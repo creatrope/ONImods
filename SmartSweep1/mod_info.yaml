@@ -1,0 +1,6 @@
+supportedContent: ALL
+minimumSupportedBuild: 469112
+version: 1.0.0
+APIVersion: 2
+static_dependencies:
+  - PeterHan.PLib
