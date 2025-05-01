@@ -205,12 +205,15 @@ namespace AutoSweeperTempFilter
                 anim: anim,
                 hitpoints: 30,
                 construction_time: 120f,
-                construction_mass: TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
-                construction_materials: TUNING.MATERIALS.REFINED_METALS,
+                //construction_mass: TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
+                //construction_materials: TUNING.MATERIALS.REFINED_METALS,
+                construction_mass: new float[] { 200f, 50f, 20f },
+                construction_materials: new string[] { "Steel", "Plastic","Glass" },
                 melting_point: 1600f,
                 build_location_rule: BuildLocationRule.Anywhere,
                 decor: TUNING.BUILDINGS.DECOR.BONUS.TIER1,
                 noise: TUNING.NOISE_POLLUTION.NOISY.TIER0
+
             );
 
             def.RequiresPowerInput = true;
