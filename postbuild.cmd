@@ -1,18 +1,14 @@
 @echo off
- 
+
 setlocal enabledelayedexpansion
 
 :: === Use passed-in ProjectDir ===
 set "PROJECT_DIR=%~1"
 
-echo "[%PROJECT_DIR%]"
+echo [%PROJECT_DIR%]
 
 :: Clean trailing backslash if present
 if "%PROJECT_DIR:~-1%"=="\" set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
-for %%A in ("%PROJECT_DIR%") do set "MOD_NAME=%%~nxA"
-
-
-:: Extract mod name from the project folder
 for %%A in ("%PROJECT_DIR%") do set "MOD_NAME=%%~nxA"
 
 :: Define other paths
@@ -21,7 +17,7 @@ set "DEST_DIR=%USERPROFILE%\Documents\Klei\OxygenNotIncluded\mods\Local\%MOD_NAM
 
 echo INFO: Mod Name: %MOD_NAME%
 echo INFO: Source Directory: %PROJECT_DIR%
-echo INFO: Build Directory:  %BUILD_DIR%"
+echo INFO: Build Directory:  %BUILD_DIR%
 echo INFO: Target Directory: %DEST_DIR%
 
 :: Ensure destination folder exists
@@ -54,9 +50,17 @@ if exist "%BUILD_DIR%\%MOD_NAME%.dll" (
     echo ERROR: %MOD_NAME%.dll is missing from %BUILD_DIR%
 )
 
-:: Copy DLL
+:: Copy Plib DLL if present
 if exist "%BUILD_DIR%\Plib.dll" (
     copy /Y "%BUILD_DIR%\Plib.dll" "%DEST_DIR%\Plib.dll"
+)
+
+:: Copy anim folder if it exists
+if exist "%PROJECT_DIR%\anim" (
+    echo OK: anim folder found
+    xcopy /Y /E /I "%PROJECT_DIR%\anim" "%DEST_DIR%\anim"
+) else (
+    echo INFO: No anim folder found to copy
 )
 
 :: Pause to allow inspection

@@ -13,7 +13,7 @@ namespace AutoSweeperTempFilter
 {
     public static class Logger
     {
-        public static bool VerboseLogging = true;
+        public static bool VerboseLogging = false;
 
         public static void Log(string message)
         {
@@ -196,11 +196,13 @@ namespace AutoSweeperTempFilter
 
         public override BuildingDef CreateBuildingDef()
         {
+            var anim = "mysweeper_kanim";
+
             BuildingDef def = BuildingTemplates.CreateBuildingDef(
                 id: ID,
                 width: 3,
                 height: 1,
-                anim: "conveyor_transferarm_kanim",
+                anim: anim,
                 hitpoints: 30,
                 construction_time: 120f,
                 construction_mass: TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
@@ -218,7 +220,7 @@ namespace AutoSweeperTempFilter
             def.AudioCategory = "Metal";
             def.UtilityInputOffset = new CellOffset(0, 0);
             def.PermittedRotations = PermittedRotations.R360;
-            def.AnimFiles = new KAnimFile[] { Assets.GetAnim("conveyor_transferarm_kanim") };
+            def.AnimFiles = new KAnimFile[] { Assets.GetAnim(anim) };
 
             return def;
         }
@@ -237,6 +239,7 @@ namespace AutoSweeperTempFilter
             var animController = go.AddOrGet<KBatchedAnimController>();
             go.AddOrGet<SolidTransferArm>().pickupRange = 8;
             animController.initialAnim = "off";
+            animController.TintColour = new Color(1.0f, 0.85f, 0.85f);
         }
     }
 
