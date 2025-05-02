@@ -208,7 +208,7 @@ namespace AutoSweeperTempFilter
                 //construction_mass: TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
                 //construction_materials: TUNING.MATERIALS.REFINED_METALS,
                 construction_mass: new float[] { 200f, 50f, 20f },
-                construction_materials: new string[] { "Steel", "Plastic","Glass" },
+                construction_materials: new string[] { "RefinedMetal", "Plastic","Glass" },
                 melting_point: 1600f,
                 build_location_rule: BuildLocationRule.Anywhere,
                 decor: TUNING.BUILDINGS.DECOR.BONUS.TIER1,
@@ -249,14 +249,19 @@ namespace AutoSweeperTempFilter
     [HarmonyPatch(typeof(SolidTransferArm), nameof(SolidTransferArm.FindFetchTarget))]
     public static class AutoSweeperTempFilterPickupFilterPatch
     {
+        // FieldRef to private field: List<Pickupable> pickupables;
+        private static readonly AccessTools.FieldRef<SolidTransferArm, List<Pickupable>> PickupablesRef =
+            AccessTools.FieldRefAccess<SolidTransferArm, List<Pickupable>>("pickupables");
+
         public static bool Prefix(SolidTransferArm __instance, Storage destination, FetchChore chore, ref Pickupable __result)
         {
             var settings = __instance.GetComponent<AutoSweeperSettings>();
             if (settings == null) return true;
 
             List<Pickupable> validItems = new List<Pickupable>();
+            List<Pickupable> pickupables = PickupablesRef(__instance);
 
-            foreach (var item in Traverse.Create(__instance).Field("pickupables").GetValue<List<Pickupable>>())
+            foreach (var item in pickupables)
             {
                 var pe = item.GetComponent<PrimaryElement>();
                 if (pe == null) continue;
@@ -271,4 +276,5 @@ namespace AutoSweeperTempFilter
             return false;
         }
     }
+
 }
