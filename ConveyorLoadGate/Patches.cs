@@ -4,15 +4,6 @@ using System.Collections.Generic;
 
 namespace ConveyorLoaderPatch
 {
-    public class ModLoad
-    {
-        public static void OnLoad()
-        {
-            Debug.Log("[ConveyorLoaderPatch] Mod loaded");
-            new Harmony("com.yourname.conveyorloaderpatch").PatchAll();
-        }
-    }
-
     [HarmonyPatch(typeof(SolidConduitDispenser))]
     [HarmonyPatch("OnSpawn")]
     public static class SolidConduitDispenser_OnSpawn_Patch
@@ -61,13 +52,13 @@ namespace ConveyorLoaderPatch
             {
                 storage.capacityKg = 0f;
                 storage.Trigger((int)GameHashes.OnStorageChange, null);
-                Debug.Log($"[ConveyorLoaderPatch] Disabled loader input by zeroing capacity on {gameObject.name}");
+                //Debug.Log($"[ConveyorLoaderPatch] Disabled loader input by zeroing capacity on {gameObject.name}");
             }
             else if (isOn && storage.capacityKg == 0f)
             {
                 storage.capacityKg = originalCapacity;
                 storage.Trigger((int)GameHashes.OnStorageChange, null);
-                Debug.Log($"[ConveyorLoaderPatch] Re-enabled loader input by restoring capacity on {gameObject.name}");
+                //Debug.Log($"[ConveyorLoaderPatch] Re-enabled loader input by restoring capacity on {gameObject.name}");
             }
         }
     }

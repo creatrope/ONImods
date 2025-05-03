@@ -24,6 +24,14 @@ if not exist "%DEST_DIR%" (
     mkdir "%DEST_DIR%"
 )
 
+:: Copy preview.png
+if exist "%PROJECT_DIR%\preview.png" (
+    echo OK: mod.yaml found
+    copy /Y "%PROJECT_DIR%\preview.png" "%DEST_DIR%\preview.png"
+) else (
+    echo ERROR: preview.png is missing
+)
+
 :: Copy mod.yaml
 if exist "%PROJECT_DIR%\mod.yaml" (
     echo OK: mod.yaml found

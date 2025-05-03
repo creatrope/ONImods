@@ -8,6 +8,8 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using static PeterHan.PLib.UI.PUIDelegates;
+using static STRINGS.RESEARCH.OTHER_TECH_ITEMS;
+
 
 namespace AutoSweeperTempFilter
 {
@@ -205,15 +207,12 @@ namespace AutoSweeperTempFilter
                 anim: anim,
                 hitpoints: 30,
                 construction_time: 120f,
-                //construction_mass: TUNING.BUILDINGS.CONSTRUCTION_MASS_KG.TIER4,
-                //construction_materials: TUNING.MATERIALS.REFINED_METALS,
                 construction_mass: new float[] { 200f, 50f, 20f },
-                construction_materials: new string[] { "RefinedMetal", "Plastic","Glass" },
+                construction_materials: new string[] { "RefinedMetal", "Plastic", "Glass" },
                 melting_point: 1600f,
                 build_location_rule: BuildLocationRule.Anywhere,
                 decor: TUNING.BUILDINGS.DECOR.BONUS.TIER1,
                 noise: TUNING.NOISE_POLLUTION.NOISY.TIER0
-
             );
 
             def.RequiresPowerInput = true;
@@ -224,6 +223,11 @@ namespace AutoSweeperTempFilter
             def.UtilityInputOffset = new CellOffset(0, 0);
             def.PermittedRotations = PermittedRotations.R360;
             def.AnimFiles = new KAnimFile[] { Assets.GetAnim(anim) };
+            def.Floodable = false;
+
+            def.ViewMode = OverlayModes.SolidConveyor.ID;     // ✅ overlay mode
+            def.SceneLayer = Grid.SceneLayer.TransferArm;     // ✅ required for sweeper arms
+            def.ObjectLayer = ObjectLayer.Building;
 
             return def;
         }
@@ -237,19 +241,42 @@ namespace AutoSweeperTempFilter
             go.AddOrGet<AutoSweeperSettings>();
         }
 
+        private static void AddVisualizer(GameObject prefab, bool movable)
+        {
+            RangeVisualizer rangeVisualizer = prefab.AddOrGet<RangeVisualizer>();
+            rangeVisualizer.OriginOffset = new Vector2I(0, 0);
+            rangeVisualizer.RangeMin.x = -4;
+            rangeVisualizer.RangeMin.y = -4;
+            rangeVisualizer.RangeMax.x = 4;
+            rangeVisualizer.RangeMax.y = 4;
+            rangeVisualizer.BlockingTileVisible = true;
+        }
+
+        public override void DoPostConfigureUnderConstruction(GameObject go)
+        {
+            AutoSweeperTempFilterConfig.AddVisualizer(prefab: go, movable: false);
+            go.GetComponent<Constructable>().requiredSkillPerk = Db.Get().SkillPerks.ConveyorBuild.Id;
+        }
+
+        public override void DoPostConfigurePreview(BuildingDef def, GameObject go)
+        {
+            AutoSweeperTempFilterConfig.AddVisualizer(go, true);
+        }
+
         public override void DoPostConfigureComplete(GameObject go)
         {
             var animController = go.AddOrGet<KBatchedAnimController>();
-            go.AddOrGet<SolidTransferArm>().pickupRange = 8;
             animController.initialAnim = "off";
             animController.TintColour = new Color(1.0f, 0.85f, 0.85f);
+            go.AddOrGet<SolidTransferArm>().pickupRange = 4;
+            AutoSweeperTempFilterConfig.AddVisualizer(prefab: go, movable: false);
         }
+
     }
 
     [HarmonyPatch(typeof(SolidTransferArm), nameof(SolidTransferArm.FindFetchTarget))]
     public static class AutoSweeperTempFilterPickupFilterPatch
     {
-        // FieldRef to private field: List<Pickupable> pickupables;
         private static readonly AccessTools.FieldRef<SolidTransferArm, List<Pickupable>> PickupablesRef =
             AccessTools.FieldRefAccess<SolidTransferArm, List<Pickupable>>("pickupables");
 
@@ -276,5 +303,4 @@ namespace AutoSweeperTempFilter
             return false;
         }
     }
-
 }
