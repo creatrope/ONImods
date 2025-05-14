@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C109D616-AB40-4040-9D57-B203FB44F560}</ProjectGuid>
+    <ProjectGuid>{6BBC8450-5842-4A89-AAC2-94C1276E9C77}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>ThermoSensorPlus</RootNamespace>
-    <AssemblyName>ThermoSensorPlus</AssemblyName>
+    <RootNamespace>ArtifactsPlus</RootNamespace>
+    <AssemblyName>ArtifactsPlus</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -74,7 +74,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ThermoSensor.cs" />
+    <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
