@@ -64,6 +64,7 @@ namespace ThermoSensorPlus
         private ThermoSensorStateComponent stateComponent;
 
         private const string ToggleSuffix = "_toggle";
+        private const string DefaultToggle = "A"; // "Above" is default
 
         public MyThresholdSwitch(string id, string labelText, string defaultInputText = "1.0")
         {
@@ -74,6 +75,7 @@ namespace ThermoSensorPlus
 
         public GameObject Build(GameObject parent)
         {
+            // Outer horizontal panel: [Label][RightPanel]
             var container = new PPanel("Field_" + fieldId)
             {
                 Direction = PanelDirection.Horizontal,
@@ -82,10 +84,12 @@ namespace ThermoSensorPlus
                 FlexSize = new Vector2(1f, 0f)
             };
 
+            // Left label (takes all available space)
             label = new PLabel("Label_" + fieldId)
             {
                 Text = labelTextValue,
                 TextStyle = PUITuning.Fonts.TextDarkStyle,
+                FlexSize = new Vector2(1f, 0f) // Take all available space
             }.AddOnRealize(go =>
             {
                 this.labelText = go.transform.Find("Text")?.GetComponent<LocText>();
@@ -93,11 +97,19 @@ namespace ThermoSensorPlus
             });
             container.AddChild(label);
 
-            // Button A
+            // Right panel for buttons and input field
+            var rightPanel = new PPanel("RightPanel_" + fieldId)
+            {
+                Direction = PanelDirection.Horizontal,
+                Spacing = 2
+                // No flex, so it sizes to content and stays right
+            };
+
+            // Button "Above"
             buttonA = new PButton("ButtonA_" + fieldId)
             {
-                Text = "A",
-                ToolTip = "Button A",
+                Text = "Above",
+                ToolTip = "Above",
                 FlexSize = new Vector2(0, 0),
                 OnClick = (go) =>
                 {
@@ -105,7 +117,6 @@ namespace ThermoSensorPlus
                     if (buttonBGameObject != null)
                         PButton.SetButtonEnabled(buttonBGameObject, true);
 
-                    // Save toggle state
                     if (stateComponent != null)
                     {
                         stateComponent.customFields[fieldId + ToggleSuffix] = "A";
@@ -118,13 +129,13 @@ namespace ThermoSensorPlus
                 go.SetMinUISize(new Vector2(24, 24));
                 buttonAGameObject = go;
             };
-            container.AddChild(buttonA);
+            rightPanel.AddChild(buttonA);
 
-            // Button B
+            // Button "Below"
             buttonB = new PButton("ButtonB_" + fieldId)
             {
-                Text = "B",
-                ToolTip = "Button B",
+                Text = "Below",
+                ToolTip = "Below",
                 FlexSize = new Vector2(0, 0),
                 OnClick = (go) =>
                 {
@@ -132,7 +143,6 @@ namespace ThermoSensorPlus
                     if (buttonAGameObject != null)
                         PButton.SetButtonEnabled(buttonAGameObject, true);
 
-                    // Save toggle state
                     if (stateComponent != null)
                     {
                         stateComponent.customFields[fieldId + ToggleSuffix] = "B";
@@ -145,11 +155,12 @@ namespace ThermoSensorPlus
                 go.SetMinUISize(new Vector2(24, 24));
                 buttonBGameObject = go;
             };
-            container.AddChild(buttonB);
+            rightPanel.AddChild(buttonB);
 
+            // Input field
             textField = new PTextField("Input_" + fieldId)
             {
-                MinWidth = 200,
+                MinWidth = 48, // ~4 characters wide
                 Text = defaultInputText,
                 OnTextChanged = (go, value) =>
                 {
@@ -164,7 +175,9 @@ namespace ThermoSensorPlus
                 inputField = go.GetComponent<TMP_InputField>();
                 Debug.Log($"[ThermoSensorPlus] MyThresholdSwitch.OnRealize: inputField assigned? {inputField != null}");
             });
-            container.AddChild(textField);
+            rightPanel.AddChild(textField);
+
+            container.AddChild(rightPanel);
 
             root = container.AddTo(parent);
             return root;
@@ -187,7 +200,7 @@ namespace ThermoSensorPlus
             if (stateComponent != null && buttonAGameObject != null && buttonBGameObject != null)
             {
                 string toggleKey = fieldId + ToggleSuffix;
-                string toggleValue = "A";
+                string toggleValue = DefaultToggle;
                 if (stateComponent.customFields.TryGetValue(toggleKey, out string savedToggle))
                     toggleValue = savedToggle;
 
@@ -266,11 +279,11 @@ namespace ThermoSensorPlus
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
 
-            var threshold1 = new MyThresholdSwitch("threshold1", "[TS+] Threshold 1:", "Default Value 1");
+            var threshold1 = new MyThresholdSwitch("threshold1", "Velocity", "1.0");
             fields.Add(threshold1);
             threshold1.Build(root);
 
-            var threshold2 = new MyThresholdSwitch("threshold2", "[TS+] Threshold 2:", "Default Value 2");
+            var threshold2 = new MyThresholdSwitch("threshold2", "Acceleration", "1.0");
             fields.Add(threshold2);
             threshold2.Build(root);
 
@@ -289,7 +302,6 @@ namespace ThermoSensorPlus
 
         public override void ClearTarget() { }
         public override string GetTitle() => "ThermoSensor+";
-        public override float GetSortKey() => -100f;
 
         public override bool IsValidForTarget(GameObject target)
         {
@@ -297,6 +309,8 @@ namespace ThermoSensorPlus
             Debug.Log($"[ThermoSensorPlus] IsValidForTarget: {target?.name}, valid={valid}");
             return valid;
         }
+
+        public override int GetSideScreenSortOrder() => -300;
 
         protected override void OnPrefabInit()
         {
