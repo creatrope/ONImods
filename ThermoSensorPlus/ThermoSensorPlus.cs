@@ -16,6 +16,12 @@ namespace ThermoSensorPlus
         public static void Log(string message) => Debug.Log(PREFIX + message);
     }
 
+    // Add the global deltaT variable here
+    public static class ThermoSensorGlobals
+    {
+        public static float deltaT = 10f;
+    }
+
     public class Mod : UserMod2
     {
         public override void OnLoad(Harmony harmony)
@@ -61,6 +67,9 @@ namespace ThermoSensorPlus
         private PTextField textField;
         private TMP_InputField inputField;
 
+        private PLabel outputField;
+        private LocText outputFieldText;
+
         private GameObject buttonAGameObject;
         private GameObject buttonBGameObject;
 
@@ -95,7 +104,7 @@ namespace ThermoSensorPlus
             {
                 Text = labelTextValue,
                 TextStyle = PUITuning.Fonts.TextDarkStyle,
-                FlexSize = new Vector2(1f, 0f) // Take all available space
+                FlexSize = new Vector2(1f, 0f)
             }.AddOnRealize(go =>
             {
                 this.labelText = go.transform.Find("Text")?.GetComponent<LocText>();
@@ -103,12 +112,11 @@ namespace ThermoSensorPlus
             });
             container.AddChild(label);
 
-            // Right panel for buttons and input field
+            // Right panel for buttons and input/output subpanel
             var rightPanel = new PPanel("RightPanel_" + fieldId)
             {
                 Direction = PanelDirection.Horizontal,
                 Spacing = 2
-                // No flex, so it sizes to content and stays right
             };
 
             // Button "Above"
@@ -163,11 +171,20 @@ namespace ThermoSensorPlus
             };
             rightPanel.AddChild(buttonB);
 
+            // Sub-panel for input and output fields
+            var ioPanel = new PPanel("IOPanel_" + fieldId)
+            {
+                Direction = PanelDirection.Horizontal,
+                Spacing = 2,
+                FlexSize = new Vector2(1f, 0f) // Take all remaining space in rightPanel
+            };
+
             // Input field
             textField = new PTextField("Input_" + fieldId)
             {
-                MinWidth = 48, // ~4 characters wide
+                MinWidth = 48,
                 Text = defaultInputText,
+                FlexSize = new Vector2(2f, 0f), // 2:1 ratio with output
                 OnTextChanged = (go, value) =>
                 {
                     if (stateComponent != null)
@@ -175,13 +192,28 @@ namespace ThermoSensorPlus
                         stateComponent.customFields[fieldId] = value;
                         CustomLogger.Log($"Saved custom field {fieldId}: {value}");
                     }
-                }
+                }               
             }.AddOnRealize(go =>
             {
                 inputField = go.GetComponent<TMP_InputField>();
                 CustomLogger.Log($"MyThresholdSwitch.OnRealize: inputField assigned? {inputField != null}");
             });
-            rightPanel.AddChild(textField);
+            ioPanel.AddChild(textField);
+
+            // Output field (read-only label)
+            outputField = new PLabel("Output_" + fieldId)
+            {
+                Text = "00000.00", // Set default label to 00000.00
+                TextStyle = PUITuning.Fonts.TextDarkStyle,
+                FlexSize = new Vector2(1f, 0f) // 2:1 ratio with input
+            }.AddOnRealize(go =>
+            {
+                outputFieldText = go.transform.Find("Text")?.GetComponent<LocText>();
+                CustomLogger.Log($"MyThresholdSwitch.OnRealize: outputFieldText assigned? {outputFieldText != null}");
+            });
+            ioPanel.AddChild(outputField);
+
+            rightPanel.AddChild(ioPanel);
 
             container.AddChild(rightPanel);
 
@@ -223,6 +255,20 @@ namespace ThermoSensorPlus
                     PButton.SetButtonEnabled(buttonBGameObject, false);
                 }
             }
+
+            // Set output field value (for now, always "0")
+            if (outputFieldText != null)
+            {
+                outputFieldText.text = "0";
+            }
+        }
+
+        public TMP_InputField InputField => inputField; // Expose for reading in the side screen
+
+        public void SetOutputValue(string value)
+        {
+            if (outputFieldText != null)
+                outputFieldText.text = value.PadRight(5); // Pad to 5 chars for consistent width
         }
     }
 
@@ -278,7 +324,7 @@ namespace ThermoSensorPlus
             {
                 Direction = PanelDirection.Vertical,
                 Spacing = 10,
-                BackColor = new Color(0, 0, 0, 0),
+                BackColor = new Color(1f, 0.9f, 0.9f, 1f), // Light red for visibility
                 Margin = new RectOffset(10, 10, 10, 10)
             };
 
@@ -321,6 +367,25 @@ namespace ThermoSensorPlus
         protected override void OnPrefabInit()
         {
             EnsureUIBuilt();
+        }
+
+        private void Update()
+        {
+            // Only update if the side screen is visible
+            if (!gameObject.activeInHierarchy)
+                return;
+
+            int tick = Time.frameCount; // Or use Time.time for seconds
+
+            foreach (var field in fields)
+            {
+                float input = 0f;
+                if (field.InputField != null && !string.IsNullOrEmpty(field.InputField.text))
+                    float.TryParse(field.InputField.text, out input);
+
+                float result = tick * input;
+                field.SetOutputValue(result.ToString("F2"));
+            }
         }
     }
 }
