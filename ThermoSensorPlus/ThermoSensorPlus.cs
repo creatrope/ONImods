@@ -48,24 +48,28 @@ namespace ThermoSensorPlus
         private GameObject root;
         private PLabel label;
         private LocText labelText;
+        private PButton buttonA;
+        private PButton buttonB;
         private PTextField textField;
         private TMP_InputField inputField;
 
         private string fieldId;
-        private string labelPrefix;
+        private string labelTextValue;
+        private string defaultInputText;
         private ThermoSensorStateComponent stateComponent;
 
-        public MyThresholdSwitch(string id, string labelText)
+        public MyThresholdSwitch(string id, string labelText, string defaultInputText = "1.0")
         {
             this.fieldId = id;
-            this.labelPrefix = labelText;
+            this.labelTextValue = labelText;
+            this.defaultInputText = defaultInputText;
         }
 
         public GameObject Build(GameObject parent)
         {
             var container = new PPanel("Field_" + fieldId)
             {
-                Direction = PanelDirection.Vertical,
+                Direction = PanelDirection.Horizontal,
                 Spacing = 5,
                 Margin = new RectOffset(0, 0, 5, 5),
                 FlexSize = new Vector2(1f, 0f)
@@ -73,7 +77,7 @@ namespace ThermoSensorPlus
 
             label = new PLabel("Label_" + fieldId)
             {
-                Text = labelPrefix,
+                Text = labelTextValue,
                 TextStyle = PUITuning.Fonts.TextDarkStyle,
             }.AddOnRealize(go =>
             {
@@ -82,10 +86,78 @@ namespace ThermoSensorPlus
             });
             container.AddChild(label);
 
+            // Add button A
+            buttonA = new PButton("ButtonA_" + fieldId)
+            {
+                Text = "A",
+                ToolTip = "Button A",
+                FlexSize = new Vector2(0, 0),
+                OnClick = (go) =>
+                {
+                    var unityButton = go.GetComponent<UnityEngine.UI.Button>();
+                    if (unityButton != null)
+                    {
+                            unityButton.interactable = false;
+                    }
+                }
+            };
+            buttonA.OnRealize += go =>
+            {
+                go.SetMinUISize(new Vector2(24, 24));
+                var unityButton = go.GetComponent<UnityEngine.UI.Button>();
+                if (unityButton != null)
+                {
+                    var colors = unityButton.colors;
+                    colors.pressedColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
+                    colors.disabledColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
+                    unityButton.colors = colors;
+                }
+            };
+            container.AddChild(buttonA);
+
+            // Add button B
+            buttonB = new PButton("ButtonB_" + fieldId)
+            {
+                Text = "B",
+                ToolTip = "Button B",
+                FlexSize = new Vector2(0, 0),
+                OnClick = (go) =>
+                {
+                    var unityButton = go.GetComponent<UnityEngine.UI.Button>();
+                    if (unityButton != null)
+                    {
+                        var colors = unityButton.colors;
+                        colors.pressedColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
+                        colors.disabledColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
+                        unityButton.colors = colors;
+
+                        unityButton.interactable = false;
+                        unityButton.OnDeselect(null);
+                        unityButton.OnPointerExit(null);
+
+                        if (unityButton.targetGraphic != null)
+                            unityButton.targetGraphic.color = colors.disabledColor;
+                    }
+                }
+            };
+            buttonB.OnRealize += go =>
+            {
+                go.SetMinUISize(new Vector2(24, 24));
+                var unityButton = go.GetComponent<UnityEngine.UI.Button>();
+                if (unityButton != null)
+                {
+                    var colors = unityButton.colors;
+                    colors.pressedColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
+                    colors.disabledColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
+                    unityButton.colors = colors;
+                }
+            };
+            container.AddChild(buttonB);
+
             textField = new PTextField("Input_" + fieldId)
             {
                 MinWidth = 200,
-                Text = "",
+                Text = defaultInputText,
                 OnTextChanged = (go, value) =>
                 {
                     if (stateComponent != null)
@@ -109,18 +181,12 @@ namespace ThermoSensorPlus
         {
             stateComponent = target;
 
-            if (stateComponent != null)
+            if (stateComponent != null && inputField != null)
             {
-                if (labelText != null)
-                    labelText.text = $"{labelPrefix} {stateComponent.randomID}";
-
-                if (inputField != null)
-                {
-                    if (stateComponent.customFields.TryGetValue(fieldId, out string savedValue))
-                        inputField.text = savedValue;
-                    else
-                        inputField.text = "";
-                }
+                if (stateComponent.customFields.TryGetValue(fieldId, out string savedValue))
+                    inputField.text = savedValue;
+                else
+                    inputField.text = defaultInputText;
             }
         }
     }
@@ -188,11 +254,11 @@ namespace ThermoSensorPlus
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
 
-            var threshold1 = new MyThresholdSwitch("threshold1", "[TS+] Threshold 1:");
+            var threshold1 = new MyThresholdSwitch("threshold1", "[TS+] Threshold 1:", "Default Value 1");
             fields.Add(threshold1);
             threshold1.Build(root);
 
-            var threshold2 = new MyThresholdSwitch("threshold2", "[TS+] Threshold 2:");
+            var threshold2 = new MyThresholdSwitch("threshold2", "[TS+] Threshold 2:", "Default Value 2");
             fields.Add(threshold2);
             threshold2.Build(root);
 
