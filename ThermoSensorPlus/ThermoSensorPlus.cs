@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using KMod;
 using PeterHan.PLib;
 using PeterHan.PLib.Core;
@@ -19,9 +19,6 @@ namespace ThermoSensorPlus
         }
     }
 
-    // Dummy marker component to distinguish our sensors
-    public sealed class ThermoSensorPlusTag : KMonoBehaviour { }
-
     [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
     public static class ThermoSensorSideScreenRegister
     {
@@ -40,11 +37,12 @@ namespace ThermoSensorPlus
     public class ThermoSensorClickMeScreen : SideScreenContent
     {
         private GameObject root;
+        private PLabel idLabel;
+        private LocText idLocText;
 
         public override bool IsValidForTarget(GameObject target)
         {
-            bool valid = target.GetComponent<LogicTemperatureSensor>() != null &&
-                         target.GetComponent<ThermoSensorPlusTag>() != null;
+            bool valid = target.GetComponent<LogicTemperatureSensor>() != null;
             Debug.Log($"[ThermoSensorPlus] IsValidForTarget = {valid}");
             return valid;
         }
@@ -52,6 +50,12 @@ namespace ThermoSensorPlus
         public override void SetTarget(GameObject target)
         {
             Debug.Log($"[ThermoSensorPlus] SetTarget on instance {GetInstanceID()} for target {target?.name}");
+
+            if (idLocText != null && target != null)
+            {
+                idLocText.text = $"[TS+] Sensor ID: {target.GetInstanceID()}";
+                Debug.Log($"[ThermoSensorPlus] Updated label with ID {target.GetInstanceID()}");
+            }
         }
 
         public override string GetTitle() => "ThermoSensor+";
@@ -62,7 +66,7 @@ namespace ThermoSensorPlus
         {
             Debug.Log($"[ThermoSensorPlus] OnPrefabInit for instance {GetInstanceID()}");
 
-            if (root != null)
+            if (ContentContainer != null)
             {
                 Debug.Log("[ThermoSensorPlus] UI already built, skipping.");
                 return;
@@ -74,16 +78,22 @@ namespace ThermoSensorPlus
             {
                 Direction = PanelDirection.Vertical,
                 Spacing = 10,
-                BackColor = new Color(0.1f, 0.1f, 0.1f, 1f),
+                BackColor = new Color(0, 0, 0, 0), // Transparent background
                 Margin = new RectOffset(10, 10, 10, 10)
             };
 
-            var label = new PLabel("ClickLabel")
+            idLabel = new PLabel("ClickLabel")
             {
-                Text = "[TS+] Static Label",
-                TextStyle = PUITuning.Fonts.TextDarkStyle
+                Text = "[TS+] Sensor ID: ",
+                TextStyle = PUITuning.Fonts.TextDarkStyle,
             };
-            panel.AddChild(label);
+            idLabel.OnRealize += go =>
+            {
+                idLocText = go.transform.Find("Text")?.GetComponent<LocText>();
+                Debug.Log($"[ThermoSensorPlus] OnRealize: idLocText assigned? {idLocText != null}");
+            };
+
+            panel.AddChild(idLabel);
 
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
@@ -92,16 +102,5 @@ namespace ThermoSensorPlus
         }
 
         public override void ClearTarget() { }
-    }
-
-    // Patch your building to add the marker
-    [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
-    public static class TagLogicSensor
-    {
-        public static void Postfix(GameObject go)
-        {
-            go.AddOrGet<ThermoSensorPlusTag>();
-            Debug.Log("[ThermoSensorPlus] Tag added to LogicTemperatureSensor");
-        }
     }
 }
