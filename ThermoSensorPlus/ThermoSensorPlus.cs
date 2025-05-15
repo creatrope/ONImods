@@ -10,13 +10,19 @@ using System.Collections.Generic;
 
 namespace ThermoSensorPlus
 {
+    public static class CustomLogger
+    {
+        private const string PREFIX = "[ThermoSensorPlus] ";
+        public static void Log(string message) => Debug.Log(PREFIX + message);
+    }
+
     public class Mod : UserMod2
     {
         public override void OnLoad(Harmony harmony)
         {
             Harmony.DEBUG = true;
             PUtil.InitLibrary();
-            Debug.Log("[ThermoSensorPlus] Mod loaded. Applying Harmony patches.");
+            CustomLogger.Log("Mod loaded. Applying Harmony patches.");
             harmony.PatchAll();
         }
     }
@@ -31,16 +37,16 @@ namespace ThermoSensorPlus
         {
             base.OnSpawn();
 
-            Debug.Log($"[ThermoSensorPlus] OnSpawn: randomID={randomID}, customFields.Count={customFields?.Count ?? 0}");
+            CustomLogger.Log($"OnSpawn: randomID={randomID}, customFields.Count={customFields?.Count ?? 0}");
 
             if (randomID == 0)
             {
                 randomID = UnityEngine.Random.Range(100000, 999999);
-                Debug.Log($"[ThermoSensorPlus] OnSpawn: Assigned new random ID {randomID} to {gameObject.name}");
+                CustomLogger.Log($"OnSpawn: Assigned new random ID {randomID} to {gameObject.name}");
             }
             else
             {
-                Debug.Log($"[ThermoSensorPlus] OnSpawn: Restored existing ID {randomID} for {gameObject.name}");
+                CustomLogger.Log($"OnSpawn: Restored existing ID {randomID} for {gameObject.name}");
             }
         }
     }
@@ -93,7 +99,7 @@ namespace ThermoSensorPlus
             }.AddOnRealize(go =>
             {
                 this.labelText = go.transform.Find("Text")?.GetComponent<LocText>();
-                Debug.Log($"[ThermoSensorPlus] MyThresholdSwitch.OnRealize: labelText assigned? {this.labelText != null}");
+                CustomLogger.Log($"MyThresholdSwitch.OnRealize: labelText assigned? {this.labelText != null}");
             });
             container.AddChild(label);
 
@@ -120,7 +126,7 @@ namespace ThermoSensorPlus
                     if (stateComponent != null)
                     {
                         stateComponent.customFields[fieldId + ToggleSuffix] = "A";
-                        Debug.Log($"[ThermoSensorPlus] Saved toggle {fieldId}: A");
+                        CustomLogger.Log($"Saved toggle {fieldId}: A");
                     }
                 }
             };
@@ -146,7 +152,7 @@ namespace ThermoSensorPlus
                     if (stateComponent != null)
                     {
                         stateComponent.customFields[fieldId + ToggleSuffix] = "B";
-                        Debug.Log($"[ThermoSensorPlus] Saved toggle {fieldId}: B");
+                        CustomLogger.Log($"Saved toggle {fieldId}: B");
                     }
                 }
             };
@@ -167,13 +173,13 @@ namespace ThermoSensorPlus
                     if (stateComponent != null)
                     {
                         stateComponent.customFields[fieldId] = value;
-                        Debug.Log($"[ThermoSensorPlus] Saved custom field {fieldId}: {value}");
+                        CustomLogger.Log($"Saved custom field {fieldId}: {value}");
                     }
                 }
             }.AddOnRealize(go =>
             {
                 inputField = go.GetComponent<TMP_InputField>();
-                Debug.Log($"[ThermoSensorPlus] MyThresholdSwitch.OnRealize: inputField assigned? {inputField != null}");
+                CustomLogger.Log($"MyThresholdSwitch.OnRealize: inputField assigned? {inputField != null}");
             });
             rightPanel.AddChild(textField);
 
@@ -204,7 +210,7 @@ namespace ThermoSensorPlus
                 if (stateComponent.customFields.TryGetValue(toggleKey, out string savedToggle))
                     toggleValue = savedToggle;
 
-                Debug.Log($"[ThermoSensorPlus] Restoring toggle {fieldId}: {toggleValue}");
+                CustomLogger.Log($"Restoring toggle {fieldId}: {toggleValue}");
 
                 if (toggleValue == "A")
                 {
@@ -225,7 +231,7 @@ namespace ThermoSensorPlus
     {
         public static void Postfix(GameObject go)
         {
-            Debug.Log("[ThermoSensorPlus] DoPostConfigureComplete PATCH RAN for: " + go.name);
+            CustomLogger.Log("DoPostConfigureComplete PATCH RAN for: " + go.name);
             go.AddOrGet<ThermoSensorStateComponent>();
         }
     }
@@ -240,7 +246,7 @@ namespace ThermoSensorPlus
                 go.GetComponent<ThermoSensorStateComponent>() == null)
             {
                 go.AddOrGet<ThermoSensorStateComponent>();
-                Debug.Log($"[ThermoSensorPlus] OnSpawn: Attached missing state to legacy sensor: {go.name}");
+                CustomLogger.Log($"OnSpawn: Attached missing state to legacy sensor: {go.name}");
             }
         }
     }
@@ -250,7 +256,7 @@ namespace ThermoSensorPlus
     {
         public static void Postfix()
         {
-            Debug.Log("[ThermoSensorPlus] Registering simple label side screen");
+            CustomLogger.Log("Registering simple label side screen");
             PUIUtils.AddSideScreenContent<ThermoSensorClickMeScreen>();
         }
     }
@@ -266,7 +272,7 @@ namespace ThermoSensorPlus
             if (root != null)
                 return;
 
-            Debug.Log("[ThermoSensorPlus] Building side screen UI...");
+            CustomLogger.Log("Building side screen UI...");
 
             var panel = new PPanel("ClickPanel")
             {
@@ -287,7 +293,7 @@ namespace ThermoSensorPlus
             fields.Add(threshold2);
             threshold2.Build(root);
 
-            Debug.Log("[ThermoSensorPlus] Side screen UI initialized.");
+            CustomLogger.Log("Side screen UI initialized.");
         }
 
         public override void SetTarget(GameObject target)
@@ -306,7 +312,7 @@ namespace ThermoSensorPlus
         public override bool IsValidForTarget(GameObject target)
         {
             bool valid = target != null && target.GetComponent<ThermoSensorStateComponent>() != null;
-            Debug.Log($"[ThermoSensorPlus] IsValidForTarget: {target?.name}, valid={valid}");
+            CustomLogger.Log($"IsValidForTarget: {target?.name}, valid={valid}");
             return valid;
         }
 
