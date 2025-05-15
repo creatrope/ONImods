@@ -31,6 +31,8 @@ namespace ThermoSensorPlus
         {
             base.OnSpawn();
 
+            Debug.Log($"[ThermoSensorPlus] OnSpawn: randomID={randomID}, customFields.Count={customFields?.Count ?? 0}");
+
             if (randomID == 0)
             {
                 randomID = UnityEngine.Random.Range(100000, 999999);
@@ -61,7 +63,7 @@ namespace ThermoSensorPlus
         private string defaultInputText;
         private ThermoSensorStateComponent stateComponent;
 
-        private static readonly ColorStyleSetting CustomButtonStyle = PUITuning.Colors.ButtonBlueStyle;
+        private const string ToggleSuffix = "_toggle";
 
         public MyThresholdSwitch(string id, string labelText, string defaultInputText = "1.0")
         {
@@ -97,12 +99,18 @@ namespace ThermoSensorPlus
                 Text = "A",
                 ToolTip = "Button A",
                 FlexSize = new Vector2(0, 0),
-                Color = CustomButtonStyle,
                 OnClick = (go) =>
                 {
                     PButton.SetButtonEnabled(go, false);
                     if (buttonBGameObject != null)
                         PButton.SetButtonEnabled(buttonBGameObject, true);
+
+                    // Save toggle state
+                    if (stateComponent != null)
+                    {
+                        stateComponent.customFields[fieldId + ToggleSuffix] = "A";
+                        Debug.Log($"[ThermoSensorPlus] Saved toggle {fieldId}: A");
+                    }
                 }
             };
             buttonA.OnRealize += go =>
@@ -118,12 +126,18 @@ namespace ThermoSensorPlus
                 Text = "B",
                 ToolTip = "Button B",
                 FlexSize = new Vector2(0, 0),
-                Color = CustomButtonStyle,
                 OnClick = (go) =>
                 {
                     PButton.SetButtonEnabled(go, false);
                     if (buttonAGameObject != null)
                         PButton.SetButtonEnabled(buttonAGameObject, true);
+
+                    // Save toggle state
+                    if (stateComponent != null)
+                    {
+                        stateComponent.customFields[fieldId + ToggleSuffix] = "B";
+                        Debug.Log($"[ThermoSensorPlus] Saved toggle {fieldId}: B");
+                    }
                 }
             };
             buttonB.OnRealize += go =>
@@ -160,12 +174,35 @@ namespace ThermoSensorPlus
         {
             stateComponent = target;
 
+            // Restore text field
             if (stateComponent != null && inputField != null)
             {
                 if (stateComponent.customFields.TryGetValue(fieldId, out string savedValue))
                     inputField.text = savedValue;
                 else
                     inputField.text = defaultInputText;
+            }
+
+            // Restore toggle state
+            if (stateComponent != null && buttonAGameObject != null && buttonBGameObject != null)
+            {
+                string toggleKey = fieldId + ToggleSuffix;
+                string toggleValue = "A";
+                if (stateComponent.customFields.TryGetValue(toggleKey, out string savedToggle))
+                    toggleValue = savedToggle;
+
+                Debug.Log($"[ThermoSensorPlus] Restoring toggle {fieldId}: {toggleValue}");
+
+                if (toggleValue == "A")
+                {
+                    PButton.SetButtonEnabled(buttonAGameObject, false);
+                    PButton.SetButtonEnabled(buttonBGameObject, true);
+                }
+                else
+                {
+                    PButton.SetButtonEnabled(buttonAGameObject, true);
+                    PButton.SetButtonEnabled(buttonBGameObject, false);
+                }
             }
         }
     }
@@ -198,12 +235,8 @@ namespace ThermoSensorPlus
     [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
     public static class ThermoSensorSideScreenRegister
     {
-        private static bool registered = false;
-
         public static void Postfix()
         {
-            if (registered) return;
-            registered = true;
             Debug.Log("[ThermoSensorPlus] Registering simple label side screen");
             PUIUtils.AddSideScreenContent<ThermoSensorClickMeScreen>();
         }
@@ -260,7 +293,9 @@ namespace ThermoSensorPlus
 
         public override bool IsValidForTarget(GameObject target)
         {
-            return target != null && target.GetComponent<ThermoSensorStateComponent>() != null;
+            bool valid = target != null && target.GetComponent<ThermoSensorStateComponent>() != null;
+            Debug.Log($"[ThermoSensorPlus] IsValidForTarget: {target?.name}, valid={valid}");
+            return valid;
         }
 
         protected override void OnPrefabInit()
