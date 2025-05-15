@@ -53,10 +53,15 @@ namespace ThermoSensorPlus
         private PTextField textField;
         private TMP_InputField inputField;
 
+        private GameObject buttonAGameObject;
+        private GameObject buttonBGameObject;
+
         private string fieldId;
         private string labelTextValue;
         private string defaultInputText;
         private ThermoSensorStateComponent stateComponent;
+
+        private static readonly ColorStyleSetting CustomButtonStyle = PUITuning.Colors.ButtonBlueStyle;
 
         public MyThresholdSwitch(string id, string labelText, string defaultInputText = "1.0")
         {
@@ -86,71 +91,45 @@ namespace ThermoSensorPlus
             });
             container.AddChild(label);
 
-            // Add button A
+            // Button A
             buttonA = new PButton("ButtonA_" + fieldId)
             {
                 Text = "A",
                 ToolTip = "Button A",
                 FlexSize = new Vector2(0, 0),
+                Color = CustomButtonStyle,
                 OnClick = (go) =>
                 {
-                    var unityButton = go.GetComponent<UnityEngine.UI.Button>();
-                    if (unityButton != null)
-                    {
-                            unityButton.interactable = false;
-                    }
+                    PButton.SetButtonEnabled(go, false);
+                    if (buttonBGameObject != null)
+                        PButton.SetButtonEnabled(buttonBGameObject, true);
                 }
             };
             buttonA.OnRealize += go =>
             {
                 go.SetMinUISize(new Vector2(24, 24));
-                var unityButton = go.GetComponent<UnityEngine.UI.Button>();
-                if (unityButton != null)
-                {
-                    var colors = unityButton.colors;
-                    colors.pressedColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
-                    colors.disabledColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
-                    unityButton.colors = colors;
-                }
+                buttonAGameObject = go;
             };
             container.AddChild(buttonA);
 
-            // Add button B
+            // Button B
             buttonB = new PButton("ButtonB_" + fieldId)
             {
                 Text = "B",
                 ToolTip = "Button B",
                 FlexSize = new Vector2(0, 0),
+                Color = CustomButtonStyle,
                 OnClick = (go) =>
                 {
-                    var unityButton = go.GetComponent<UnityEngine.UI.Button>();
-                    if (unityButton != null)
-                    {
-                        var colors = unityButton.colors;
-                        colors.pressedColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
-                        colors.disabledColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
-                        unityButton.colors = colors;
-
-                        unityButton.interactable = false;
-                        unityButton.OnDeselect(null);
-                        unityButton.OnPointerExit(null);
-
-                        if (unityButton.targetGraphic != null)
-                            unityButton.targetGraphic.color = colors.disabledColor;
-                    }
+                    PButton.SetButtonEnabled(go, false);
+                    if (buttonAGameObject != null)
+                        PButton.SetButtonEnabled(buttonAGameObject, true);
                 }
             };
             buttonB.OnRealize += go =>
             {
                 go.SetMinUISize(new Vector2(24, 24));
-                var unityButton = go.GetComponent<UnityEngine.UI.Button>();
-                if (unityButton != null)
-                {
-                    var colors = unityButton.colors;
-                    colors.pressedColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
-                    colors.disabledColor = new Color(0.9f, 0.9f, 1.0f, 1.0f);
-                    unityButton.colors = colors;
-                }
+                buttonBGameObject = go;
             };
             container.AddChild(buttonB);
 
