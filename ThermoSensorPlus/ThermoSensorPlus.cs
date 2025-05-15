@@ -1,9 +1,9 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using KMod;
 using PeterHan.PLib;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.UI;
-using System;
+using KSerialization;
 using UnityEngine;
 
 namespace ThermoSensorPlus
@@ -12,13 +12,63 @@ namespace ThermoSensorPlus
     {
         public override void OnLoad(Harmony harmony)
         {
-            base.OnLoad(harmony);
-            PUtil.InitLibrary(); // Required for PLib
-            Debug.Log("[ThermoSensorPlus] Mod loaded and Harmony patches applied.");
+            Harmony.DEBUG = true; // See if patching fails
+            PUtil.InitLibrary();
+            Debug.Log("[ThermoSensorPlus] Mod loaded. Applying Harmony patches.");
             harmony.PatchAll();
         }
     }
 
+    [SerializationConfig(MemberSerialization.OptIn)]
+    public class ThermoSensorStateComponent : KMonoBehaviour
+    {
+        [Serialize]
+        public int randomID;
+
+        protected override void OnSpawn()
+        {
+            base.OnSpawn();
+
+            if (randomID == 0)
+            {
+                randomID = UnityEngine.Random.Range(100000, 999999);
+                Debug.Log($"[ThermoSensorPlus] OnSpawn: Assigned new random ID {randomID} to {gameObject.name}");
+            }
+            else
+            {
+                Debug.Log($"[ThermoSensorPlus] OnSpawn: Restored existing ID {randomID} for {gameObject.name}");
+            }
+        }
+    }
+
+    // ✅ Patch for NEW buildings
+    [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
+    public static class ThermoSensorPatchNew
+    {
+        public static void Postfix(GameObject go)
+        {
+            Debug.Log("[ThermoSensorPlus] DoPostConfigureComplete PATCH RAN for: " + go.name);
+            go.AddOrGet<ThermoSensorStateComponent>();
+        }
+    }
+
+    // ✅ Patch for OLD (existing) buildings
+    [HarmonyPatch(typeof(BuildingComplete), "OnSpawn")]
+    public static class ThermoSensorPatchExisting
+    {
+        public static void Postfix(BuildingComplete __instance)
+        {
+            var go = __instance.gameObject;
+            if (go.GetComponent<LogicTemperatureSensor>() != null &&
+                go.GetComponent<ThermoSensorStateComponent>() == null)
+            {
+                go.AddOrGet<ThermoSensorStateComponent>();
+                Debug.Log($"[ThermoSensorPlus] OnSpawn: Attached missing state to legacy sensor: {go.name}");
+            }
+        }
+    }
+
+    // ✅ Register side screen
     [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
     public static class ThermoSensorSideScreenRegister
     {
@@ -42,7 +92,8 @@ namespace ThermoSensorPlus
 
         public override bool IsValidForTarget(GameObject target)
         {
-            bool valid = target.GetComponent<LogicTemperatureSensor>() != null;
+            bool valid = target.GetComponent<LogicTemperatureSensor>() != null &&
+                         target.GetComponent<ThermoSensorStateComponent>() != null;
             Debug.Log($"[ThermoSensorPlus] IsValidForTarget = {valid}");
             return valid;
         }
@@ -51,10 +102,15 @@ namespace ThermoSensorPlus
         {
             Debug.Log($"[ThermoSensorPlus] SetTarget on instance {GetInstanceID()} for target {target?.name}");
 
-            if (idLocText != null && target != null)
+            var state = target?.GetComponent<ThermoSensorStateComponent>();
+            if (idLocText != null && state != null)
             {
-                idLocText.text = $"[TS+] Sensor ID: {target.GetInstanceID()}";
-                Debug.Log($"[ThermoSensorPlus] Updated label with ID {target.GetInstanceID()}");
+                idLocText.text = $"[TS+] Sensor ID: {state.randomID}";
+                Debug.Log($"[ThermoSensorPlus] Updated label with ID {state.randomID}");
+            }
+            else
+            {
+                Debug.LogWarning("[ThermoSensorPlus] Could not assign label — missing LocText or state.");
             }
         }
 
@@ -78,7 +134,7 @@ namespace ThermoSensorPlus
             {
                 Direction = PanelDirection.Vertical,
                 Spacing = 10,
-                BackColor = new Color(0, 0, 0, 0), // Transparent background
+                BackColor = new Color(0, 0, 0, 0),
                 Margin = new RectOffset(10, 10, 10, 10)
             };
 
@@ -86,12 +142,11 @@ namespace ThermoSensorPlus
             {
                 Text = "[TS+] Sensor ID: ",
                 TextStyle = PUITuning.Fonts.TextDarkStyle,
-            };
-            idLabel.OnRealize += go =>
+            }.AddOnRealize(go =>
             {
                 idLocText = go.transform.Find("Text")?.GetComponent<LocText>();
                 Debug.Log($"[ThermoSensorPlus] OnRealize: idLocText assigned? {idLocText != null}");
-            };
+            });
 
             panel.AddChild(idLabel);
 

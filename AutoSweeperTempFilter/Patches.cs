@@ -3,6 +3,7 @@ using KMod;
 using PeterHan.PLib;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.UI;
+using KSerialization;
 using System;
 using UnityEngine;
 
@@ -13,12 +14,62 @@ namespace ThermoSensorPlus
         public override void OnLoad(Harmony harmony)
         {
             base.OnLoad(harmony);
-            PUtil.InitLibrary(); // Required for PLib
+            PUtil.InitLibrary();
             Debug.Log("[ThermoSensorPlus] Mod loaded and Harmony patches applied.");
             harmony.PatchAll();
         }
     }
 
+    // Persistent state component storing a random ID
+    [SerializationConfig(MemberSerialization.OptIn)]
+    public class ThermoSensorStateComponent : KMonoBehaviour
+    {
+        [Serialize]
+        public int randomID;
+
+        protected override void OnSpawn()
+        {
+            base.OnSpawn();
+
+            if (randomID == 0)
+            {
+                randomID = UnityEngine.Random.Range(100000, 999999);
+                Debug.Log($"[ThermoSensorPlus] Assigned new random ID: {randomID} to {gameObject.name}");
+            }
+            else
+            {
+                Debug.Log($"[ThermoSensorPlus] Restored existing ID: {randomID} for {gameObject.name}");
+            }
+        }
+    }
+
+    // Add component to newly built LogicTemperatureSensors
+    [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
+    public static class ThermoSensorAddState_New
+    {
+        public static void Postfix(GameObject go)
+        {
+            go.AddOrGet<ThermoSensorStateComponent>();
+            Debug.Log($"[ThermoSensorPlus] Attached state component (new) to {go.name}");
+        }
+    }
+
+    // Add component to existing (loaded-from-save) LogicTemperatureSensors
+    [HarmonyPatch(typeof(LogicTemperatureSensor), "OnSpawn")]
+    public static class ThermoSensorAddState_Existing
+    {
+        public static void Prefix(LogicTemperatureSensor __instance)
+        {
+            var go = __instance.gameObject;
+            if (go.GetComponent<ThermoSensorStateComponent>() == null)
+            {
+                go.AddOrGet<ThermoSensorStateComponent>();
+                Debug.Log($"[ThermoSensorPlus] Attached state component (existing) to {go.name}");
+            }
+        }
+    }
+
+    // Register side screen
     [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
     public static class ThermoSensorSideScreenRegister
     {
@@ -42,7 +93,8 @@ namespace ThermoSensorPlus
 
         public override bool IsValidForTarget(GameObject target)
         {
-            bool valid = target.GetComponent<LogicTemperatureSensor>() != null;
+            bool valid = target.GetComponent<LogicTemperatureSensor>() != null &&
+                         target.GetComponent<ThermoSensorStateComponent>() != null;
             Debug.Log($"[ThermoSensorPlus] IsValidForTarget = {valid}");
             return valid;
         }
@@ -51,14 +103,15 @@ namespace ThermoSensorPlus
         {
             Debug.Log($"[ThermoSensorPlus] SetTarget on instance {GetInstanceID()} for target {target?.name}");
 
-            if (idLocText != null && target != null)
+            var state = target?.GetComponent<ThermoSensorStateComponent>();
+            if (idLocText != null && state != null)
             {
-                idLocText.text = $"[TS+] Sensor ID: {target.GetInstanceID()}";
-                Debug.Log($"[ThermoSensorPlus] Updated label text to Sensor ID: {target.GetInstanceID()}");
+                idLocText.text = $"[TS+] Sensor ID: {state.randomID}";
+                Debug.Log($"[ThermoSensorPlus] Displaying persistent random ID: {state.randomID}");
             }
             else
             {
-                Debug.LogWarning("[ThermoSensorPlus] idLocText was null in SetTarget.");
+                Debug.LogWarning("[ThermoSensorPlus] Could not assign label — missing LocText or state.");
             }
         }
 
