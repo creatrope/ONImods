@@ -13,7 +13,7 @@ namespace ThermoSensorPlus
     {
         public override void OnLoad(Harmony harmony)
         {
-            Harmony.DEBUG = true; // See if patching fails
+            Harmony.DEBUG = true;
             PUtil.InitLibrary();
             Debug.Log("[ThermoSensorPlus] Mod loaded. Applying Harmony patches.");
             harmony.PatchAll();
@@ -23,11 +23,8 @@ namespace ThermoSensorPlus
     [SerializationConfig(MemberSerialization.OptIn)]
     public class ThermoSensorStateComponent : KMonoBehaviour
     {
-        [Serialize]
-        public int randomID;
-
-        [Serialize]
-        public string customText;
+        [Serialize] public int randomID;
+        [Serialize] public string customText;
 
         protected override void OnSpawn()
         {
@@ -45,7 +42,6 @@ namespace ThermoSensorPlus
         }
     }
 
-    // ✅ Patch for NEW buildings
     [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
     public static class ThermoSensorPatchNew
     {
@@ -56,7 +52,6 @@ namespace ThermoSensorPlus
         }
     }
 
-    // ✅ Patch for OLD (existing) buildings
     [HarmonyPatch(typeof(BuildingComplete), "OnSpawn")]
     public static class ThermoSensorPatchExisting
     {
@@ -72,7 +67,6 @@ namespace ThermoSensorPlus
         }
     }
 
-    // ✅ Register side screen
     [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
     public static class ThermoSensorSideScreenRegister
     {
@@ -82,7 +76,6 @@ namespace ThermoSensorPlus
         {
             if (registered) return;
             registered = true;
-
             Debug.Log("[ThermoSensorPlus] Registering simple label side screen");
             PUIUtils.AddSideScreenContent<ThermoSensorClickMeScreen>();
         }
@@ -97,61 +90,12 @@ namespace ThermoSensorPlus
         private TMP_InputField inputField;
         private ThermoSensorStateComponent currentState;
 
-        public override bool IsValidForTarget(GameObject target)
+        private void EnsureUIBuilt()
         {
-            bool valid = target.GetComponent<LogicTemperatureSensor>() != null &&
-                         target.GetComponent<ThermoSensorStateComponent>() != null;
-            Debug.Log($"[ThermoSensorPlus] IsValidForTarget = {valid}");
-            return valid;
-        }
-
-        public override void SetTarget(GameObject target)
-        {
-            Debug.Log($"[ThermoSensorPlus] SetTarget on instance {GetInstanceID()} for target {target?.name}");
-
-            currentState = target?.GetComponent<ThermoSensorStateComponent>();
-
-            // If UI is not yet realized, force a layout rebuild to ensure OnRealize is called
-            if (idLocText == null || inputField == null)
-            {
-                Debug.Log("[ThermoSensorPlus] Forcing layout rebuild to realize UI elements.");
-                if (ContentContainer != null)
-                    PUIUtils.ForceLayoutRebuild(ContentContainer);
-            }
-
-            // Now update UI if possible
-            if (idLocText != null && currentState != null)
-            {
-                idLocText.text = $"[TS+] Sensor ID: {currentState.randomID}";
-                Debug.Log($"[ThermoSensorPlus] Updated label with ID {currentState.randomID}");
-            }
-            else
-            {
-                Debug.LogWarning("[ThermoSensorPlus] Could not assign label — missing LocText or state.");
-            }
-
-            if (inputField != null && currentState != null)
-            {
-                inputField.text = currentState.customText ?? "";
-                Debug.Log($"[ThermoSensorPlus] Restored custom text: {inputField.text}");
-            }
-        }
-
-        public override string GetTitle() => "ThermoSensor+";
-
-        public override float GetSortKey() => -100f;
-
-        protected override void OnPrefabInit()
-        {
-            Debug.Log($"[ThermoSensorPlus] OnPrefabInit for instance {GetInstanceID()}");
-
-            if (ContentContainer != null)
-            {
-                Debug.Log("[ThermoSensorPlus] UI already built, skipping.");
+            if (root != null)
                 return;
-            }
 
-            Debug.Log("[ThermoSensorPlus] Building UI");
+            Debug.Log("[ThermoSensorPlus] Building side screen UI...");
 
             var panel = new PPanel("ClickPanel")
             {
@@ -171,6 +115,7 @@ namespace ThermoSensorPlus
                 Debug.Log($"[ThermoSensorPlus] OnRealize: idLocText assigned? {idLocText != null}");
             });
             panel.AddChild(idLabel);
+            _ = idLabel.Build();
 
             textField = new PTextField("CustomTextField")
             {
@@ -191,13 +136,39 @@ namespace ThermoSensorPlus
                 Debug.Log($"[ThermoSensorPlus] OnRealize: inputField assigned? {inputField != null}");
             };
             panel.AddChild(textField);
+            _ = textField.Build();
 
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
 
-            Debug.Log("[ThermoSensorPlus] Simple label side screen UI initialized.");
+            Debug.Log("[ThermoSensorPlus] Side screen UI initialized.");
+        }
+
+        public override void SetTarget(GameObject target)
+        {
+            EnsureUIBuilt();
+
+            currentState = target?.GetComponent<ThermoSensorStateComponent>();
+
+            if (idLocText != null && currentState != null)
+                idLocText.text = $"[TS+] Sensor ID: {currentState.randomID}";
+
+            if (inputField != null && currentState != null)
+                inputField.text = currentState.customText ?? "";
         }
 
         public override void ClearTarget() { }
+        public override string GetTitle() => "ThermoSensor+";
+        public override float GetSortKey() => -100f;
+
+        public override bool IsValidForTarget(GameObject target)
+        {
+            return target != null && target.GetComponent<ThermoSensorStateComponent>() != null;
+        }
+
+        protected override void OnPrefabInit()
+        {
+            EnsureUIBuilt(); // Optional: prewarm
+        }
     }
 }
