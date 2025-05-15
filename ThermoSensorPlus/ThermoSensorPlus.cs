@@ -6,6 +6,7 @@ using PeterHan.PLib.UI;
 using KSerialization;
 using UnityEngine;
 using TMPro;
+using System.Collections.Generic;
 
 namespace ThermoSensorPlus
 {
@@ -24,7 +25,7 @@ namespace ThermoSensorPlus
     public class ThermoSensorStateComponent : KMonoBehaviour
     {
         [Serialize] public int randomID;
-        [Serialize] public string customText;
+        [Serialize] public Dictionary<string, string> customFields = new Dictionary<string, string>();
 
         protected override void OnSpawn()
         {
@@ -38,6 +39,88 @@ namespace ThermoSensorPlus
             else
             {
                 Debug.Log($"[ThermoSensorPlus] OnSpawn: Restored existing ID {randomID} for {gameObject.name}");
+            }
+        }
+    }
+
+    public class MyThresholdSwitch
+    {
+        private GameObject root;
+        private PLabel label;
+        private LocText labelText;
+        private PTextField textField;
+        private TMP_InputField inputField;
+
+        private string fieldId;
+        private string labelPrefix;
+        private ThermoSensorStateComponent stateComponent;
+
+        public MyThresholdSwitch(string id, string labelText)
+        {
+            this.fieldId = id;
+            this.labelPrefix = labelText;
+        }
+
+        public GameObject Build(GameObject parent)
+        {
+            var container = new PPanel("Field_" + fieldId)
+            {
+                Direction = PanelDirection.Vertical,
+                Spacing = 5,
+                Margin = new RectOffset(0, 0, 5, 5),
+                FlexSize = new Vector2(1f, 0f)
+            };
+
+            label = new PLabel("Label_" + fieldId)
+            {
+                Text = labelPrefix,
+                TextStyle = PUITuning.Fonts.TextDarkStyle,
+            }.AddOnRealize(go =>
+            {
+                this.labelText = go.transform.Find("Text")?.GetComponent<LocText>();
+                Debug.Log($"[ThermoSensorPlus] MyThresholdSwitch.OnRealize: labelText assigned? {this.labelText != null}");
+            });
+            container.AddChild(label);
+
+            textField = new PTextField("Input_" + fieldId)
+            {
+                MinWidth = 200,
+                Text = "",
+                OnTextChanged = (go, value) =>
+                {
+                    if (stateComponent != null)
+                    {
+                        stateComponent.customFields[fieldId] = value;
+                        Debug.Log($"[ThermoSensorPlus] Saved custom field {fieldId}: {value}");
+                    }
+                }
+            }.AddOnRealize(go =>
+            {
+                inputField = go.GetComponent<TMP_InputField>();
+                Debug.Log($"[ThermoSensorPlus] MyThresholdSwitch.OnRealize: inputField assigned? {inputField != null}");
+            });
+            container.AddChild(textField);
+
+            root = container.AddTo(parent);
+            return root;
+        }
+
+        public void SetTarget(ThermoSensorStateComponent target)
+        {
+            stateComponent = target;
+
+            if (stateComponent != null)
+            {
+                if (labelText != null)
+                    labelText.text = $"{labelPrefix} {stateComponent.randomID}";
+
+                if (inputField != null)
+                {
+                    if (stateComponent.customFields.TryGetValue(fieldId, out string savedValue))
+                        inputField.text = savedValue;
+                    else
+                        inputField.text = "";
+                }
             }
         }
     }
@@ -84,10 +167,7 @@ namespace ThermoSensorPlus
     public class ThermoSensorClickMeScreen : SideScreenContent
     {
         private GameObject root;
-        private PLabel idLabel;
-        private LocText idLocText;
-        private PTextField textField;
-        private TMP_InputField inputField;
+        private List<MyThresholdSwitch> fields = new List<MyThresholdSwitch>();
         private ThermoSensorStateComponent currentState;
 
         private void EnsureUIBuilt()
@@ -105,41 +185,16 @@ namespace ThermoSensorPlus
                 Margin = new RectOffset(10, 10, 10, 10)
             };
 
-            idLabel = new PLabel("ClickLabel")
-            {
-                Text = "[TS+] Sensor ID: ",
-                TextStyle = PUITuning.Fonts.TextDarkStyle,
-            }.AddOnRealize(go =>
-            {
-                idLocText = go.transform.Find("Text")?.GetComponent<LocText>();
-                Debug.Log($"[ThermoSensorPlus] OnRealize: idLocText assigned? {idLocText != null}");
-            });
-            panel.AddChild(idLabel);
-            _ = idLabel.Build();
-
-            textField = new PTextField("CustomTextField")
-            {
-                MinWidth = 200,
-                Text = "",
-                OnTextChanged = (go, value) =>
-                {
-                    if (currentState != null)
-                    {
-                        currentState.customText = value;
-                        Debug.Log($"[ThermoSensorPlus] Saved custom text: {value}");
-                    }
-                }
-            };
-            textField.OnRealize += go =>
-            {
-                inputField = go.GetComponent<TMP_InputField>();
-                Debug.Log($"[ThermoSensorPlus] OnRealize: inputField assigned? {inputField != null}");
-            };
-            panel.AddChild(textField);
-            _ = textField.Build();
-
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
+
+            var threshold1 = new MyThresholdSwitch("threshold1", "[TS+] Threshold 1:");
+            fields.Add(threshold1);
+            threshold1.Build(root);
+
+            var threshold2 = new MyThresholdSwitch("threshold2", "[TS+] Threshold 2:");
+            fields.Add(threshold2);
+            threshold2.Build(root);
 
             Debug.Log("[ThermoSensorPlus] Side screen UI initialized.");
         }
@@ -150,11 +205,8 @@ namespace ThermoSensorPlus
 
             currentState = target?.GetComponent<ThermoSensorStateComponent>();
 
-            if (idLocText != null && currentState != null)
-                idLocText.text = $"[TS+] Sensor ID: {currentState.randomID}";
-
-            if (inputField != null && currentState != null)
-                inputField.text = currentState.customText ?? "";
+            foreach (var field in fields)
+                field.SetTarget(currentState);
         }
 
         public override void ClearTarget() { }
@@ -168,7 +220,7 @@ namespace ThermoSensorPlus
 
         protected override void OnPrefabInit()
         {
-            EnsureUIBuilt(); // Optional: prewarm
+            EnsureUIBuilt();
         }
     }
 }
