@@ -5,6 +5,7 @@ using PeterHan.PLib.Core;
 using PeterHan.PLib.UI;
 using KSerialization;
 using UnityEngine;
+using TMPro;
 
 namespace ThermoSensorPlus
 {
@@ -24,6 +25,9 @@ namespace ThermoSensorPlus
     {
         [Serialize]
         public int randomID;
+
+        [Serialize]
+        public string customText;
 
         protected override void OnSpawn()
         {
@@ -89,6 +93,9 @@ namespace ThermoSensorPlus
         private GameObject root;
         private PLabel idLabel;
         private LocText idLocText;
+        private PTextField textField;
+        private TMP_InputField inputField;
+        private ThermoSensorStateComponent currentState;
 
         public override bool IsValidForTarget(GameObject target)
         {
@@ -102,15 +109,31 @@ namespace ThermoSensorPlus
         {
             Debug.Log($"[ThermoSensorPlus] SetTarget on instance {GetInstanceID()} for target {target?.name}");
 
-            var state = target?.GetComponent<ThermoSensorStateComponent>();
-            if (idLocText != null && state != null)
+            currentState = target?.GetComponent<ThermoSensorStateComponent>();
+
+            // If UI is not yet realized, force a layout rebuild to ensure OnRealize is called
+            if (idLocText == null || inputField == null)
             {
-                idLocText.text = $"[TS+] Sensor ID: {state.randomID}";
-                Debug.Log($"[ThermoSensorPlus] Updated label with ID {state.randomID}");
+                Debug.Log("[ThermoSensorPlus] Forcing layout rebuild to realize UI elements.");
+                if (ContentContainer != null)
+                    PUIUtils.ForceLayoutRebuild(ContentContainer);
+            }
+
+            // Now update UI if possible
+            if (idLocText != null && currentState != null)
+            {
+                idLocText.text = $"[TS+] Sensor ID: {currentState.randomID}";
+                Debug.Log($"[ThermoSensorPlus] Updated label with ID {currentState.randomID}");
             }
             else
             {
                 Debug.LogWarning("[ThermoSensorPlus] Could not assign label — missing LocText or state.");
+            }
+
+            if (inputField != null && currentState != null)
+            {
+                inputField.text = currentState.customText ?? "";
+                Debug.Log($"[ThermoSensorPlus] Restored custom text: {inputField.text}");
             }
         }
 
@@ -147,8 +170,27 @@ namespace ThermoSensorPlus
                 idLocText = go.transform.Find("Text")?.GetComponent<LocText>();
                 Debug.Log($"[ThermoSensorPlus] OnRealize: idLocText assigned? {idLocText != null}");
             });
-
             panel.AddChild(idLabel);
+
+            textField = new PTextField("CustomTextField")
+            {
+                MinWidth = 200,
+                Text = "",
+                OnTextChanged = (go, value) =>
+                {
+                    if (currentState != null)
+                    {
+                        currentState.customText = value;
+                        Debug.Log($"[ThermoSensorPlus] Saved custom text: {value}");
+                    }
+                }
+            };
+            textField.OnRealize += go =>
+            {
+                inputField = go.GetComponent<TMP_InputField>();
+                Debug.Log($"[ThermoSensorPlus] OnRealize: inputField assigned? {inputField != null}");
+            };
+            panel.AddChild(textField);
 
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
