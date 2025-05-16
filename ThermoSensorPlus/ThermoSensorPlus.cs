@@ -142,6 +142,14 @@ namespace ThermoSensorPlus
 
     public class ThermoSensorClickMeScreen : SideScreenContent
     {
+        private void Update()
+        {
+            if (!gameObject.activeInHierarchy || currentState == null)
+                return;
+
+            foreach (var field in fields)
+                field.UpdateOutput();
+        }
         private GameObject root;
         private ThermoSensorStateComponent currentState;
         private List<MyThresholdSwitch> fields = new List<MyThresholdSwitch>();
@@ -159,21 +167,11 @@ namespace ThermoSensorPlus
             CustomLogger.Log($"SetTarget called for: {currentState?.gameObject.name ?? "null"}");
 
             foreach (var field in fields)
-            {
                 field.SetTarget(currentState);
-                field.UpdateOutput(); // Ensure output is refreshed with latest smoothed values
-            }
         }
 
         public override void ClearTarget() { }
         public override string GetTitle() => "ThermoSensor+";
-
-        public override void ScreenUpdate(bool topLevel)
-        {
-            base.ScreenUpdate(topLevel);
-            foreach (var field in fields)
-                field.UpdateOutput();
-        }
 
         protected override void OnPrefabInit()
         {
@@ -202,169 +200,86 @@ namespace ThermoSensorPlus
 
     public class MyThresholdSwitch
     {
-        private GameObject root;
-        private PLabel label;
-        private PTextField textField;
-        private TMP_InputField inputField;
+        private readonly string fieldId;
+        private readonly string labelText;
+        private readonly string defaultValue;
+
+        private PTextField inputField;
         private PLabel outputField;
         private LocText outputLocText;
-
-        private GameObject buttonAGameObject;
-        private GameObject buttonBGameObject;
-
-        private string fieldId;
-        private string labelTextValue;
-        private string defaultInputText;
         private ThermoSensorStateComponent stateComponent;
 
-        private const string ToggleSuffix = "_toggle";
-        private const string DefaultToggle = "A"; // "Above" is default
-
-        public MyThresholdSwitch(string id, string labelText, string defaultInputText = "1.0")
+        public MyThresholdSwitch(string id, string label, string defaultValue = "1.0")
         {
             this.fieldId = id;
-            this.labelTextValue = labelText;
-            this.defaultInputText = defaultInputText;
+            this.labelText = label;
+            this.defaultValue = defaultValue;
         }
 
         public GameObject Build(GameObject parent)
         {
-            // Outer horizontal panel: [Label][Buttons][Input][Output]
-            var container = new PPanel("Field_" + fieldId)
+            var row = new PPanel("RowPanel_" + fieldId)
             {
                 Direction = PanelDirection.Horizontal,
-                Spacing = 5,
-                Margin = new RectOffset(0, 0, 5, 5),
-                FlexSize = new Vector2(1f, 0f)
+                Spacing = 5
             };
 
-            // Label
-            label = new PLabel("Label_" + fieldId)
+            row.AddChild(new PLabel("Label_" + fieldId)
             {
-                Text = labelTextValue,
-                TextStyle = PUITuning.Fonts.TextDarkStyle,
-                FlexSize = new Vector2(0, 0)
-            };
-            container.AddChild(label);
-
-            // Button "Above" (A)
-            var buttonA = new PButton("ButtonA_" + fieldId)
-            {
-                Text = "A",
-                ToolTip = "Above",
-                FlexSize = new Vector2(0, 0),
-                OnClick = (go) =>
-                {
-                    PButton.SetButtonEnabled(go, false);
-                    if (buttonBGameObject != null)
-                        PButton.SetButtonEnabled(buttonBGameObject, true);
-
-                    if (stateComponent != null)
-                        stateComponent.customFields[fieldId + ToggleSuffix] = "A";
-                }
-            };
-            buttonA.OnRealize += go => buttonAGameObject = go;
-            container.AddChild(buttonA);
-
-            // Button "Below" (B)
-            var buttonB = new PButton("ButtonB_" + fieldId)
-            {
-                Text = "B",
-                ToolTip = "Below",
-                FlexSize = new Vector2(0, 0),
-                OnClick = (go) =>
-                {
-                    PButton.SetButtonEnabled(go, false);
-                    if (buttonAGameObject != null)
-                        PButton.SetButtonEnabled(buttonAGameObject, true);
-
-                    if (stateComponent != null)
-                        stateComponent.customFields[fieldId + ToggleSuffix] = "B";
-                }
-            };
-            buttonB.OnRealize += go => buttonBGameObject = go;
-            container.AddChild(buttonB);
-
-            // Input field
-            textField = new PTextField("Input_" + fieldId)
-            {
-                MinWidth = 48,
-                Text = defaultInputText,
-                OnTextChanged = (go, value) =>
-                {
-                    if (stateComponent != null)
-                        stateComponent.customFields[fieldId] = value;
-                }
-            }.AddOnRealize(go =>
-            {
-                inputField = go.GetComponent<TMP_InputField>();
+                Text = labelText,
+                TextStyle = PUITuning.Fonts.TextDarkStyle
             });
-            container.AddChild(textField);
 
-            // Output field (to the right of input)
+            inputField = new PTextField("InputField_" + fieldId)
+            {
+                Text = defaultValue,
+                MinWidth = 60,
+                OnTextChanged = (go, val) => {
+                    if (stateComponent != null)
+                        stateComponent.customFields[fieldId] = val;
+                }
+            };
+            row.AddChild(inputField);
+
             outputField = new PLabel("OutputField_" + fieldId)
             {
                 Text = "00000.00",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
-            }.AddOnRealize(go =>
-            {
+            }.AddOnRealize(go => {
                 outputLocText = go.transform.Find("Text")?.GetComponent<LocText>();
             });
-            container.AddChild(outputField);
+            row.AddChild(outputField);
 
-            root = container.AddTo(parent);
-            return root;
+            return row.AddTo(parent);
         }
 
-        public void SetTarget(ThermoSensorStateComponent target)
+        public void SetTarget(ThermoSensorStateComponent state)
         {
-            stateComponent = target;
+            stateComponent = state;
 
-            // Restore text field
-            if (stateComponent != null && inputField != null)
+            if (state != null && state.customFields.TryGetValue(fieldId, out string val))
             {
-                if (stateComponent.customFields.TryGetValue(fieldId, out string savedValue))
-                    inputField.text = savedValue;
-                else
-                    inputField.text = defaultInputText;
+                inputField.Text = val;
             }
 
-            // Restore toggle state
-            if (stateComponent != null && buttonAGameObject != null && buttonBGameObject != null)
-            {
-                string toggleKey = fieldId + ToggleSuffix;
-                string toggleValue = DefaultToggle;
-                if (stateComponent.customFields.TryGetValue(toggleKey, out string savedToggle))
-                    toggleValue = savedToggle;
-
-                if (toggleValue == "A")
-                {
-                    PButton.SetButtonEnabled(buttonAGameObject, false);
-                    PButton.SetButtonEnabled(buttonBGameObject, true);
-                }
-                else
-                {
-                    PButton.SetButtonEnabled(buttonAGameObject, true);
-                    PButton.SetButtonEnabled(buttonBGameObject, false);
-                }
-            }
             UpdateOutput();
         }
 
         public void UpdateOutput()
         {
-            if (outputLocText != null && stateComponent != null)
+            float val = 0f;
+            if (stateComponent != null)
             {
-                float val = 0f;
                 if (fieldId == "threshold1")
                     val = stateComponent.SmoothedFirst;
                 else if (fieldId == "threshold2")
                     val = stateComponent.SmoothedSecond;
                 else
                     val = stateComponent.LastValue;
-
-                outputLocText.text = val.ToString("00000.00");
             }
+
+            if (outputLocText != null)
+                outputLocText.text = val.ToString("00000.00");
         }
     }
 }
