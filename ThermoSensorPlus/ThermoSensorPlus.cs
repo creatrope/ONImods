@@ -7,6 +7,7 @@ using KSerialization;
 using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
+using UnityEngine.UI;
 
 namespace ThermoSensorPlus
 {
@@ -79,6 +80,28 @@ namespace ThermoSensorPlus
             lastFirstDerivative = first;
         }
 
+        public void EnsureDefaults()
+        {
+            // Initialize customFields
+            if (!customFields.ContainsKey("threshold1"))
+                customFields["threshold1"] = "1.0";
+            if (!customFields.ContainsKey("threshold2"))
+                customFields["threshold2"] = "1.0";
+
+            // Initialize buttonStates for both threshold1 and threshold2
+            foreach (var prefix in new[] { "threshold1", "threshold2" })
+            {
+                if (!buttonStates.ContainsKey($"{prefix}_A"))
+                    buttonStates[$"{prefix}_A"] = false;
+                if (!buttonStates.ContainsKey($"{prefix}_B"))
+                    buttonStates[$"{prefix}_B"] = false;
+                if (!buttonStates.ContainsKey($"{prefix}_A_interactable"))
+                    buttonStates[$"{prefix}_A_interactable"] = true;
+                if (!buttonStates.ContainsKey($"{prefix}_B_interactable"))
+                    buttonStates[$"{prefix}_B_interactable"] = true;
+            }
+        }
+
         protected override void OnSpawn()
         {
             base.OnSpawn();
@@ -93,6 +116,8 @@ namespace ThermoSensorPlus
             {
                 CustomLogger.Log($"OnSpawn: Restored existing ID {randomID} for {gameObject.name}");
             }
+
+            EnsureDefaults();
         }
 
         public void Sim1000ms(float dt)
@@ -220,13 +245,27 @@ namespace ThermoSensorPlus
         private readonly string defaultValue;
 
         private PTextField inputField;
-        private TMP_InputField unityInputField; // <-- Add this field
+        private TMP_InputField unityInputField;
         private PLabel outputField;
         private LocText outputLocText;
         private ThermoSensorStateComponent stateComponent;
 
         private GameObject parentForBuild = null;
-        private bool isSideScreenInitialized = false;
+
+        // Button state and UI references are now per-instance, not shared
+        private PButton aButton;
+        private PButton bButton;
+        private UnityEngine.UI.Button unityAButton;
+        private UnityEngine.UI.Button unityBButton;
+        private KButton kAButton;
+        private KButton kBButton;
+        private bool aButtonState = false;
+        private bool bButtonState = false;
+        private bool aInteractable = true;
+        private bool bInteractable = true;
+
+        private static readonly Color ButtonOnColor = new Color(0.2f, 0.8f, 0.2f, 1f);
+        private static readonly Color ButtonOffColor = new Color(0.7f, 0.7f, 0.7f, 1f);
 
         public MyThresholdSwitch(string id, string label, string defaultValue = "1.0")
         {
@@ -240,8 +279,58 @@ namespace ThermoSensorPlus
             parentForBuild = parent;
         }
 
+        private PButton CreateButton(string buttonId, string label, System.Action onToggle, out UnityEngine.UI.Button unityButtonRef, out KButton kButtonRef)
+        {
+            UnityEngine.UI.Button localButtonRef = null;
+            KButton localKButtonRef = null;
+            var pButton = new PButton($"{buttonId}Button_{fieldId}")
+            {
+                Text = label,
+                TextStyle = PUITuning.Fonts.TextLightStyle,
+                ToolTip = $"Toggle {label}",
+                FlexSize = new Vector2(22, 22),
+                OnClick = (buttonSource) =>
+                {
+                    onToggle?.Invoke();
+                    if (localKButtonRef != null)
+                        localKButtonRef.isInteractable = (buttonId == "A" ? aInteractable : bInteractable);
+                    UpdateButtonVisual();
+                }
+            };
+            pButton.AddOnRealize(realizedGo =>
+            {
+                localButtonRef = realizedGo.GetComponentInChildren<UnityEngine.UI.Button>();
+                localKButtonRef = realizedGo.GetComponent<KButton>();
+                // Store references
+                if (buttonId == "A") { unityAButton = localButtonRef; kAButton = localKButtonRef; }
+                else if (buttonId == "B") { unityBButton = localButtonRef; kBButton = localKButtonRef; }
+                // Always update the visual and interactable state here
+                UpdateButtonVisual();
+            });
+            unityButtonRef = localButtonRef;
+            kButtonRef = localKButtonRef;
+            return pButton;
+        }
+
         public GameObject Build(GameObject parent)
         {
+            // Ensure stateComponent exists on the parent GameObject (sensor)
+            if (parent != null && stateComponent == null)
+            {
+                stateComponent = parent.GetComponent<ThermoSensorStateComponent>();
+                if (stateComponent == null)
+                {
+                    stateComponent = parent.AddComponent<ThermoSensorStateComponent>();
+                    CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Build: Created ThermoSensorStateComponent on {parent.name}");
+                }
+                else
+                {
+                    CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Build: Found existing ThermoSensorStateComponent on {parent.name}");
+                }
+            }
+            // Always ensure defaults after creation or retrieval
+            stateComponent?.EnsureDefaults();
+
             var row = new PPanel("RowPanel_" + fieldId)
             {
                 Direction = PanelDirection.Horizontal,
@@ -254,6 +343,26 @@ namespace ThermoSensorPlus
                 TextStyle = PUITuning.Fonts.TextDarkStyle
             });
 
+            // Add "A" button
+            aButton = CreateButton("A", "A", () =>
+            {
+                aButtonState = !aButtonState;
+                aInteractable = false;
+                UpdateButtonVisual();
+                SaveState();
+            }, out unityAButton, out kAButton);
+            row.AddChild(aButton);
+
+            // Add "B" button
+            bButton = CreateButton("B", "B", () =>
+            {
+                bButtonState = !bButtonState;
+                bInteractable = false;
+                UpdateButtonVisual();
+                SaveState();
+            }, out unityBButton, out kBButton);
+            row.AddChild(bButton);
+
             inputField = new PTextField("InputField_" + fieldId)
             {
                 Text = defaultValue,
@@ -264,7 +373,6 @@ namespace ThermoSensorPlus
                 }
             }
             .AddOnRealize(realizedGo => {
-                // Find and keep the TMP_InputField for direct updates
                 unityInputField = realizedGo.GetComponentInChildren<TMP_InputField>();
             });
             row.AddChild(inputField);
@@ -287,19 +395,90 @@ namespace ThermoSensorPlus
         {
             stateComponent = state;
 
-            // Debug: print the value about to be restored
+            LogButtonState("SetTarget (before applying state)");
+
+            // Restore input field value
             string val = defaultValue;
             if (stateComponent != null && stateComponent.customFields.TryGetValue(fieldId, out string savedVal))
                 val = savedVal;
             CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Restoring inputField.Text='{val}' for sensor id={stateComponent?.randomID}");
 
-            // Update both the PTextField and the TMP_InputField directly
             if (inputField != null)
                 inputField.Text = val;
             if (unityInputField != null && unityInputField.text != val)
                 unityInputField.text = val;
 
+            // Restore button states and interactable state from stateComponent if present
+            bool prevAButtonState = aButtonState, prevBButtonState = bButtonState;
+            bool prevAInteractable = aInteractable, prevBInteractable = bInteractable;
+
+            aButtonState = false;
+            bButtonState = false;
+            aInteractable = true;
+            bInteractable = true;
+            if (stateComponent != null && stateComponent.buttonStates != null)
+            {
+                if (stateComponent.buttonStates.TryGetValue($"{fieldId}_A", out bool savedA))
+                    aButtonState = savedA;
+                if (stateComponent.buttonStates.TryGetValue($"{fieldId}_B", out bool savedB))
+                    bButtonState = savedB;
+                if (stateComponent.buttonStates.TryGetValue($"{fieldId}_A_interactable", out bool savedAInteract))
+                    aInteractable = savedAInteract;
+                if (stateComponent.buttonStates.TryGetValue($"{fieldId}_B_interactable", out bool savedBInteract))
+                    bInteractable = savedBInteract;
+            }
+
+            UpdateButtonVisual();
+
+            // Set KButton interactable state from saved state
+            if (kAButton != null)
+            {
+                kAButton.isInteractable = aInteractable;
+                CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Set kAButton.isInteractable = {aInteractable}");
+            }
+            if (kBButton != null)
+            {
+                kBButton.isInteractable = bInteractable;
+                CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Set kBButton.isInteractable = {bInteractable}");
+            }
+
+            if (unityAButton != null)
+                unityAButton.image.color = aButtonState ? ButtonOnColor : ButtonOffColor;
+            if (unityBButton != null)
+                unityBButton.image.color = bButtonState ? ButtonOnColor : ButtonOffColor;
+
             UpdateOutput();
+
+            LogButtonState("SetTarget (after applying state)");
+        }
+
+        private void SaveState()
+        {
+            if (stateComponent != null)
+            {
+                stateComponent.buttonStates[$"{fieldId}_A"] = aButtonState;
+                stateComponent.buttonStates[$"{fieldId}_B"] = bButtonState;
+                stateComponent.buttonStates[$"{fieldId}_A_interactable"] = aInteractable;
+                stateComponent.buttonStates[$"{fieldId}_B_interactable"] = bInteractable;
+            }
+        }
+
+        private void UpdateButtonVisual()
+        {
+            if (aButton != null)
+                aButton.Text = aButtonState ? "A" : "A";
+            if (bButton != null)
+                bButton.Text = bButtonState ? "B" : "B";
+
+            if (unityAButton != null)
+                unityAButton.image.color = aButtonState ? ButtonOnColor : ButtonOffColor;
+            if (unityBButton != null)
+                unityBButton.image.color = bButtonState ? ButtonOnColor : ButtonOffColor;
+
+            if (kAButton != null)
+                kAButton.isInteractable = aInteractable;
+            if (kBButton != null)
+                kBButton.isInteractable = bInteractable;
         }
 
         public void UpdateOutput()
@@ -317,6 +496,27 @@ namespace ThermoSensorPlus
 
             if (outputLocText != null)
                 outputLocText.text = val.ToString("00000.00");
+        }
+
+        private void LogButtonState(string context)
+        {
+            string stateSummary =
+                $"aBnState={aButtonState}, bBnState={bButtonState}, " +
+                $"aInteract={aInteractable}, bInteract={bInteractable} | " +
+                $"stateComponent.buttonStates: ";
+
+            if (stateComponent == null || stateComponent.buttonStates == null || stateComponent.buttonStates.Count == 0)
+            {
+                stateSummary += "EMPTY";
+            }
+            else
+            {
+                foreach (var kvp in stateComponent.buttonStates)
+                    stateSummary += $"{kvp.Key.Replace("Button", "Bn")}={kvp.Value}, ";
+                stateSummary = stateSummary.TrimEnd(',', ' ');
+            }
+
+            CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] {context}: {stateSummary}");
         }
     }
 }
