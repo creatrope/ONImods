@@ -573,13 +573,12 @@ namespace ThermoSensorPlus
             if (inputField != null && float.TryParse(inputField.Text, out float parsed))
                 inputVal = parsed;
 
-            if (isAButtonPressed && outputVal > inputVal)
+            bool signalOn = (isAButtonPressed && outputVal > inputVal) ||
+                            (isBButtonPressed && outputVal < inputVal);
+
+            if (signalOn)
             {
-                CustomLogger.LogMath($"[AutomationDebug] {fieldId}: Output={outputVal}, Input={inputVal}, A_Pressed={isAButtonPressed}, B_Pressed={isBButtonPressed}, TriggeredBy=A, SensorID={stateComponent?.randomID}");
-            }
-            else if (isBButtonPressed && outputVal < inputVal)
-            {
-                CustomLogger.LogMath($"[AutomationDebug] {fieldId}: Output={outputVal}, Input={inputVal}, A_Pressed={isAButtonPressed}, B_Pressed={isBButtonPressed}, TriggeredBy=B, SensorID={stateComponent?.randomID}");
+                CustomLogger.LogMath($"[AutomationDebug] {fieldId}: Automation Signal On (Output={outputVal}, Input={inputVal}, A_Pressed={isAButtonPressed}, B_Pressed={isBButtonPressed}, SensorID={stateComponent?.randomID})");
             }
         }
 
