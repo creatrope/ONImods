@@ -37,6 +37,7 @@ namespace ThermoSensorPlus
     {
         [Serialize] public int randomID;
         [Serialize] public Dictionary<string, string> customFields = new Dictionary<string, string>();
+        [Serialize] public Dictionary<string, bool> buttonStates = new Dictionary<string, bool>();
 
         private float? lastValue = null;
         private float? lastFirstDerivative = null;
@@ -100,7 +101,7 @@ namespace ThermoSensorPlus
             {
                 float currentValue = sensor.CurrentValue;
                 UpdateDerivatives(currentValue, ThermoSensorGlobals.deltaT);
-                CustomLogger.Log($"[{gameObject.name}] dT: {FirstDerivative:0.###}, d²T: {SecondDerivative:0.###}");
+                //CustomLogger.Log($"[{gameObject.name}] dT: {FirstDerivative:0.###}, d²T: {SecondDerivative:0.###}");
             }
         }
     }
@@ -142,6 +143,8 @@ namespace ThermoSensorPlus
 
     public class ThermoSensorClickMeScreen : SideScreenContent
     {
+        private bool isSideScreenInitialized = false;
+
         private void Update()
         {
             if (!gameObject.activeInHierarchy || currentState == null)
@@ -150,6 +153,7 @@ namespace ThermoSensorPlus
             foreach (var field in fields)
                 field.UpdateOutput();
         }
+
         private GameObject root;
         private ThermoSensorStateComponent currentState;
         private List<MyThresholdSwitch> fields = new List<MyThresholdSwitch>();
@@ -163,6 +167,12 @@ namespace ThermoSensorPlus
 
         public override void SetTarget(GameObject target)
         {
+            if (!isSideScreenInitialized)
+            {
+                // UI not built yet, so build it now
+                OnPrefabInit();
+            }
+
             currentState = target?.GetComponent<ThermoSensorStateComponent>();
             CustomLogger.Log($"SetTarget called for: {currentState?.gameObject.name ?? "null"}");
 
@@ -175,6 +185,9 @@ namespace ThermoSensorPlus
 
         protected override void OnPrefabInit()
         {
+            if (isSideScreenInitialized)
+                return; // Prevent double-building
+
             var panel = new PPanel("ClickPanel")
             {
                 Direction = PanelDirection.Vertical,
@@ -194,6 +207,8 @@ namespace ThermoSensorPlus
             fields.Add(threshold2);
             threshold2.Build(root);
 
+            isSideScreenInitialized = true;
+
             CustomLogger.Log("Side screen UI initialized.");
         }
     }
@@ -205,15 +220,24 @@ namespace ThermoSensorPlus
         private readonly string defaultValue;
 
         private PTextField inputField;
+        private TMP_InputField unityInputField; // <-- Add this field
         private PLabel outputField;
         private LocText outputLocText;
         private ThermoSensorStateComponent stateComponent;
+
+        private GameObject parentForBuild = null;
+        private bool isSideScreenInitialized = false;
 
         public MyThresholdSwitch(string id, string label, string defaultValue = "1.0")
         {
             this.fieldId = id;
             this.labelText = label;
             this.defaultValue = defaultValue;
+        }
+
+        public void SetParentForBuild(GameObject parent)
+        {
+            parentForBuild = parent;
         }
 
         public GameObject Build(GameObject parent)
@@ -234,33 +258,46 @@ namespace ThermoSensorPlus
             {
                 Text = defaultValue,
                 MinWidth = 60,
-                OnTextChanged = (go, val) => {
+                OnTextChanged = (source, val) => {
                     if (stateComponent != null)
                         stateComponent.customFields[fieldId] = val;
                 }
-            };
+            }
+            .AddOnRealize(realizedGo => {
+                // Find and keep the TMP_InputField for direct updates
+                unityInputField = realizedGo.GetComponentInChildren<TMP_InputField>();
+            });
             row.AddChild(inputField);
 
             outputField = new PLabel("OutputField_" + fieldId)
             {
                 Text = "00000.00",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
-            }.AddOnRealize(go => {
-                outputLocText = go.transform.Find("Text")?.GetComponent<LocText>();
+            }.AddOnRealize(realizedGo => {
+                outputLocText = realizedGo.transform.Find("Text")?.GetComponent<LocText>();
             });
             row.AddChild(outputField);
 
-            return row.AddTo(parent);
+            var go = row.AddTo(parent);
+
+            return go;
         }
 
         public void SetTarget(ThermoSensorStateComponent state)
         {
             stateComponent = state;
 
-            if (state != null && state.customFields.TryGetValue(fieldId, out string val))
-            {
+            // Debug: print the value about to be restored
+            string val = defaultValue;
+            if (stateComponent != null && stateComponent.customFields.TryGetValue(fieldId, out string savedVal))
+                val = savedVal;
+            CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Restoring inputField.Text='{val}' for sensor id={stateComponent?.randomID}");
+
+            // Update both the PTextField and the TMP_InputField directly
+            if (inputField != null)
                 inputField.Text = val;
-            }
+            if (unityInputField != null && unityInputField.text != val)
+                unityInputField.text = val;
 
             UpdateOutput();
         }
