@@ -168,10 +168,27 @@ namespace ThermoSensorPlus
     [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
     public static class ThermoSensorPatchNew
     {
+        // Use the same port ID as the base game: LogicSwitch.PORT_ID
+        public static readonly HashedString RIBBON_OUTPUT_PORT_ID = LogicSwitch.PORT_ID;
+
         public static void Postfix(GameObject go)
         {
             CustomLogger.Log("DoPostConfigureComplete PATCH RAN for: " + go.name);
             go.AddOrGet<ThermoSensorStateComponent>();
+
+            // Use the original port ID so the sensor's logic output is mapped to bit 0 of the ribbon
+            var ports = go.AddOrGet<LogicPorts>();
+            ports.outputPortInfo = new[]
+            {
+                LogicPorts.Port.RibbonOutputPort(
+                    RIBBON_OUTPUT_PORT_ID,
+                    new CellOffset(0, 0),
+                    STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT,
+                    STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT_ACTIVE,
+                    STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT_INACTIVE,
+                    true
+                )
+            };
         }
     }
 
