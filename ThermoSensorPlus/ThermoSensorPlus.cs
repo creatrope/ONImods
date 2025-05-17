@@ -88,17 +88,26 @@ namespace ThermoSensorPlus
             if (!customFields.ContainsKey("threshold2"))
                 customFields["threshold2"] = "1.0";
 
-            // Initialize buttonStates for both threshold1 and threshold2
+            // For each threshold, check if the button states are valid (opposite states)
             foreach (var prefix in new[] { "threshold1", "threshold2" })
             {
-                if (!buttonStates.ContainsKey($"{prefix}_A"))
-                    buttonStates[$"{prefix}_A"] = false;
-                if (!buttonStates.ContainsKey($"{prefix}_B"))
+                bool a = buttonStates.ContainsKey($"{prefix}_A") ? buttonStates[$"{prefix}_A"] : false;
+                bool b = buttonStates.ContainsKey($"{prefix}_B") ? buttonStates[$"{prefix}_B"] : false;
+                bool aInteract = buttonStates.ContainsKey($"{prefix}_A_interactable") ? buttonStates[$"{prefix}_A_interactable"] : true;
+                bool bInteract = buttonStates.ContainsKey($"{prefix}_B_interactable") ? buttonStates[$"{prefix}_B_interactable"] : true;
+
+                // Valid if exactly one is pressed and not interactable, the other is not pressed and interactable
+                bool validA = a && !aInteract && !b && bInteract;
+                bool validB = b && !bInteract && !a && aInteract;
+
+                if (!(validA || validB))
+                {
+                    // If not valid, set to default: A pressed, not interactable; B not pressed, interactable
+                    buttonStates[$"{prefix}_A"] = true;
+                    buttonStates[$"{prefix}_A_interactable"] = false;
                     buttonStates[$"{prefix}_B"] = false;
-                if (!buttonStates.ContainsKey($"{prefix}_A_interactable"))
-                    buttonStates[$"{prefix}_A_interactable"] = true;
-                if (!buttonStates.ContainsKey($"{prefix}_B_interactable"))
                     buttonStates[$"{prefix}_B_interactable"] = true;
+                }
             }
         }
 
@@ -347,7 +356,9 @@ namespace ThermoSensorPlus
             aButton = CreateButton("A", "A", () =>
             {
                 aButtonState = !aButtonState;
-                aInteractable = false;
+                aInteractable = false;         // Disable A after press
+                bButtonState = false;          // Reset B's state
+                bInteractable = true;          // Enable B
                 UpdateButtonVisual();
                 SaveState();
             }, out unityAButton, out kAButton);
@@ -357,7 +368,9 @@ namespace ThermoSensorPlus
             bButton = CreateButton("B", "B", () =>
             {
                 bButtonState = !bButtonState;
-                bInteractable = false;
+                bInteractable = false;         // Disable B after press
+                aButtonState = false;          // Reset A's state
+                aInteractable = true;          // Enable A
                 UpdateButtonVisual();
                 SaveState();
             }, out unityBButton, out kBButton);
