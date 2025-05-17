@@ -14,6 +14,21 @@ namespace ThermoSensorPlus
     public static class CustomLogger
     {
         private const string PREFIX = "[ThermoSensorPlus] ";
+        public static bool DebugMath = true;
+        public static bool DebugUI = false;
+
+        public static void LogMath(string message)
+        {
+            if (DebugMath)
+                Debug.Log(PREFIX + message);
+        }
+
+        public static void LogUI(string message)
+        {
+            if (DebugUI)
+                Debug.Log(PREFIX + message);
+        }
+
         public static void Log(string message) => Debug.Log(PREFIX + message);
     }
 
@@ -50,6 +65,14 @@ namespace ThermoSensorPlus
         public float SmoothedSecond { get; private set; }
 
         private const float SmoothingAlpha = 0.2f;
+
+        private readonly List<MyThresholdSwitch> registeredSwitches = new List<MyThresholdSwitch>();
+
+        public void RegisterSwitch(MyThresholdSwitch sw)
+        {
+            if (!registeredSwitches.Contains(sw))
+                registeredSwitches.Add(sw);
+        }
 
         public void UpdateDerivatives(float currentValue, float deltaT)
         {
@@ -135,8 +158,10 @@ namespace ThermoSensorPlus
             {
                 float currentValue = sensor.CurrentValue;
                 UpdateDerivatives(currentValue, ThermoSensorGlobals.deltaT);
-                //CustomLogger.Log($"[{gameObject.name}] dT: {FirstDerivative:0.###}, d²T: {SecondDerivative:0.###}");
             }
+            // Call automation check for all registered switches
+            foreach (var sw in registeredSwitches)
+                sw.AutomationCheckAndDebug();
         }
     }
 
@@ -268,10 +293,10 @@ namespace ThermoSensorPlus
         private UnityEngine.UI.Button unityBButton;
         private KButton kAButton;
         private KButton kBButton;
-        private bool aButtonState = false;
-        private bool bButtonState = false;
-        private bool aInteractable = true;
-        private bool bInteractable = true;
+        private bool isAButtonPressed = false;
+        private bool isBButtonPressed = false;
+        private bool isAButtonInteractable = true;
+        private bool isBButtonInteractable = true;
 
         private static readonly Color ButtonOnColor = new Color(0.2f, 0.8f, 0.2f, 1f);
         private static readonly Color ButtonOffColor = new Color(0.7f, 0.7f, 0.7f, 1f);
@@ -302,7 +327,7 @@ namespace ThermoSensorPlus
                 {
                     onToggle?.Invoke();
                     if (localKButtonRef != null)
-                        localKButtonRef.isInteractable = (buttonId == "A" ? aInteractable : bInteractable);
+                        localKButtonRef.isInteractable = (buttonId == "A" ? isAButtonInteractable : isBButtonInteractable);
                     UpdateButtonVisual();
                 }
             };
@@ -355,10 +380,10 @@ namespace ThermoSensorPlus
             // Add "A" button
             aButton = CreateButton("A", "A", () =>
             {
-                aButtonState = !aButtonState;
-                aInteractable = false;         // Disable A after press
-                bButtonState = false;          // Reset B's state
-                bInteractable = true;          // Enable B
+                isAButtonPressed = !isAButtonPressed;
+                isAButtonInteractable = false;         // Disable A after press
+                isBButtonPressed = false;              // Reset B's state
+                isBButtonInteractable = true;          // Enable B
                 UpdateButtonVisual();
                 SaveState();
             }, out unityAButton, out kAButton);
@@ -367,10 +392,10 @@ namespace ThermoSensorPlus
             // Add "B" button
             bButton = CreateButton("B", "B", () =>
             {
-                bButtonState = !bButtonState;
-                bInteractable = false;         // Disable B after press
-                aButtonState = false;          // Reset A's state
-                aInteractable = true;          // Enable A
+                isBButtonPressed = !isBButtonPressed;
+                isBButtonInteractable = false;         // Disable B after press
+                isAButtonPressed = false;              // Reset A's state
+                isAButtonInteractable = true;          // Enable A
                 UpdateButtonVisual();
                 SaveState();
             }, out unityBButton, out kBButton);
@@ -401,6 +426,9 @@ namespace ThermoSensorPlus
 
             var go = row.AddTo(parent);
 
+            if (stateComponent != null)
+                stateComponent.RegisterSwitch(this);
+
             return go;
         }
 
@@ -414,7 +442,7 @@ namespace ThermoSensorPlus
             string val = defaultValue;
             if (stateComponent != null && stateComponent.customFields.TryGetValue(fieldId, out string savedVal))
                 val = savedVal;
-            CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Restoring inputField.Text='{val}' for sensor id={stateComponent?.randomID}");
+            CustomLogger.LogUI($"[MyThresholdSwitch:{fieldId}] Restoring inputField.Text='{val}' for sensor id={stateComponent?.randomID}");
 
             if (inputField != null)
                 inputField.Text = val;
@@ -422,23 +450,23 @@ namespace ThermoSensorPlus
                 unityInputField.text = val;
 
             // Restore button states and interactable state from stateComponent if present
-            bool prevAButtonState = aButtonState, prevBButtonState = bButtonState;
-            bool prevAInteractable = aInteractable, prevBInteractable = bInteractable;
+            bool prevAButtonPressed = isAButtonPressed, prevBButtonPressed = isBButtonPressed;
+            bool prevAButtonInteractable = isAButtonInteractable, prevBButtonInteractable = isBButtonInteractable;
 
-            aButtonState = false;
-            bButtonState = false;
-            aInteractable = true;
-            bInteractable = true;
+            isAButtonPressed = false;
+            isBButtonPressed = false;
+            isAButtonInteractable = true;
+            isBButtonInteractable = true;
             if (stateComponent != null && stateComponent.buttonStates != null)
             {
                 if (stateComponent.buttonStates.TryGetValue($"{fieldId}_A", out bool savedA))
-                    aButtonState = savedA;
+                    isAButtonPressed = savedA;
                 if (stateComponent.buttonStates.TryGetValue($"{fieldId}_B", out bool savedB))
-                    bButtonState = savedB;
+                    isBButtonPressed = savedB;
                 if (stateComponent.buttonStates.TryGetValue($"{fieldId}_A_interactable", out bool savedAInteract))
-                    aInteractable = savedAInteract;
+                    isAButtonInteractable = savedAInteract;
                 if (stateComponent.buttonStates.TryGetValue($"{fieldId}_B_interactable", out bool savedBInteract))
-                    bInteractable = savedBInteract;
+                    isBButtonInteractable = savedBInteract;
             }
 
             UpdateButtonVisual();
@@ -446,19 +474,19 @@ namespace ThermoSensorPlus
             // Set KButton interactable state from saved state
             if (kAButton != null)
             {
-                kAButton.isInteractable = aInteractable;
-                CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Set kAButton.isInteractable = {aInteractable}");
+                kAButton.isInteractable = isAButtonInteractable;
+                CustomLogger.LogUI($"[MyThresholdSwitch:{fieldId}] Set kAButton.isInteractable = {isAButtonInteractable}");
             }
             if (kBButton != null)
             {
-                kBButton.isInteractable = bInteractable;
-                CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Set kBButton.isInteractable = {bInteractable}");
+                kBButton.isInteractable = isBButtonInteractable;
+                CustomLogger.LogUI($"[MyThresholdSwitch:{fieldId}] Set kBButton.isInteractable = {isBButtonInteractable}");
             }
 
             if (unityAButton != null)
-                unityAButton.image.color = aButtonState ? ButtonOnColor : ButtonOffColor;
+                unityAButton.image.color = isAButtonPressed ? ButtonOnColor : ButtonOffColor;
             if (unityBButton != null)
-                unityBButton.image.color = bButtonState ? ButtonOnColor : ButtonOffColor;
+                unityBButton.image.color = isBButtonPressed ? ButtonOnColor : ButtonOffColor;
 
             UpdateOutput();
 
@@ -469,29 +497,29 @@ namespace ThermoSensorPlus
         {
             if (stateComponent != null)
             {
-                stateComponent.buttonStates[$"{fieldId}_A"] = aButtonState;
-                stateComponent.buttonStates[$"{fieldId}_B"] = bButtonState;
-                stateComponent.buttonStates[$"{fieldId}_A_interactable"] = aInteractable;
-                stateComponent.buttonStates[$"{fieldId}_B_interactable"] = bInteractable;
+                stateComponent.buttonStates[$"{fieldId}_A"] = isAButtonPressed;
+                stateComponent.buttonStates[$"{fieldId}_B"] = isBButtonPressed;
+                stateComponent.buttonStates[$"{fieldId}_A_interactable"] = isAButtonInteractable;
+                stateComponent.buttonStates[$"{fieldId}_B_interactable"] = isBButtonInteractable;
             }
         }
 
         private void UpdateButtonVisual()
         {
             if (aButton != null)
-                aButton.Text = aButtonState ? "A" : "A";
+                aButton.Text = isAButtonPressed ? "A" : "A";
             if (bButton != null)
-                bButton.Text = bButtonState ? "B" : "B";
+                bButton.Text = isBButtonPressed ? "B" : "B";
 
             if (unityAButton != null)
-                unityAButton.image.color = aButtonState ? ButtonOnColor : ButtonOffColor;
+                unityAButton.image.color = isAButtonPressed ? ButtonOnColor : ButtonOffColor;
             if (unityBButton != null)
-                unityBButton.image.color = bButtonState ? ButtonOnColor : ButtonOffColor;
+                unityBButton.image.color = isBButtonPressed ? ButtonOnColor : ButtonOffColor;
 
             if (kAButton != null)
-                kAButton.isInteractable = aInteractable;
+                kAButton.isInteractable = isAButtonInteractable;
             if (kBButton != null)
-                kBButton.isInteractable = bInteractable;
+                kBButton.isInteractable = isBButtonInteractable;
         }
 
         public void UpdateOutput()
@@ -511,11 +539,38 @@ namespace ThermoSensorPlus
                 outputLocText.text = val.ToString("00000.00");
         }
 
+        public void AutomationCheckAndDebug()
+        {
+            float outputVal = 0f;
+            if (stateComponent != null)
+            {
+                if (fieldId == "threshold1")
+                    outputVal = stateComponent.SmoothedFirst;
+                else if (fieldId == "threshold2")
+                    outputVal = stateComponent.SmoothedSecond;
+                else
+                    outputVal = stateComponent.LastValue;
+            }
+
+            float inputVal = 0f;
+            if (inputField != null && float.TryParse(inputField.Text, out float parsed))
+                inputVal = parsed;
+
+            if (isAButtonPressed && outputVal > inputVal)
+            {
+                CustomLogger.LogMath($"[AutomationDebug] {fieldId}: Output={outputVal}, Input={inputVal}, A_Pressed={isAButtonPressed}, B_Pressed={isBButtonPressed}, TriggeredBy=A, SensorID={stateComponent?.randomID}");
+            }
+            else if (isBButtonPressed && outputVal < inputVal)
+            {
+                CustomLogger.LogMath($"[AutomationDebug] {fieldId}: Output={outputVal}, Input={inputVal}, A_Pressed={isAButtonPressed}, B_Pressed={isBButtonPressed}, TriggeredBy=B, SensorID={stateComponent?.randomID}");
+            }
+        }
+
         private void LogButtonState(string context)
         {
             string stateSummary =
-                $"aBnState={aButtonState}, bBnState={bButtonState}, " +
-                $"aInteract={aInteractable}, bInteract={bInteractable} | " +
+                $"aBnState={isAButtonPressed}, bBnState={isBButtonPressed}, " +
+                $"aInteract={isAButtonInteractable}, bInteract={isBButtonInteractable} | " +
                 $"stateComponent.buttonStates: ";
 
             if (stateComponent == null || stateComponent.buttonStates == null || stateComponent.buttonStates.Count == 0)
@@ -529,7 +584,7 @@ namespace ThermoSensorPlus
                 stateSummary = stateSummary.TrimEnd(',', ' ');
             }
 
-            CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] {context}: {stateSummary}");
+            CustomLogger.LogUI($"[MyThresholdSwitch:{fieldId}] {context}: {stateSummary}");
         }
     }
 }
