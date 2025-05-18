@@ -244,12 +244,15 @@ namespace ThermoSensorPlus
 
             currentState = target?.GetComponent<ThermoSensorStateComponent>();
 
+            // Commented out sensor ID display for debugging
+            /*
             if (sensorIdLocText != null)
             {
                 sensorIdLocText.text = currentState != null
                     ? $"Sensor ID: {currentState.randomID}"
                     : "Sensor ID: (none)";
             }
+            */
 
             foreach (var field in fields)
                 field.SetTarget(currentState);
@@ -257,6 +260,8 @@ namespace ThermoSensorPlus
 
         public override void ClearTarget() { }
         public override string GetTitle() => "ThermoSensor+";
+
+        public override int GetSideScreenSortOrder() => -100;
 
         protected override void OnPrefabInit()
         {
@@ -271,6 +276,8 @@ namespace ThermoSensorPlus
                 Margin = new RectOffset(10, 10, 10, 10)
             };
 
+            // Commented out sensor ID label for debugging
+            /*
             var idLabel = new PLabel("SensorIdLabel")
             {
                 Text = currentState != null ? $"Sensor ID: {currentState.randomID}" : "Sensor ID: (none)",
@@ -280,6 +287,7 @@ namespace ThermoSensorPlus
                 sensorIdLocText = realizedGo.transform.Find("Text")?.GetComponent<LocText>();
             });
             panel.AddChild(idLabel);
+            */
 
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
@@ -290,7 +298,7 @@ namespace ThermoSensorPlus
 
             var threshold2 = new MyThresholdSwitch("threshold2", "Acc.", "1.0", 2);
             fields.Add(threshold2);
-            threshold2.BuildUIRow(root); // New method, see below
+            threshold2.BuildUIRow(root);
 
             isSideScreenInitialized = true;
         }
@@ -298,6 +306,9 @@ namespace ThermoSensorPlus
 
     public class MyThresholdSwitch
     {
+        private const string AboveLabel = "Above";
+        private const string BelowLabel = "Below";
+
         private readonly string fieldId;
         private readonly string labelText;
         private readonly string defaultValue;
@@ -310,7 +321,6 @@ namespace ThermoSensorPlus
 
         private GameObject parentForBuild = null;
 
-        // Button state and UI references are now per-instance, not shared
         private PButton aButton;
         private PButton bButton;
         private UnityEngine.UI.Button unityAButton;
@@ -344,11 +354,15 @@ namespace ThermoSensorPlus
         {
             UnityEngine.UI.Button localButtonRef = null;
             KButton localKButtonRef = null;
+            // Use constants for button labels
+            string displayLabel = label;
+            if (buttonId == "A") displayLabel = AboveLabel;
+            else if (buttonId == "B") displayLabel = BelowLabel;
             var pButton = new PButton($"{buttonId}Button_{fieldId}")
             {
-                Text = label,
+                Text = displayLabel,
                 TextStyle = PUITuning.Fonts.TextLightStyle,
-                ToolTip = $"Toggle {label}",
+                ToolTip = $"Toggle {displayLabel}",
                 FlexSize = new Vector2(22, 22),
                 OnClick = (buttonSource) =>
                 {
@@ -362,10 +376,8 @@ namespace ThermoSensorPlus
             {
                 localButtonRef = realizedGo.GetComponentInChildren<UnityEngine.UI.Button>();
                 localKButtonRef = realizedGo.GetComponent<KButton>();
-                // Store references
                 if (buttonId == "A") { unityAButton = localButtonRef; kAButton = localKButtonRef; }
                 else if (buttonId == "B") { unityBButton = localButtonRef; kBButton = localKButtonRef; }
-                // Always update the visual and interactable state here
                 UpdateButtonVisual();
             });
             unityButtonRef = localButtonRef;
@@ -400,11 +412,11 @@ namespace ThermoSensorPlus
             });
 
             // Add "A" button
-            aButton = CreateButton("A", "A", OnAButtonClicked, out unityAButton, out kAButton);
+            aButton = CreateButton("A", AboveLabel, OnAButtonClicked, out unityAButton, out kAButton);
             row.AddChild(aButton);
 
             // Add "B" button
-            bButton = CreateButton("B", "B", OnBButtonClicked, out unityBButton, out kBButton);
+            bButton = CreateButton("B", BelowLabel, OnBButtonClicked, out unityBButton, out kBButton);
             row.AddChild(bButton);
 
             inputField = new PTextField("InputField_" + fieldId)
@@ -453,11 +465,11 @@ namespace ThermoSensorPlus
             });
 
             // Add "A" button with correct handler
-            aButton = CreateButton("A", "A", OnAButtonClicked, out unityAButton, out kAButton);
+            aButton = CreateButton("A", AboveLabel, OnAButtonClicked, out unityAButton, out kAButton);
             row.AddChild(aButton);
 
             // Add "B" button with correct handler
-            bButton = CreateButton("B", "B", OnBButtonClicked, out unityBButton, out kBButton);
+            bButton = CreateButton("B", BelowLabel, OnBButtonClicked, out unityBButton, out kBButton);
             row.AddChild(bButton);
 
             // Input field with OnTextChanged handler
@@ -559,9 +571,9 @@ namespace ThermoSensorPlus
         private void UpdateButtonVisual()
         {
             if (aButton != null)
-                aButton.Text = isAButtonPressed ? "A" : "A";
+                aButton.Text = isAButtonPressed ? AboveLabel : AboveLabel;
             if (bButton != null)
-                bButton.Text = isBButtonPressed ? "B" : "B";
+                bButton.Text = isBButtonPressed ? BelowLabel : BelowLabel;
 
             if (unityAButton != null)
                 unityAButton.image.color = isAButtonPressed ? ButtonOnColor : ButtonOffColor;
