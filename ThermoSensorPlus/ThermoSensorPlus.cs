@@ -16,20 +16,6 @@ namespace ThermoSensorPlus
     public static class CustomLogger
     {
         private const string PREFIX = "[ThermoSensorPlus] ";
-        public static bool DebugMath = true;
-        public static bool DebugUI = false;
-
-        public static void LogMath(string message)
-        {
-            if (DebugMath)
-                Debug.Log(PREFIX + message);
-        }
-
-        public static void LogUI(string message)
-        {
-            if (DebugUI)
-                Debug.Log(PREFIX + message);
-        }
 
         public static void Log(string message) => Debug.Log(PREFIX + message);
     }
@@ -307,8 +293,6 @@ namespace ThermoSensorPlus
             threshold2.BuildUIRow(root); // New method, see below
 
             isSideScreenInitialized = true;
-
-            CustomLogger.Log("Side screen UI initialized.");
         }
     }
 
@@ -398,11 +382,6 @@ namespace ThermoSensorPlus
                 if (stateComponent == null)
                 {
                     stateComponent = parent.AddComponent<ThermoSensorStateComponent>();
-                    CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Build: Created ThermoSensorStateComponent on {parent.name}");
-                }
-                else
-                {
-                    CustomLogger.Log($"[MyThresholdSwitch:{fieldId}] Build: Found existing ThermoSensorStateComponent on {parent.name}");
                 }
             }
             // Always ensure defaults after creation or retrieval
@@ -516,13 +495,10 @@ namespace ThermoSensorPlus
             if (stateComponent != null)
                 stateComponent.RegisterSwitch(this);
 
-            LogButtonState("SetTarget (before applying state)");
-
             // Restore input field value
             string val = defaultValue;
             if (stateComponent != null && stateComponent.customFields.TryGetValue(fieldId, out string savedVal))
                 val = savedVal;
-            CustomLogger.LogUI($"[MyThresholdSwitch:{fieldId}] Restoring inputField.Text='{val}' for sensor id={stateComponent?.randomID}");
 
             if (inputField != null)
                 inputField.Text = val;
@@ -555,12 +531,10 @@ namespace ThermoSensorPlus
             if (kAButton != null)
             {
                 kAButton.isInteractable = isAButtonInteractable;
-                CustomLogger.LogUI($"[MyThresholdSwitch:{fieldId}] Set kAButton.isInteractable = {isAButtonInteractable}");
             }
             if (kBButton != null)
             {
                 kBButton.isInteractable = isBButtonInteractable;
-                CustomLogger.LogUI($"[MyThresholdSwitch:{fieldId}] Set kBButton.isInteractable = {isBButtonInteractable}");
             }
 
             if (unityAButton != null)
@@ -569,8 +543,6 @@ namespace ThermoSensorPlus
                 unityBButton.image.color = isBButtonPressed ? ButtonOnColor : ButtonOffColor;
 
             UpdateOutput();
-
-            LogButtonState("SetTarget (after applying state)");
         }
 
         private void SaveState()
@@ -637,11 +609,6 @@ namespace ThermoSensorPlus
                 inputVal = parsed;
 
             bool signalOn = GetSignalOn();
-
-            if (signalOn)
-            {
-                CustomLogger.LogMath($"[AutomationDebug] {fieldId}: Automation Signal On (Output={outputVal}, Input={inputVal}, A_Pressed={isAButtonPressed}, B_Pressed={isBButtonPressed}, SensorID={stateComponent?.randomID})");
-            }
         }
 
         public bool GetSignalOn()
@@ -663,47 +630,6 @@ namespace ThermoSensorPlus
 
             return (isAButtonPressed && outputVal > inputVal) ||
                    (isBButtonPressed && outputVal < inputVal);
-        }
-
-        private void LogButtonState(string context)
-        {
-            string stateSummary =
-                $"aBnState={isAButtonPressed}, bBnState={isBButtonPressed}, " +
-                $"aInteract={isAButtonInteractable}, bInteract={isBButtonInteractable} | " +
-                $"stateComponent.buttonStates: ";
-
-            if (stateComponent == null || stateComponent.buttonStates == null || stateComponent.buttonStates.Count == 0)
-            {
-                stateSummary += "EMPTY";
-            }
-            else
-            {
-                foreach (var kvp in stateComponent.buttonStates)
-                    stateSummary += $"{kvp.Key.Replace("Button", "Bn")}={kvp.Value}, ";
-                stateSummary = stateSummary.TrimEnd(',', ' ');
-            }
-
-            CustomLogger.LogUI($"[MyThresholdSwitch:{fieldId}] {context}: {stateSummary}");
-        }
-
-        public string GetAutomationDebugString()
-        {
-            float outputVal = 0f;
-            if (stateComponent != null)
-            {
-                if (fieldId == "threshold1")
-                    outputVal = stateComponent.SmoothedFirst;
-                else if (fieldId == "threshold2")
-                    outputVal = stateComponent.SmoothedSecond;
-                else
-                    outputVal = stateComponent.LastValue;
-            }
-
-            float inputVal = 0f;
-            if (inputField != null && float.TryParse(inputField.Text, out float parsed))
-                inputVal = parsed;
-
-            return $"[AutomationDebug] {fieldId}: Output={outputVal}, Input={inputVal}, A_Pressed={isAButtonPressed}, B_Pressed={isBButtonPressed}, SensorID={stateComponent?.randomID}";
         }
 
         private void OnAButtonClicked()
