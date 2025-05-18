@@ -155,17 +155,16 @@ namespace SensorsPlus
         /// <summary>
         /// Ensures default values for custom fields and button states.
         /// </summary>
-        public static void EnsureDefaults(Dictionary<string, string> customFields, Dictionary<string, bool> buttonStates)
+        public static void EnsureDefaults(ref Dictionary<string, string> customFields, ref Dictionary<string, bool> buttonStates)
         {
-            if (customFields != null && buttonStates != null)
-            {
-                // Example logic to populate defaults
-                if (!customFields.ContainsKey("DefaultField"))
-                    customFields["DefaultField"] = "DefaultValue";
+            if (customFields == null) customFields = new Dictionary<string, string>();
+            if (buttonStates == null) buttonStates = new Dictionary<string, bool>();
+            // Example logic to populate defaults
+            if (!customFields.ContainsKey("DefaultField"))
+                customFields["DefaultField"] = "DefaultValue";
 
-                if (!buttonStates.ContainsKey("DefaultButton"))
-                    buttonStates["DefaultButton"] = false;
-            }
+            if (!buttonStates.ContainsKey("DefaultButton"))
+                buttonStates["DefaultButton"] = false;
         }
     }
 }

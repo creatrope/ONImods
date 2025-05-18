@@ -92,27 +92,18 @@ namespace SensorsPlus
 
         public void EnsureDefaults()
         {
-            ThermoSensorHelpers.EnsureDefaults(base.CustomFields, base.ButtonStates);
+            var customFields = base.CustomFields;
+            var buttonStates = base.ButtonStates;
+
+            SensorHelpers.EnsureDefaults(ref customFields, ref buttonStates);
+
+            base.CustomFields = customFields;
+            base.ButtonStates = buttonStates;
         }
 
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            Debug.Log($"[{ThermoSensorGlobals.ModuleName}] ThermoSensorStateComponent OnSpawn called");
-
-            if (base.CustomFields == null)
-                Debug.LogError($"[{ThermoSensorGlobals.ModuleName}] ERROR: CustomFields is null after deserialization!");
-            if (base.ButtonStates == null)
-                Debug.LogError($"[{ThermoSensorGlobals.ModuleName}] ERROR: ButtonStates is null after deserialization!");
-
-            Debug.Log($"[{ThermoSensorGlobals.ModuleName}] OnSpawn (post-deserialization) for ThermoSensorStateComponent:");
-            if (base.CustomFields != null)
-                foreach (var kvp in base.CustomFields)
-                    Debug.Log($"[{ThermoSensorGlobals.ModuleName}]   CustomField: {kvp.Key} = {kvp.Value}");
-            if (base.ButtonStates != null)
-                foreach (var kvp in base.ButtonStates)
-                    Debug.Log($"[{ThermoSensorGlobals.ModuleName}]   ButtonState: {kvp.Key} = {kvp.Value}");
-            Debug.Log($"[{ThermoSensorGlobals.ModuleName}]   RandomID: {RandomID}");
 
             if (RandomID == 0)
                 RandomID = UnityEngine.Random.Range(100000, 999999);
