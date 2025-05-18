@@ -267,15 +267,10 @@ namespace SensorsPlus
         public void UpdateOutput()
         {
             float val = 0f;
-            // Cast stateComponent to ThermoSensorStateComponent
-            if (stateComponent is ThermoSensorStateComponent thermoState)
+            // Use the generic GetValue method for any IThresholdSwitchState implementation
+            if (stateComponent != null)
             {
-                if (fieldId == "threshold1")
-                    val = thermoState.SmoothedFirst;
-                else if (fieldId == "threshold2")
-                    val = thermoState.SmoothedSecond;
-                else
-                    val = thermoState.LastValue;
+                val = stateComponent.GetValue(fieldId);
             }
 
             if (outputLocText != null)

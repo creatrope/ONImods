@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using SensorsPlus;
-using SensorsPlus.Helpers; // Add this namespace at the top of the file
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,17 +18,6 @@ namespace SensorsPlus
     public static class ThermoSensorGlobals
     {
         public const string ModuleName = "ThermoSensorPlus";
-    }
-
-    public class Mod : UserMod2
-    {
-        public override void OnLoad(Harmony harmony)
-        {
-            Harmony.DEBUG = true;
-            PUtil.InitLibrary();
-            Debug.Log($"[{ThermoSensorGlobals.ModuleName}] ThermoSensorPlus loaded.");
-            harmony.PatchAll();
-        }
     }
 
     [SerializationConfig(MemberSerialization.OptIn)]
@@ -180,7 +168,10 @@ namespace SensorsPlus
     public class ThermoSensorClickMeScreen : SideScreenContent
     {
         private bool isSideScreenInitialized = false;
-
+        private GameObject root;
+        private ThermoSensorStateComponent currentState;
+        private List<MyThresholdSwitch> fields = new List<MyThresholdSwitch>();
+        private LocText sensorIdLocText;
         private void Update()
         {
             if (!gameObject.activeInHierarchy || currentState == null)
@@ -189,13 +180,6 @@ namespace SensorsPlus
             foreach (var field in fields)
                 field.UpdateOutput();
         }
-
-        private GameObject root;
-        private ThermoSensorStateComponent currentState;
-        private List<MyThresholdSwitch> fields = new List<MyThresholdSwitch>();
-
-        private LocText sensorIdLocText;
-
         public override bool IsValidForTarget(GameObject target)
         {
             return target != null && target.GetComponent<ThermoSensorStateComponent>() != null;
@@ -264,58 +248,6 @@ namespace SensorsPlus
             if (currentState is ThermoSensorStateComponent thermoState)
             {
                 SensorHelpers.SaveSwitchFieldsState(fields, thermoState);
-            }
-        }
-    }
-}
-
-namespace SensorsPlus.Helpers
-{
-    public static class ThermoSensorHelpers
-    {
-        public static void EnsureDefaults(Dictionary<string, string> customFields, Dictionary<string, bool> buttonStates)
-        {
-            // Add logic to ensure defaults for customFields and buttonStates
-            if (customFields != null && buttonStates != null)
-            {
-                // Example logic to populate defaults
-                if (!customFields.ContainsKey("DefaultField"))
-                    customFields["DefaultField"] = "DefaultValue";
-
-                if (!buttonStates.ContainsKey("DefaultButton"))
-                    buttonStates["DefaultButton"] = false;
-            }
-        }
-
-        public static void ConfigureRibbonOutputPort(GameObject go, HashedString portId, CellOffset offset, LocString portName, LocString activePort, LocString inactivePort, bool showInUI)
-        {
-            var logicPorts = go.GetComponent<LogicPorts>();
-            if (logicPorts == null)
-            {
-                logicPorts = go.AddComponent<LogicPorts>();
-            }
-
-            var newPort = new LogicPorts.Port(
-                portId,
-                offset,
-                portName,
-                activePort,
-                inactivePort,
-                showInUI,
-                LogicPortSpriteType.RibbonOutput
-            );
-
-            // Add to outputPortInfo array if not already present
-            if (logicPorts.outputPortInfo == null)
-            {
-                logicPorts.outputPortInfo = new[] { newPort };
-            }
-            else
-            {
-                var ports = new List<LogicPorts.Port>(logicPorts.outputPortInfo);
-                if (!ports.Exists(p => p.id == portId))
-                    ports.Add(newPort);
-                logicPorts.outputPortInfo = ports.ToArray();
             }
         }
     }

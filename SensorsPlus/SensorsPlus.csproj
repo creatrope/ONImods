@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{C109D616-AB40-4040-9D57-B203FB44F560}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>ThermoSensorPlus</RootNamespace>
-    <AssemblyName>ThermoSensorPlus</AssemblyName>
+    <RootNamespace>SensorsPlus</RootNamespace>
+    <AssemblyName>SensorsPlus</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -76,8 +76,10 @@
   <ItemGroup>
     <Compile Include="IThresholdSwitchState.cs" />
     <Compile Include="MyThresholdSwitch.cs" />
+    <Compile Include="PressureSensorPlus.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SensorHelpers.cs" />
+    <Compile Include="SensorsPlusMod.cs" />
     <Compile Include="ThermoSensorPlus.cs" />
     <Compile Include="ThresholdSwitchStateComponentBase.cs" />
   </ItemGroup>
@@ -90,7 +92,7 @@
     </None>
   </ItemGroup>
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(MSBuildProjectDirectory)\bin\Release\ThermoSensorPlus.dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\ThermoSensorPlus.dll&quot; &quot;$(SolutionDir)lib\PLib.dll&quot;" />
+    <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(MSBuildProjectDirectory)\bin\Release\SensorsPlus.dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\SensorsPlus.dll&quot; &quot;$(SolutionDir)lib\PLib.dll&quot;" />
   </Target>
   <Target Name="RunDeploy" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="&quot;$(MSBuildProjectDirectory)\..\deploy.bat&quot; &quot;$(MSBuildProjectDirectory)&quot;" />

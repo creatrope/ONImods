@@ -7,7 +7,39 @@ namespace SensorsPlus
 {
     public static class SensorHelpers
     {
-        // Derivative and smoothing calculation
+        private static string logFilePath;
+        private static bool logInitialized = false;
+
+        static SensorHelpers()
+        {
+            // Try to find the directory of Players.log and use it for SensorsPlus.log
+            string playersLogPath = Path.Combine(Application.persistentDataPath, "Players.log");
+            string logDir = Path.GetDirectoryName(playersLogPath);
+            logFilePath = Path.Combine(logDir, "SensorsPlus.log");
+        }
+
+        public static void LogToFile(string message)
+        {
+            try
+            {
+                if (!logInitialized)
+                {
+                    // Unlink (delete) the log file at the start of the run
+                    if (File.Exists(logFilePath))
+                        File.Delete(logFilePath);
+                    logInitialized = true;
+                }
+                File.AppendAllText(logFilePath, $"{System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}\n");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[SensorsPlus] Failed to write to log file: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Calculates first and second derivatives and applies smoothing.
+        /// </summary>
         public static void UpdateDerivatives(
             ref float? lastValue,
             ref float? lastFirstDerivative,
@@ -19,29 +51,20 @@ namespace SensorsPlus
             float deltaT,
             float smoothingAlpha = 0.2f)
         {
-            float first = 0f;
-            float second = 0f;
+            firstDerivative = 0f;
+            secondDerivative = 0f;
 
             if (lastValue.HasValue)
             {
-                first = (currentValue - lastValue.Value) / deltaT;
-                if (lastFirstDerivative.HasValue)
-                    second = (first - lastFirstDerivative.Value) / deltaT;
+                float prevValue = lastValue.Value;
+                float prevFirst = lastFirstDerivative ?? 0f;
+                firstDerivative = (currentValue - prevValue) / deltaT;
+                smoothedFirst = smoothingAlpha * firstDerivative + (1 - smoothingAlpha) * smoothedFirst;
+                secondDerivative = (smoothedFirst - prevFirst) / deltaT;
+                smoothedSecond = smoothingAlpha * secondDerivative + (1 - smoothingAlpha) * smoothedSecond;
             }
-
-            firstDerivative = first;
-            secondDerivative = second;
-
-            smoothedFirst = lastValue.HasValue
-                ? smoothingAlpha * first + (1 - smoothingAlpha) * smoothedFirst
-                : first;
-
-            smoothedSecond = lastFirstDerivative.HasValue
-                ? smoothingAlpha * second + (1 - smoothingAlpha) * smoothedSecond
-                : second;
-
+            lastFirstDerivative = smoothedFirst;
             lastValue = currentValue;
-            lastFirstDerivative = first;
         }
 
         // Calculate bitmask for registered switches
@@ -126,7 +149,6 @@ namespace SensorsPlus
                 logicPorts = go.AddComponent<LogicPorts>();
             }
 
-            // Create a new port
             var newPort = new LogicPorts.Port(
                 portId,
                 offset,
@@ -145,47 +167,9 @@ namespace SensorsPlus
             else
             {
                 var ports = new List<LogicPorts.Port>(logicPorts.outputPortInfo);
-                // Avoid duplicates
                 if (!ports.Exists(p => p.id == portId))
                     ports.Add(newPort);
                 logicPorts.outputPortInfo = ports.ToArray();
-            }
-        }
-
-
-    }
-}
-
-namespace SensorsPlus.Helpers
-{
-    public static class ThermoSensorHelper // Renamed to avoid conflict
-    {
-        public static void EnsureDefaults(
-            Dictionary<string, string> customFields,
-            Dictionary<string, bool> buttonStates)
-        {
-            if (!customFields.ContainsKey("threshold1"))
-                customFields["threshold1"] = "1.0";
-            if (!customFields.ContainsKey("threshold2"))
-                customFields["threshold2"] = "1.0";
-
-            foreach (var prefix in new[] { "threshold1", "threshold2" })
-            {
-                bool a = buttonStates.ContainsKey($"{prefix}_A") && buttonStates[$"{prefix}_A"];
-                bool b = buttonStates.ContainsKey($"{prefix}_B") && buttonStates[$"{prefix}_B"];
-                bool aInteract = !buttonStates.ContainsKey($"{prefix}_A_interactable") || buttonStates[$"{prefix}_A_interactable"];
-                bool bInteract = !buttonStates.ContainsKey($"{prefix}_B_interactable") || buttonStates[$"{prefix}_B_interactable"];
-
-                bool validA = a && !aInteract && !b && bInteract;
-                bool validB = b && !bInteract && !a && aInteract;
-
-                if (!(validA || validB))
-                {
-                    buttonStates[$"{prefix}_A"] = true;
-                    buttonStates[$"{prefix}_A_interactable"] = false;
-                    buttonStates[$"{prefix}_B"] = false;
-                    buttonStates[$"{prefix}_B_interactable"] = true;
-                }
             }
         }
     }
