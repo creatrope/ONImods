@@ -6,18 +6,39 @@ using PeterHan.PLib.Core;
 using PeterHan.PLib.UI;
 using System;
 using System.Collections.Generic;
-using ThermoSensorPlus;
+using System.Runtime.Serialization;
+using SensorsPlus;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace ThermoSensorPlus
+namespace SensorsPlus
 {
     public static class CustomLogger
     {
         private const string PREFIX = "[ThermoSensorPlus] ";
+        private static readonly string LogFilePath = System.IO.Path.Combine(
+            System.IO.Path.GetDirectoryName(Application.consoleLogPath), "ThermoSensorPlus.debug.log");
 
-        public static void Log(string message) => Debug.Log(PREFIX + message);
+        // Only writes error/debug messages to the custom log file
+        public static void Log(string message)
+        {
+            string fullMessage = PREFIX + message;
+
+            // Always write to custom log file
+            try
+            {
+                System.IO.File.AppendAllText(LogFilePath, fullMessage + Environment.NewLine);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning(PREFIX + "Failed to write to custom log file: " + ex.Message);
+            }
+
+            // Optionally, only write errors to Unity log
+            if (message.StartsWith("ERROR") || message.Contains("null") || message.Contains("Exception"))
+                Debug.LogError(fullMessage);
+        }
     }
 
     public static class ThermoSensorGlobals
@@ -37,11 +58,48 @@ namespace ThermoSensorPlus
     }
 
     [SerializationConfig(MemberSerialization.OptIn)]
-    public partial class ThermoSensorStateComponent : KMonoBehaviour, ISim1000ms
+    public partial class ThermoSensorStateComponent : ThresholdSwitchStateComponentBase, ISim1000ms
     {
-        [Serialize] public int randomID;
-        [Serialize] public Dictionary<string, string> customFields = new Dictionary<string, string>();
-        [Serialize] public Dictionary<string, bool> buttonStates = new Dictionary<string, bool>();
+        [Serialize]
+        private int RandomID = 0; // Add this field to resolve the error
+
+        public ThermoSensorStateComponent()
+        {
+            CustomLogger.Log("ThermoSensorStateComponent CONSTRUCTOR called (fresh instance)");
+        }
+
+        [OnSerializing]
+        private void OnSerializing()
+        {
+            CustomLogger.Log("Saving ThermoSensorStateComponent:");
+            foreach (var kvp in CustomFields)
+                CustomLogger.Log($"  CustomField: {kvp.Key} = {kvp.Value}");
+            foreach (var kvp in ButtonStates)
+                CustomLogger.Log($"  ButtonState: {kvp.Key} = {kvp.Value}");
+            CustomLogger.Log($"  RandomID: {RandomID}");
+        }
+
+        private void OnDeserialized()
+        {
+            CustomLogger.Log("ThermoSensorStateComponent OnDeserialized CALLED (loaded from save)");
+            if (CustomFields == null)
+                CustomLogger.Log("ERROR: CustomFields is null after deserialization!");
+            if (ButtonStates == null)
+                CustomLogger.Log("ERROR: ButtonStates is null after deserialization!");
+
+            CustomLogger.Log("OnDeserialized called for ThermoSensorStateComponent:");
+            if (CustomFields != null)
+            {
+                foreach (var kvp in CustomFields)
+                    CustomLogger.Log($"  CustomField: {kvp.Key} = {kvp.Value}");
+            }
+            if (ButtonStates != null)
+            {
+                foreach (var kvp in ButtonStates)
+                    CustomLogger.Log($"  ButtonState: {kvp.Key} = {kvp.Value}");
+            }
+            CustomLogger.Log($"  RandomID: {RandomID}");
+        }
 
         private float? lastValue = null;
         private float? lastFirstDerivative = null;
@@ -54,15 +112,11 @@ namespace ThermoSensorPlus
 
         private const float SmoothingAlpha = 0.2f;
 
-        private readonly List<MyThresholdSwitch> registeredSwitches = new List<MyThresholdSwitch>();
-
         private Dictionary<int, bool> switchSignalStates = new Dictionary<int, bool>();
 
-        public void RegisterSwitch(MyThresholdSwitch sw)
-        {
-            if (!registeredSwitches.Contains(sw))
-                registeredSwitches.Add(sw);
-        }
+        // Use the base class properties with correct casing
+        private Dictionary<string, string> customFields => CustomFields;
+        private Dictionary<string, bool> buttonStates => ButtonStates;
 
         public void UpdateDerivatives(float currentValue, float deltaT)
         {
@@ -123,8 +177,29 @@ namespace ThermoSensorPlus
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            if (randomID == 0)
-                randomID = UnityEngine.Random.Range(100000, 999999);
+            CustomLogger.Log("ThermoSensorStateComponent OnSpawn called");
+
+            // Debugging: check for nulls after deserialization
+            if (CustomFields == null)
+                CustomLogger.Log("ERROR: CustomFields is null after deserialization!");
+            if (ButtonStates == null)
+                CustomLogger.Log("ERROR: ButtonStates is null after deserialization!");
+
+            CustomLogger.Log("OnSpawn (post-deserialization) for ThermoSensorStateComponent:");
+            if (CustomFields != null)
+            {
+                foreach (var kvp in CustomFields)
+                    CustomLogger.Log($"  CustomField: {kvp.Key} = {kvp.Value}");
+            }
+            if (ButtonStates != null)
+            {
+                foreach (var kvp in ButtonStates)
+                    CustomLogger.Log($"  ButtonState: {kvp.Key} = {kvp.Value}");
+            }
+            CustomLogger.Log($"  RandomID: {RandomID}");
+
+            if (RandomID == 0)
+                RandomID = UnityEngine.Random.Range(100000, 999999);
             EnsureDefaults();
         }
             
@@ -143,7 +218,7 @@ namespace ThermoSensorPlus
             }
 
             switchSignalStates.Clear();
-            foreach (var sw in registeredSwitches)
+            foreach (var sw in RegisteredSwitches)
             {
                 bool signalOn = sw.GetSignalOn();
                 switchSignalStates[sw.OutputBit] = signalOn;
@@ -167,7 +242,9 @@ namespace ThermoSensorPlus
 
         public static void Postfix(GameObject go)
         {
-            go.AddOrGet<ThermoSensorStateComponent>();
+            // Ensure the component is added to the prefab at config time, not just at runtime
+            if (go.GetComponent<ThermoSensorStateComponent>() == null)
+                go.AddComponent<ThermoSensorStateComponent>();
 
             var ports = go.AddOrGet<LogicPorts>();
 
@@ -244,18 +321,12 @@ namespace ThermoSensorPlus
 
             currentState = target?.GetComponent<ThermoSensorStateComponent>();
 
-            // Commented out sensor ID display for debugging
-            /*
-            if (sensorIdLocText != null)
-            {
-                sensorIdLocText.text = currentState != null
-                    ? $"Sensor ID: {currentState.randomID}"
-                    : "Sensor ID: (none)";
-            }
-            */
-
             foreach (var field in fields)
+            {
                 field.SetTarget(currentState);
+                if (currentState != null)
+                    currentState.RegisterSwitch(field);
+            }
         }
 
         public override void ClearTarget() { }
@@ -276,19 +347,6 @@ namespace ThermoSensorPlus
                 Margin = new RectOffset(10, 10, 10, 10)
             };
 
-            // Commented out sensor ID label for debugging
-            /*
-            var idLabel = new PLabel("SensorIdLabel")
-            {
-                Text = currentState != null ? $"Sensor ID: {currentState.randomID}" : "Sensor ID: (none)",
-                TextStyle = PUITuning.Fonts.TextDarkStyle
-            }.AddOnRealize(realizedGo =>
-            {
-                sensorIdLocText = realizedGo.transform.Find("Text")?.GetComponent<LocText>();
-            });
-            panel.AddChild(idLabel);
-            */
-
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
 
@@ -302,366 +360,22 @@ namespace ThermoSensorPlus
 
             isSideScreenInitialized = true;
         }
-    }
-
-    public class MyThresholdSwitch
-    {
-        private const string AboveLabel = "Above";
-        private const string BelowLabel = "Below";
-
-        private readonly string fieldId;
-        private readonly string labelText;
-        private readonly string defaultValue;
-
-        private PTextField inputField;
-        private TMP_InputField unityInputField;
-        private PLabel outputField;
-        private LocText outputLocText;
-        private ThermoSensorStateComponent stateComponent;
-
-        private GameObject parentForBuild = null;
-
-        private PButton aButton;
-        private PButton bButton;
-        private UnityEngine.UI.Button unityAButton;
-        private UnityEngine.UI.Button unityBButton;
-        private KButton kAButton;
-        private KButton kBButton;
-        private bool isAButtonPressed = false;
-        private bool isBButtonPressed = false;
-        private bool isAButtonInteractable = true;
-        private bool isBButtonInteractable = true;
-
-        private static readonly Color ButtonOnColor = new Color(0.2f, 0.8f, 0.2f, 1f);
-        private static readonly Color ButtonOffColor = new Color(0.7f, 0.7f, 0.7f, 1f);
-
-        public int OutputBit { get; } // Add this property
-
-        public MyThresholdSwitch(string id, string label, string defaultValue = "1.0", int outputBit = 0)
-        {
-            this.fieldId = id;
-            this.labelText = label;
-            this.defaultValue = defaultValue;
-            this.OutputBit = outputBit; // Set the output bit
-        }
-
-        public void SetParentForBuild(GameObject parent)
-        {
-            parentForBuild = parent;
-        }
-
-        private PButton CreateButton(string buttonId, string label, System.Action onToggle, out UnityEngine.UI.Button unityButtonRef, out KButton kButtonRef)
-        {
-            UnityEngine.UI.Button localButtonRef = null;
-            KButton localKButtonRef = null;
-            // Use constants for button labels
-            string displayLabel = label;
-            if (buttonId == "A") displayLabel = AboveLabel;
-            else if (buttonId == "B") displayLabel = BelowLabel;
-            var pButton = new PButton($"{buttonId}Button_{fieldId}")
-            {
-                Text = displayLabel,
-                TextStyle = PUITuning.Fonts.TextLightStyle,
-                ToolTip = $"Toggle {displayLabel}",
-                FlexSize = new Vector2(22, 22),
-                OnClick = (buttonSource) =>
-                {
-                    onToggle?.Invoke();
-                    if (localKButtonRef != null)
-                        localKButtonRef.isInteractable = (buttonId == "A" ? isAButtonInteractable : isBButtonInteractable);
-                    UpdateButtonVisual();
-                }
-            };
-            pButton.AddOnRealize(realizedGo =>
-            {
-                localButtonRef = realizedGo.GetComponentInChildren<UnityEngine.UI.Button>();
-                localKButtonRef = realizedGo.GetComponent<KButton>();
-                if (buttonId == "A") { unityAButton = localButtonRef; kAButton = localKButtonRef; }
-                else if (buttonId == "B") { unityBButton = localButtonRef; kBButton = localKButtonRef; }
-                UpdateButtonVisual();
-            });
-            unityButtonRef = localButtonRef;
-            kButtonRef = localKButtonRef;
-            return pButton;
-        }
-
-        public GameObject Build(GameObject parent)
-        {
-            // Ensure stateComponent exists on the parent GameObject (sensor)
-            if (parent != null && stateComponent == null)
-            {
-                stateComponent = parent.GetComponent<ThermoSensorStateComponent>();
-                if (stateComponent == null)
-                {
-                    stateComponent = parent.AddComponent<ThermoSensorStateComponent>();
-                }
-            }
-            // Always ensure defaults after creation or retrieval
-            stateComponent?.EnsureDefaults();
-
-            var row = new PPanel("RowPanel_" + fieldId)
-            {
-                Direction = PanelDirection.Horizontal,
-                Spacing = 5
-            };
-
-            row.AddChild(new PLabel("Label_" + fieldId)
-            {
-                Text = labelText,
-                TextStyle = PUITuning.Fonts.TextDarkStyle
-            });
-
-            // Add "A" button
-            aButton = CreateButton("A", AboveLabel, OnAButtonClicked, out unityAButton, out kAButton);
-            row.AddChild(aButton);
-
-            // Add "B" button
-            bButton = CreateButton("B", BelowLabel, OnBButtonClicked, out unityBButton, out kBButton);
-            row.AddChild(bButton);
-
-            inputField = new PTextField("InputField_" + fieldId)
-            {
-                Text = defaultValue,
-                MinWidth = 60,
-                OnTextChanged = (source, val) => {
-                    if (stateComponent != null)
-                        stateComponent.customFields[fieldId] = val;
-                }
-            }
-            .AddOnRealize(realizedGo => {
-                unityInputField = realizedGo.GetComponentInChildren<TMP_InputField>();
-            });
-            row.AddChild(inputField);
-
-            outputField = new PLabel("OutputField_" + fieldId)
-            {
-                Text = "00000.00",
-                TextStyle = PUITuning.Fonts.TextDarkStyle
-            }.AddOnRealize(realizedGo => {
-                outputLocText = realizedGo.transform.Find("Text")?.GetComponent<LocText>();
-            });
-            row.AddChild(outputField);
-
-            var go = row.AddTo(parent);
-
-            if (stateComponent != null)
-                stateComponent.RegisterSwitch(this);
-
-            return go;
-        }
-
-        public GameObject BuildUIRow(GameObject parent)
-        {
-            var row = new PPanel("RowPanel_" + fieldId)
-            {
-                Direction = PanelDirection.Horizontal,
-                Spacing = 5
-            };
-
-            row.AddChild(new PLabel("Label_" + fieldId)
-            {
-                Text = labelText,
-                TextStyle = PUITuning.Fonts.TextDarkStyle
-            });
-
-            // Add "A" button with correct handler
-            aButton = CreateButton("A", AboveLabel, OnAButtonClicked, out unityAButton, out kAButton);
-            row.AddChild(aButton);
-
-            // Add "B" button with correct handler
-            bButton = CreateButton("B", BelowLabel, OnBButtonClicked, out unityBButton, out kBButton);
-            row.AddChild(bButton);
-
-            // Input field with OnTextChanged handler
-            inputField = new PTextField("InputField_" + fieldId)
-            {
-                Text = defaultValue,
-                MinWidth = 60,
-                OnTextChanged = (source, val) => {
-                    if (stateComponent != null)
-                        stateComponent.customFields[fieldId] = val;
-                }
-            }
-            .AddOnRealize(realizedGo => {
-                unityInputField = realizedGo.GetComponentInChildren<TMP_InputField>();
-            });
-            row.AddChild(inputField);
-
-            outputField = new PLabel("OutputField_" + fieldId)
-            {
-                Text = "00000.00",
-                TextStyle = PUITuning.Fonts.TextDarkStyle
-            }.AddOnRealize(realizedGo => {
-                outputLocText = realizedGo.transform.Find("Text")?.GetComponent<LocText>();
-            });
-            row.AddChild(outputField);
-
-            return row.AddTo(parent);
-        }
-
-        public void SetTarget(ThermoSensorStateComponent state)
-        {
-            stateComponent = state;
-
-            // Register with the state component if not already registered
-            if (stateComponent != null)
-                stateComponent.RegisterSwitch(this);
-
-            // Restore input field value
-            string val = defaultValue;
-            if (stateComponent != null && stateComponent.customFields.TryGetValue(fieldId, out string savedVal))
-                val = savedVal;
-
-            if (inputField != null)
-                inputField.Text = val;
-            if (unityInputField != null && unityInputField.text != val)
-                unityInputField.text = val;
-
-            // Restore button states and interactable state from stateComponent if present
-            bool prevAButtonPressed = isAButtonPressed, prevBButtonPressed = isBButtonPressed;
-            bool prevAButtonInteractable = isAButtonInteractable, prevBButtonInteractable = isBButtonInteractable;
-
-            isAButtonPressed = false;
-            isBButtonPressed = false;
-            isAButtonInteractable = true;
-            isBButtonInteractable = true;
-            if (stateComponent != null && stateComponent.buttonStates != null)
-            {
-                if (stateComponent.buttonStates.TryGetValue($"{fieldId}_A", out bool savedA))
-                    isAButtonPressed = savedA;
-                if (stateComponent.buttonStates.TryGetValue($"{fieldId}_B", out bool savedB))
-                    isBButtonPressed = savedB;
-                if (stateComponent.buttonStates.TryGetValue($"{fieldId}_A_interactable", out bool savedAInteract))
-                    isAButtonInteractable = savedAInteract;
-                if (stateComponent.buttonStates.TryGetValue($"{fieldId}_B_interactable", out bool savedBInteract))
-                    isBButtonInteractable = savedBInteract;
-            }
-
-            UpdateButtonVisual();
-
-            // Set KButton interactable state from saved state
-            if (kAButton != null)
-            {
-                kAButton.isInteractable = isAButtonInteractable;
-            }
-            if (kBButton != null)
-            {
-                kBButton.isInteractable = isBButtonInteractable;
-            }
-
-            if (unityAButton != null)
-                unityAButton.image.color = isAButtonPressed ? ButtonOnColor : ButtonOffColor;
-            if (unityBButton != null)
-                unityBButton.image.color = isBButtonPressed ? ButtonOnColor : ButtonOffColor;
-
-            UpdateOutput();
-        }
 
         private void SaveState()
         {
-            if (stateComponent != null)
+            if (currentState is ThermoSensorStateComponent thermoState)
             {
-                stateComponent.buttonStates[$"{fieldId}_A"] = isAButtonPressed;
-                stateComponent.buttonStates[$"{fieldId}_B"] = isBButtonPressed;
-                stateComponent.buttonStates[$"{fieldId}_A_interactable"] = isAButtonInteractable;
-                stateComponent.buttonStates[$"{fieldId}_B_interactable"] = isBButtonInteractable;
+                foreach (var field in fields)
+                {
+                    thermoState.ButtonStates[$"{field.FieldId}_A"] = field.IsAButtonPressed;
+                    thermoState.ButtonStates[$"{field.FieldId}_B"] = field.IsBButtonPressed;
+                    thermoState.ButtonStates[$"{field.FieldId}_A_interactable"] = field.IsAButtonInteractable;
+                    thermoState.ButtonStates[$"{field.FieldId}_B_interactable"] = field.IsBButtonInteractable;
+                    if (field.InputField != null)
+                        thermoState.CustomFields[field.FieldId] = field.InputField.Text;
+                }
             }
-        }
-
-        private void UpdateButtonVisual()
-        {
-            if (aButton != null)
-                aButton.Text = isAButtonPressed ? AboveLabel : AboveLabel;
-            if (bButton != null)
-                bButton.Text = isBButtonPressed ? BelowLabel : BelowLabel;
-
-            if (unityAButton != null)
-                unityAButton.image.color = isAButtonPressed ? ButtonOnColor : ButtonOffColor;
-            if (unityBButton != null)
-                unityBButton.image.color = isBButtonPressed ? ButtonOnColor : ButtonOffColor;
-
-            if (kAButton != null)
-                kAButton.isInteractable = isAButtonInteractable;
-            if (kBButton != null)
-                kBButton.isInteractable = isBButtonInteractable;
-        }
-
-        public void UpdateOutput()
-        {
-            float val = 0f;
-            if (stateComponent != null)
-            {
-                if (fieldId == "threshold1")
-                    val = stateComponent.SmoothedFirst;
-                else if (fieldId == "threshold2")
-                    val = stateComponent.SmoothedSecond;
-                else
-                    val = stateComponent.LastValue;
-            }
-
-            if (outputLocText != null)
-                outputLocText.text = val.ToString("00000.00");
-        }
-
-        public void AutomationCheckAndDebug()
-        {
-            float outputVal = 0f;
-            if (stateComponent != null)
-            {
-                if (fieldId == "threshold1")
-                    outputVal = stateComponent.SmoothedFirst;
-                else if (fieldId == "threshold2")
-                    outputVal = stateComponent.SmoothedSecond;
-                else
-                    outputVal = stateComponent.LastValue;
-            }
-
-            float inputVal = 0f;
-            if (inputField != null && float.TryParse(inputField.Text, out float parsed))
-                inputVal = parsed;
-
-            bool signalOn = GetSignalOn();
-        }
-
-        public bool GetSignalOn()
-        {
-            float outputVal = 0f;
-            if (stateComponent != null)
-            {
-                if (fieldId == "threshold1")
-                    outputVal = stateComponent.SmoothedFirst;
-                else if (fieldId == "threshold2")
-                    outputVal = stateComponent.SmoothedSecond;
-                else
-                    outputVal = stateComponent.LastValue;
-            }
-
-            float inputVal = 0f;
-            if (inputField != null && float.TryParse(inputField.Text, out float parsed))
-                inputVal = parsed;
-
-            return (isAButtonPressed && outputVal > inputVal) ||
-                   (isBButtonPressed && outputVal < inputVal);
-        }
-
-        private void OnAButtonClicked()
-        {
-            isAButtonPressed = !isAButtonPressed;
-            isAButtonInteractable = false;
-            isBButtonPressed = false;
-            isBButtonInteractable = true;
-            UpdateButtonVisual();
-            SaveState();
-        }
-
-        private void OnBButtonClicked()
-        {
-            isBButtonPressed = !isBButtonPressed;
-            isBButtonInteractable = false;
-            isAButtonPressed = false;
-            isAButtonInteractable = true;
-            UpdateButtonVisual();
-            SaveState();
         }
     }
+
 }
