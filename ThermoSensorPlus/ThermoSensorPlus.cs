@@ -45,7 +45,7 @@ namespace ThermoSensorPlus
         {
             Harmony.DEBUG = true;
             PUtil.InitLibrary();
-            CustomLogger.Log("Mod loaded. Applying Harmony patches.");
+            CustomLogger.Log("ThermoSensorPlus loaded.");
             harmony.PatchAll();
         }
     }
@@ -70,7 +70,6 @@ namespace ThermoSensorPlus
 
         private readonly List<MyThresholdSwitch> registeredSwitches = new List<MyThresholdSwitch>();
 
-        // Add this: stores the current signalOn state for each OutputBit
         private Dictionary<int, bool> switchSignalStates = new Dictionary<int, bool>();
 
         public void RegisterSwitch(MyThresholdSwitch sw)
@@ -110,13 +109,11 @@ namespace ThermoSensorPlus
 
         public void EnsureDefaults()
         {
-            // Initialize customFields
             if (!customFields.ContainsKey("threshold1"))
                 customFields["threshold1"] = "1.0";
             if (!customFields.ContainsKey("threshold2"))
                 customFields["threshold2"] = "1.0";
 
-            // For each threshold, check if the button states are valid (opposite states)
             foreach (var prefix in new[] { "threshold1", "threshold2" })
             {
                 bool a = buttonStates.ContainsKey($"{prefix}_A") ? buttonStates[$"{prefix}_A"] : false;
@@ -124,13 +121,11 @@ namespace ThermoSensorPlus
                 bool aInteract = buttonStates.ContainsKey($"{prefix}_A_interactable") ? buttonStates[$"{prefix}_A_interactable"] : true;
                 bool bInteract = buttonStates.ContainsKey($"{prefix}_B_interactable") ? buttonStates[$"{prefix}_B_interactable"] : true;
 
-                // Valid if exactly one is pressed and not interactable, the other is not pressed and interactable
                 bool validA = a && !aInteract && !b && bInteract;
                 bool validB = b && !bInteract && !a && aInteract;
 
                 if (!(validA || validB))
                 {
-                    // If not valid, set to default: A pressed, not interactable; B not pressed, interactable
                     buttonStates[$"{prefix}_A"] = true;
                     buttonStates[$"{prefix}_A_interactable"] = false;
                     buttonStates[$"{prefix}_B"] = false;
@@ -142,21 +137,8 @@ namespace ThermoSensorPlus
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            if (GetComponent<LogicTemperatureSensor>() == null)
-                CustomLogger.Log("WARNING: ThermoSensorStateComponent added to object without LogicTemperatureSensor: " + gameObject.name);
-
-            CustomLogger.Log($"OnSpawn: randomID={randomID}, customFields.Count={customFields?.Count ?? 0}");
-
             if (randomID == 0)
-            {
                 randomID = UnityEngine.Random.Range(100000, 999999);
-                CustomLogger.Log($"OnSpawn: Assigned new random ID {randomID} to {gameObject.name}");
-            }
-            else
-            {
-                CustomLogger.Log($"OnSpawn: Restored existing ID {randomID} for {gameObject.name}");
-            }
-
             EnsureDefaults();
         }
             
@@ -164,7 +146,6 @@ namespace ThermoSensorPlus
         {
             int signal = 0;
 
-            // Bit 0: default sensor state
             if (TryGetComponent<LogicTemperatureSensor>(out var sensor))
             {
                 float currentValue = sensor.CurrentValue;
@@ -172,51 +153,22 @@ namespace ThermoSensorPlus
                 if (sensor.IsSwitchedOn)
                 {
                     signal |= 1 << 0;
-                    CustomLogger.LogMath($"DefaultSignal Bit 0 ON: {gameObject.name} (ID={randomID}) IsSwitchedOn={sensor.IsSwitchedOn}");
                 }
-                else
+            }
+
+            switchSignalStates.Clear();
+            foreach (var sw in registeredSwitches)
+            {
+                bool signalOn = sw.GetSignalOn();
+                switchSignalStates[sw.OutputBit] = signalOn;
+                if (signalOn)
                 {
-                    CustomLogger.LogMath($"DefaultSignal Bit 0 OFF: {gameObject.name} (ID={randomID}) IsSwitchedOn={sensor.IsSwitchedOn}");
-                }
-            }
-            else
-            {
-                CustomLogger.LogMath($"DefaultSignal Bit 0 SKIPPED: {gameObject.name} (ID={randomID}) LogicTemperatureSensor NOT FOUND");
-            }
-
-            CustomLogger.LogMath($"BitmaskAfterDefault {gameObject.name} (ID={randomID}) Bitmask after default: {Convert.ToString(signal, 2).PadLeft(8, '0')} (int: {signal})");
-
-            // Test for registeredSwitches null or empty
-            if (registeredSwitches == null)
-            {
-                CustomLogger.LogMath($"registeredSwitches is NULL for {gameObject.name} (ID={randomID})");
-            }
-            else if (registeredSwitches.Count == 0)
-            {
-                CustomLogger.LogMath($"registeredSwitches is EMPTY for {gameObject.name} (ID={randomID})");
-            }
-            else
-            {
-                foreach (var sw in registeredSwitches)
-                {
-                    bool signalOn = sw.GetSignalOn();
-                    switchSignalStates[sw.OutputBit] = signalOn;
-                    if (signalOn)
-                    {
-                        signal |= 1 << sw.OutputBit;
-                    }
-                    CustomLogger.LogMath(
-                        $"CustomBit {sw.OutputBit}: {gameObject.name} (ID={randomID}) GetSignalOn={signalOn} [{sw.GetAutomationDebugString()}]"
-                    );
+                    signal |= 1 << sw.OutputBit;
                 }
             }
 
-            CustomLogger.LogMath($"BitmaskAfterCustom {gameObject.name} (ID={randomID}) Bitmask after custom: {Convert.ToString(signal, 2).PadLeft(8, '0')} (int: {signal})");
-
-            // Send the combined signal
             if (TryGetComponent<LogicPorts>(out var ports))
             {
-                CustomLogger.LogMath($"SendSignal PortID={ThermoSensorPatchNew.RIBBON_OUTPUT_PORT_ID}, Signal={signal}");
                 ports.SendSignal(ThermoSensorPatchNew.RIBBON_OUTPUT_PORT_ID, signal);
             }
         }
@@ -225,21 +177,17 @@ namespace ThermoSensorPlus
     [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
     public static class ThermoSensorPatchNew
     {
-        // Define a unique port ID for your ribbon output
         public static readonly HashedString RIBBON_OUTPUT_PORT_ID = new HashedString("ThermoSensorPlusRibbonOutput");
 
         public static void Postfix(GameObject go)
         {
-            CustomLogger.Log("DoPostConfigureComplete PATCH RAN for: " + go.name);
             go.AddOrGet<ThermoSensorStateComponent>();
 
             var ports = go.AddOrGet<LogicPorts>();
 
-            // Remove all input and output ports to ensure a clean slate
             ports.inputPortInfo = new LogicPorts.Port[0];
             ports.outputPortInfo = new LogicPorts.Port[0];
 
-            // Add only the ribbon output port
             ports.outputPortInfo = new[]
             {
                 LogicPorts.Port.RibbonOutputPort(
@@ -264,7 +212,6 @@ namespace ThermoSensorPlus
                 go.GetComponent<ThermoSensorStateComponent>() == null)
             {
                 go.AddOrGet<ThermoSensorStateComponent>();
-                CustomLogger.Log($"OnSpawn: Attached missing state to legacy sensor: {go.name}");
             }
         }
     }
@@ -274,7 +221,6 @@ namespace ThermoSensorPlus
     {
         public static void Postfix()
         {
-            CustomLogger.Log("Registering simple label side screen");
             PUIUtils.AddSideScreenContent<ThermoSensorClickMeScreen>();
         }
     }
@@ -296,14 +242,11 @@ namespace ThermoSensorPlus
         private ThermoSensorStateComponent currentState;
         private List<MyThresholdSwitch> fields = new List<MyThresholdSwitch>();
 
-        // Cache for the sensor ID LocText
         private LocText sensorIdLocText;
 
         public override bool IsValidForTarget(GameObject target)
         {
-            bool valid = target != null && target.GetComponent<ThermoSensorStateComponent>() != null;
-            CustomLogger.Log($"IsValidForTarget: {target?.name}, valid={valid}");
-            return valid;
+            return target != null && target.GetComponent<ThermoSensorStateComponent>() != null;
         }
 
         public override void SetTarget(GameObject target)
@@ -314,7 +257,6 @@ namespace ThermoSensorPlus
             }
 
             currentState = target?.GetComponent<ThermoSensorStateComponent>();
-            CustomLogger.Log($"SetTarget called for: {currentState?.gameObject.name ?? "null"}");
 
             if (sensorIdLocText != null)
             {
@@ -323,7 +265,6 @@ namespace ThermoSensorPlus
                     : "Sensor ID: (none)";
             }
 
-            // Register switches with the actual sensor GameObject
             foreach (var field in fields)
                 field.SetTarget(currentState);
         }
@@ -334,7 +275,7 @@ namespace ThermoSensorPlus
         protected override void OnPrefabInit()
         {
             if (isSideScreenInitialized)
-                return; // Prevent double-building
+                return;
 
             var panel = new PPanel("ClickPanel")
             {
@@ -344,7 +285,6 @@ namespace ThermoSensorPlus
                 Margin = new RectOffset(10, 10, 10, 10)
             };
 
-            // Add a label to show the sensor's randomID and cache its LocText
             var idLabel = new PLabel("SensorIdLabel")
             {
                 Text = currentState != null ? $"Sensor ID: {currentState.randomID}" : "Sensor ID: (none)",
@@ -358,10 +298,9 @@ namespace ThermoSensorPlus
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
 
-            // Build UI rows only (do not register with a GameObject here)
             var threshold1 = new MyThresholdSwitch("threshold1", "Vel.", "1.0", 1);
             fields.Add(threshold1);
-            threshold1.BuildUIRow(root); // New method, see below
+            threshold1.BuildUIRow(root);
 
             var threshold2 = new MyThresholdSwitch("threshold2", "Acc.", "1.0", 2);
             fields.Add(threshold2);
