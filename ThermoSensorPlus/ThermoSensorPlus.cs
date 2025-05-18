@@ -90,24 +90,12 @@ namespace SensorsPlus
             SmoothedSecond = smoothedSecond;
         }
 
-        public void EnsureDefaults()
-        {
-            var customFields = base.CustomFields;
-            var buttonStates = base.ButtonStates;
-
-            SensorHelpers.EnsureDefaults(ref customFields, ref buttonStates);
-
-            base.CustomFields = customFields;
-            base.ButtonStates = buttonStates;
-        }
-
         protected override void OnSpawn()
         {
             base.OnSpawn();
 
             if (RandomID == 0)
                 RandomID = UnityEngine.Random.Range(100000, 999999);
-            EnsureDefaults();
         }
 
         public void Sim1000ms(float dt)
