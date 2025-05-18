@@ -8,42 +8,17 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using SensorsPlus;
+using SensorsPlus.Helpers; // Add this namespace at the top of the file
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using SystemDateTime = System.DateTime;
 
 namespace SensorsPlus
 {
-    public static class CustomLogger
-    {
-        private const string PREFIX = "[ThermoSensorPlus] ";
-        private static readonly string LogFilePath = System.IO.Path.Combine(
-            System.IO.Path.GetDirectoryName(Application.consoleLogPath), "ThermoSensorPlus.debug.log");
-
-        // Only writes error/debug messages to the custom log file
-        public static void Log(string message)
-        {
-            string fullMessage = PREFIX + message;
-
-            // Always write to custom log file
-            try
-            {
-                System.IO.File.AppendAllText(LogFilePath, fullMessage + Environment.NewLine);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning(PREFIX + "Failed to write to custom log file: " + ex.Message);
-            }
-
-            // Optionally, only write errors to Unity log
-            if (message.StartsWith("ERROR") || message.Contains("null") || message.Contains("Exception"))
-                Debug.LogError(fullMessage);
-        }
-    }
-
     public static class ThermoSensorGlobals
     {
-        public static float deltaT = 10f;
+        public const string ModuleName = "ThermoSensorPlus";
     }
 
     public class Mod : UserMod2
@@ -52,7 +27,7 @@ namespace SensorsPlus
         {
             Harmony.DEBUG = true;
             PUtil.InitLibrary();
-            CustomLogger.Log("ThermoSensorPlus loaded.");
+            Debug.Log($"[{ThermoSensorGlobals.ModuleName}] ThermoSensorPlus loaded.");
             harmony.PatchAll();
         }
     }
@@ -61,44 +36,22 @@ namespace SensorsPlus
     public partial class ThermoSensorStateComponent : ThresholdSwitchStateComponentBase, ISim1000ms
     {
         [Serialize]
-        private int RandomID = 0; // Add this field to resolve the error
+        private int RandomID = 0;
 
         public ThermoSensorStateComponent()
         {
-            CustomLogger.Log("ThermoSensorStateComponent CONSTRUCTOR called (fresh instance)");
+            Debug.Log($"[{ThermoSensorGlobals.ModuleName}] ThermoSensorStateComponent CONSTRUCTOR called (fresh instance)");
         }
 
         [OnSerializing]
         private void OnSerializing()
         {
-            CustomLogger.Log("Saving ThermoSensorStateComponent:");
-            foreach (var kvp in CustomFields)
-                CustomLogger.Log($"  CustomField: {kvp.Key} = {kvp.Value}");
-            foreach (var kvp in ButtonStates)
-                CustomLogger.Log($"  ButtonState: {kvp.Key} = {kvp.Value}");
-            CustomLogger.Log($"  RandomID: {RandomID}");
+            // Debugging code removed as requested
         }
 
         private void OnDeserialized()
         {
-            CustomLogger.Log("ThermoSensorStateComponent OnDeserialized CALLED (loaded from save)");
-            if (CustomFields == null)
-                CustomLogger.Log("ERROR: CustomFields is null after deserialization!");
-            if (ButtonStates == null)
-                CustomLogger.Log("ERROR: ButtonStates is null after deserialization!");
-
-            CustomLogger.Log("OnDeserialized called for ThermoSensorStateComponent:");
-            if (CustomFields != null)
-            {
-                foreach (var kvp in CustomFields)
-                    CustomLogger.Log($"  CustomField: {kvp.Key} = {kvp.Value}");
-            }
-            if (ButtonStates != null)
-            {
-                foreach (var kvp in ButtonStates)
-                    CustomLogger.Log($"  ButtonState: {kvp.Key} = {kvp.Value}");
-            }
-            CustomLogger.Log($"  RandomID: {RandomID}");
+            // Debugging code removed as requested
         }
 
         private float? lastValue = null;
@@ -114,95 +67,58 @@ namespace SensorsPlus
 
         private Dictionary<int, bool> switchSignalStates = new Dictionary<int, bool>();
 
-        // Use the base class properties with correct casing
-        private Dictionary<string, string> customFields => CustomFields;
-        private Dictionary<string, bool> buttonStates => ButtonStates;
-
         public void UpdateDerivatives(float currentValue, float deltaT)
         {
-            float first = 0f;
-            float second = 0f;
+            float smoothedFirst = SmoothedFirst;
+            float smoothedSecond = SmoothedSecond;
 
-            if (lastValue.HasValue)
-            {
-                first = (currentValue - lastValue.Value) / deltaT;
-                if (lastFirstDerivative.HasValue)
-                    second = (first - lastFirstDerivative.Value) / deltaT;
-            }
+            SensorHelpers.UpdateDerivatives(
+                ref lastValue,
+                ref lastFirstDerivative,
+                ref smoothedFirst,
+                ref smoothedSecond,
+                out float first,
+                out float second,
+                currentValue,
+                deltaT,
+                SmoothingAlpha
+            );
 
             FirstDerivative = first;
             SecondDerivative = second;
-
-            if (lastValue.HasValue)
-                SmoothedFirst = SmoothingAlpha * first + (1 - SmoothingAlpha) * SmoothedFirst;
-            else
-                SmoothedFirst = first;
-
-            if (lastFirstDerivative.HasValue)
-                SmoothedSecond = SmoothingAlpha * second + (1 - SmoothingAlpha) * SmoothedSecond;
-            else
-                SmoothedSecond = second;
-
-            lastValue = currentValue;
-            lastFirstDerivative = first;
+            SmoothedFirst = smoothedFirst;
+            SmoothedSecond = smoothedSecond;
         }
 
         public void EnsureDefaults()
         {
-            if (!customFields.ContainsKey("threshold1"))
-                customFields["threshold1"] = "1.0";
-            if (!customFields.ContainsKey("threshold2"))
-                customFields["threshold2"] = "1.0";
-
-            foreach (var prefix in new[] { "threshold1", "threshold2" })
-            {
-                bool a = buttonStates.ContainsKey($"{prefix}_A") ? buttonStates[$"{prefix}_A"] : false;
-                bool b = buttonStates.ContainsKey($"{prefix}_B") ? buttonStates[$"{prefix}_B"] : false;
-                bool aInteract = buttonStates.ContainsKey($"{prefix}_A_interactable") ? buttonStates[$"{prefix}_A_interactable"] : true;
-                bool bInteract = buttonStates.ContainsKey($"{prefix}_B_interactable") ? buttonStates[$"{prefix}_B_interactable"] : true;
-
-                bool validA = a && !aInteract && !b && bInteract;
-                bool validB = b && !bInteract && !a && aInteract;
-
-                if (!(validA || validB))
-                {
-                    buttonStates[$"{prefix}_A"] = true;
-                    buttonStates[$"{prefix}_A_interactable"] = false;
-                    buttonStates[$"{prefix}_B"] = false;
-                    buttonStates[$"{prefix}_B_interactable"] = true;
-                }
-            }
+            ThermoSensorHelpers.EnsureDefaults(base.CustomFields, base.ButtonStates);
         }
 
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            CustomLogger.Log("ThermoSensorStateComponent OnSpawn called");
+            Debug.Log($"[{ThermoSensorGlobals.ModuleName}] ThermoSensorStateComponent OnSpawn called");
 
-            // Debugging: check for nulls after deserialization
-            if (CustomFields == null)
-                CustomLogger.Log("ERROR: CustomFields is null after deserialization!");
-            if (ButtonStates == null)
-                CustomLogger.Log("ERROR: ButtonStates is null after deserialization!");
+            if (base.CustomFields == null)
+                Debug.LogError($"[{ThermoSensorGlobals.ModuleName}] ERROR: CustomFields is null after deserialization!");
+            if (base.ButtonStates == null)
+                Debug.LogError($"[{ThermoSensorGlobals.ModuleName}] ERROR: ButtonStates is null after deserialization!");
 
-            CustomLogger.Log("OnSpawn (post-deserialization) for ThermoSensorStateComponent:");
-            if (CustomFields != null)
-            {
-                foreach (var kvp in CustomFields)
-                    CustomLogger.Log($"  CustomField: {kvp.Key} = {kvp.Value}");
-            }
-            if (ButtonStates != null)
-            {
-                foreach (var kvp in ButtonStates)
-                    CustomLogger.Log($"  ButtonState: {kvp.Key} = {kvp.Value}");
-            }
-            CustomLogger.Log($"  RandomID: {RandomID}");
+            Debug.Log($"[{ThermoSensorGlobals.ModuleName}] OnSpawn (post-deserialization) for ThermoSensorStateComponent:");
+            if (base.CustomFields != null)
+                foreach (var kvp in base.CustomFields)
+                    Debug.Log($"[{ThermoSensorGlobals.ModuleName}]   CustomField: {kvp.Key} = {kvp.Value}");
+            if (base.ButtonStates != null)
+                foreach (var kvp in base.ButtonStates)
+                    Debug.Log($"[{ThermoSensorGlobals.ModuleName}]   ButtonState: {kvp.Key} = {kvp.Value}");
+            Debug.Log($"[{ThermoSensorGlobals.ModuleName}]   RandomID: {RandomID}");
 
             if (RandomID == 0)
                 RandomID = UnityEngine.Random.Range(100000, 999999);
             EnsureDefaults();
         }
-            
+
         public void Sim1000ms(float dt)
         {
             int signal = 0;
@@ -210,7 +126,7 @@ namespace SensorsPlus
             if (TryGetComponent<LogicTemperatureSensor>(out var sensor))
             {
                 float currentValue = sensor.CurrentValue;
-                UpdateDerivatives(currentValue, ThermoSensorGlobals.deltaT);
+                UpdateDerivatives(currentValue, dt);
                 if (sensor.IsSwitchedOn)
                 {
                     signal |= 1 << 0;
@@ -218,20 +134,20 @@ namespace SensorsPlus
             }
 
             switchSignalStates.Clear();
-            foreach (var sw in RegisteredSwitches)
-            {
-                bool signalOn = sw.GetSignalOn();
-                switchSignalStates[sw.OutputBit] = signalOn;
-                if (signalOn)
-                {
-                    signal |= 1 << sw.OutputBit;
-                }
-            }
+            signal |= base.GetRegisteredSwitchSignal();
 
-            if (TryGetComponent<LogicPorts>(out var ports))
-            {
-                ports.SendSignal(ThermoSensorPatchNew.RIBBON_OUTPUT_PORT_ID, signal);
-            }
+            SendRibbonSignal(signal);
+        }
+
+        protected override void SendRibbonSignal(int signal)
+        {
+            SensorHelpers.SendRibbonSignal(
+                RegisteredSwitches,
+                switchSignalStates,
+                gameObject,
+                ThermoSensorPatchNew.RIBBON_OUTPUT_PORT_ID,
+                signal
+            );
         }
     }
 
@@ -240,28 +156,22 @@ namespace SensorsPlus
     {
         public static readonly HashedString RIBBON_OUTPUT_PORT_ID = new HashedString("ThermoSensorPlusRibbonOutput");
 
+        [HarmonyPostfix]
         public static void Postfix(GameObject go)
         {
             // Ensure the component is added to the prefab at config time, not just at runtime
             if (go.GetComponent<ThermoSensorStateComponent>() == null)
                 go.AddComponent<ThermoSensorStateComponent>();
 
-            var ports = go.AddOrGet<LogicPorts>();
-
-            ports.inputPortInfo = new LogicPorts.Port[0];
-            ports.outputPortInfo = new LogicPorts.Port[0];
-
-            ports.outputPortInfo = new[]
-            {
-                LogicPorts.Port.RibbonOutputPort(
-                    RIBBON_OUTPUT_PORT_ID,
-                    new CellOffset(0, 0),
-                    STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT,
-                    STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT_ACTIVE,
-                    STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT_INACTIVE,
-                    true
-                )
-            };
+            SensorsPlus.SensorHelpers.ConfigureRibbonOutputPort(
+                go,
+                RIBBON_OUTPUT_PORT_ID,
+                new CellOffset(0, 0),
+                STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT,
+                STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT_ACTIVE,
+                STRINGS.BUILDINGS.PREFABS.LOGICTEMPERATURESENSOR.LOGIC_PORT_INACTIVE,
+                true
+            );
         }
     }
 
@@ -350,6 +260,15 @@ namespace SensorsPlus
             root = panel.AddTo(gameObject, 0);
             ContentContainer = root;
 
+            // Use PLabel to create a LocText child properly attached to the UI hierarchy
+            var sensorIdLabel = new PLabel("SensorIdLabel")
+            {
+                Text = "Sensor ID: N/A",
+                TextStyle = PUITuning.Fonts.TextDarkStyle,
+                ToolTip = "Unique sensor identifier"
+            };
+            sensorIdLocText = sensorIdLabel.AddTo(root).GetComponent<LocText>();
+
             var threshold1 = new MyThresholdSwitch("threshold1", "Vel.", "1.0", 1);
             fields.Add(threshold1);
             threshold1.BuildUIRow(root);
@@ -365,17 +284,60 @@ namespace SensorsPlus
         {
             if (currentState is ThermoSensorStateComponent thermoState)
             {
-                foreach (var field in fields)
-                {
-                    thermoState.ButtonStates[$"{field.FieldId}_A"] = field.IsAButtonPressed;
-                    thermoState.ButtonStates[$"{field.FieldId}_B"] = field.IsBButtonPressed;
-                    thermoState.ButtonStates[$"{field.FieldId}_A_interactable"] = field.IsAButtonInteractable;
-                    thermoState.ButtonStates[$"{field.FieldId}_B_interactable"] = field.IsBButtonInteractable;
-                    if (field.InputField != null)
-                        thermoState.CustomFields[field.FieldId] = field.InputField.Text;
-                }
+                SensorHelpers.SaveSwitchFieldsState(fields, thermoState);
             }
         }
     }
+}
 
+namespace SensorsPlus.Helpers
+{
+    public static class ThermoSensorHelpers
+    {
+        public static void EnsureDefaults(Dictionary<string, string> customFields, Dictionary<string, bool> buttonStates)
+        {
+            // Add logic to ensure defaults for customFields and buttonStates
+            if (customFields != null && buttonStates != null)
+            {
+                // Example logic to populate defaults
+                if (!customFields.ContainsKey("DefaultField"))
+                    customFields["DefaultField"] = "DefaultValue";
+
+                if (!buttonStates.ContainsKey("DefaultButton"))
+                    buttonStates["DefaultButton"] = false;
+            }
+        }
+
+        public static void ConfigureRibbonOutputPort(GameObject go, HashedString portId, CellOffset offset, LocString portName, LocString activePort, LocString inactivePort, bool showInUI)
+        {
+            var logicPorts = go.GetComponent<LogicPorts>();
+            if (logicPorts == null)
+            {
+                logicPorts = go.AddComponent<LogicPorts>();
+            }
+
+            var newPort = new LogicPorts.Port(
+                portId,
+                offset,
+                portName,
+                activePort,
+                inactivePort,
+                showInUI,
+                LogicPortSpriteType.RibbonOutput
+            );
+
+            // Add to outputPortInfo array if not already present
+            if (logicPorts.outputPortInfo == null)
+            {
+                logicPorts.outputPortInfo = new[] { newPort };
+            }
+            else
+            {
+                var ports = new List<LogicPorts.Port>(logicPorts.outputPortInfo);
+                if (!ports.Exists(p => p.id == portId))
+                    ports.Add(newPort);
+                logicPorts.outputPortInfo = ports.ToArray();
+            }
+        }
+    }
 }
