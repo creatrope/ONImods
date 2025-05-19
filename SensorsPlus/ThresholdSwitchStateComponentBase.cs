@@ -83,5 +83,16 @@ namespace SensorsPlus
             }
             return signal;
         }
+
+        // Add this to the base class
+        public virtual float GetThresholdValue(string fieldId, float smoothedFirst, float smoothedSecond, float lastValue)
+        {
+            switch (fieldId)
+            {
+                case "threshold1": return smoothedFirst;
+                case "threshold2": return smoothedSecond;
+                default: return lastValue;
+            }
+        }
     }
 }

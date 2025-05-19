@@ -119,12 +119,7 @@ namespace SensorsPlus
         }
         public override float GetValue(string fieldId)
         {
-            switch (fieldId)
-            {
-                case "threshold1": return SmoothedFirst;
-                case "threshold2": return SmoothedSecond;
-                default: return LastValue;
-            }
+            return GetThresholdValue(fieldId, SmoothedFirst, SmoothedSecond, LastValue);
         }
     }
 
