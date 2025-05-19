@@ -81,6 +81,7 @@
     <Compile Include="SensorHelpers.cs" />
     <Compile Include="SensorsPlusMod.cs" />
     <Compile Include="ThermoSensorPlus.cs" />
+    <Compile Include="ThresholdSensorSideScreen.cs" />
     <Compile Include="ThresholdSwitchStateComponentBase.cs" />
   </ItemGroup>
   <ItemGroup>

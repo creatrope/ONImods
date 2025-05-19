@@ -175,90 +175,9 @@ namespace SensorsPlus
         }
     }
 
-    public class ThermoSensorClickMeScreen : SideScreenContent
+    public class ThermoSensorClickMeScreen : ThresholdSensorSideScreen<ThermoSensorStateComponent>
     {
-        private bool isSideScreenInitialized = false;
-        private GameObject root;
-        private ThermoSensorStateComponent currentState;
-        private List<MyThresholdSwitch> fields = new List<MyThresholdSwitch>();
-        private LocText sensorIdLocText;
-        private void Update()
-        {
-            if (!gameObject.activeInHierarchy || currentState == null)
-                return;
-
-            foreach (var field in fields)
-                field.UpdateOutput();
-        }
-        public override bool IsValidForTarget(GameObject target)
-        {
-            return target != null && target.GetComponent<ThermoSensorStateComponent>() != null;
-        }
-
-        public override void SetTarget(GameObject target)
-        {
-            if (!isSideScreenInitialized)
-            {
-                OnPrefabInit();
-            }
-
-            currentState = target?.GetComponent<ThermoSensorStateComponent>();
-
-            foreach (var field in fields)
-            {
-                field.SetTarget(currentState);
-                if (currentState != null)
-                    currentState.RegisterSwitch(field);
-            }
-        }
-
-        public override void ClearTarget() { }
-        public override string GetTitle() => "ThermoSensor+";
-
-        public override int GetSideScreenSortOrder() => -100;
-
-        protected override void OnPrefabInit()
-        {
-            if (isSideScreenInitialized)
-                return;
-
-            var panel = new PPanel("ClickPanel")
-            {
-                Direction = PanelDirection.Vertical,
-                Spacing = 10,
-                BackColor = new Color(1f, 0.9f, 0.9f, 1f),
-                Margin = new RectOffset(10, 10, 10, 10)
-            };
-
-            root = panel.AddTo(gameObject, 0);
-            ContentContainer = root;
-
-            // Use PLabel to create a LocText child properly attached to the UI hierarchy
-            var sensorIdLabel = new PLabel("SensorIdLabel")
-            {
-                Text = "Sensor ID: N/A",
-                TextStyle = PUITuning.Fonts.TextDarkStyle,
-                ToolTip = "Unique sensor identifier"
-            };
-            sensorIdLocText = sensorIdLabel.AddTo(root).GetComponent<LocText>();
-
-            var threshold1 = new MyThresholdSwitch("threshold1", "Vel.", "1.0", 1);
-            fields.Add(threshold1);
-            threshold1.BuildUIRow(root);
-
-            var threshold2 = new MyThresholdSwitch("threshold2", "Acc.", "1.0", 2);
-            fields.Add(threshold2);
-            threshold2.BuildUIRow(root);
-
-            isSideScreenInitialized = true;
-        }
-
-        private void SaveState()
-        {
-            if (currentState is ThermoSensorStateComponent thermoState)
-            {
-                SensorHelpers.SaveSwitchFieldsState(fields, thermoState);
-            }
-        }
+        protected override string Title => "ThermoSensor+";
+        protected override Color PanelColor => new Color(1f, 0.9f, 0.9f, 1f);
     }
 }

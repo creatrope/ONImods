@@ -11,8 +11,4 @@ namespace SensorsPlus
         void RegisterSwitch(MyThresholdSwitch sw);
         void ClearRegisteredSwitches();
     }
-
-    public partial class ThermoSensorStateComponent : ThresholdSwitchStateComponentBase, ISim1000ms
-    {
-    }
 }

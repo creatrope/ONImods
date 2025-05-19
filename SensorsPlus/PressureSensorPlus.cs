@@ -107,21 +107,6 @@ namespace SensorsPlus
             SendRibbonSignal(signal);
         }
 
-        protected override void SendRibbonSignal(int signal)
-        {
-            base.SendRibbonSignal(signal);
-        }
-
-        public override float GetValue(string fieldId)
-        {
-            switch (fieldId)
-            {
-                case "threshold1": return FirstDerivative;
-                case "threshold2": return SecondDerivative;
-                default: return 0f;
-            }
-        }
-
         protected override HashedString RibbonPortId
         {
             get
@@ -213,90 +198,9 @@ namespace SensorsPlus
         }
     }
 
-    public class PressureSensorClickMeScreen : SideScreenContent
+    public class PressureSensorClickMeScreen : ThresholdSensorSideScreen<PressureSensorStateComponent>
     {
-        private bool isSideScreenInitialized = false;
-        private GameObject root;
-        private PressureSensorStateComponent currentState;
-        private List<MyThresholdSwitch> fields = new List<MyThresholdSwitch>();
-        private LocText sensorIdLocText;
-        private void Update()
-        {
-            if (!gameObject.activeInHierarchy || currentState == null)
-                return;
-
-            foreach (var field in fields)
-                field.UpdateOutput();
-        }
-
-        public override bool IsValidForTarget(GameObject target)
-        {
-            return target != null && target.GetComponent<PressureSensorStateComponent>() != null;
-        }
-
-        public override void SetTarget(GameObject target)
-        {
-            if (!isSideScreenInitialized)
-            {
-                OnPrefabInit();
-            }
-
-            currentState = target?.GetComponent<PressureSensorStateComponent>();
-
-            foreach (var field in fields)
-            {
-                field.SetTarget(currentState);
-                if (currentState != null)
-                    currentState.RegisterSwitch(field);
-            }
-        }
-
-        public override void ClearTarget() { }
-        public override string GetTitle() => "PressureSensor+";
-
-        public override int GetSideScreenSortOrder() => -100;
-
-        protected override void OnPrefabInit()
-        {
-            if (isSideScreenInitialized)
-                return;
-
-            var panel = new PPanel("ClickPanel")
-            {
-                Direction = PanelDirection.Vertical,
-                Spacing = 10,
-                BackColor = new Color(0.9f, 0.9f, 1f, 1f),
-                Margin = new RectOffset(10, 10, 10, 10)
-            };
-
-            root = panel.AddTo(gameObject, 0);
-            ContentContainer = root;
-
-            var sensorIdLabel = new PLabel("SensorIdLabel")
-            {
-                Text = "Sensor ID: N/A",
-                TextStyle = PUITuning.Fonts.TextDarkStyle,
-                ToolTip = "Unique sensor identifier"
-            };
-            sensorIdLocText = sensorIdLabel.AddTo(root).GetComponent<LocText>();
-
-            var threshold1 = new MyThresholdSwitch("threshold1", "Vel.", "1.0", 1);
-            fields.Add(threshold1);
-            threshold1.BuildUIRow(root);
-
-            var threshold2 = new MyThresholdSwitch("threshold2", "Acc.", "1.0", 2);
-            fields.Add(threshold2);
-            threshold2.BuildUIRow(root);
-
-            isSideScreenInitialized = true;
-        }
-
-        private void SaveState()
-        {
-            if (currentState is PressureSensorStateComponent pressureState)
-            {
-                SensorHelpers.SaveSwitchFieldsState(fields, pressureState);
-            }
-        }
+        protected override string Title => "PressureSensor+";
+        protected override Color PanelColor => new Color(0.9f, 0.9f, 1f, 1f);
     }
 }
