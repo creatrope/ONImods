@@ -14,6 +14,10 @@ namespace SensorsPlus
         [Serialize]
         public Dictionary<string, bool> ButtonStates { get; set; } = new Dictionary<string, bool>();
 
+        [Serialize]
+        private int randomID = 0;
+        public int RandomID => randomID;
+
         private readonly List<MyThresholdSwitch> registeredSwitches = new List<MyThresholdSwitch>();
         protected IEnumerable<MyThresholdSwitch> RegisteredSwitches => registeredSwitches;
 
@@ -24,6 +28,15 @@ namespace SensorsPlus
 
         // Add this dictionary for switch signal states if needed by all sensors
         protected Dictionary<int, bool> switchSignalStates = new Dictionary<int, bool>();
+
+        protected virtual int RandomIdMin => 100000;
+        protected virtual int RandomIdMax => 999999;
+
+        protected virtual void EnsureRandomID()
+        {
+            if (randomID == 0)
+                randomID = UnityEngine.Random.Range(RandomIdMin, RandomIdMax);
+        }
 
         public void RegisterSwitch(MyThresholdSwitch sw)
         {
@@ -57,10 +70,10 @@ namespace SensorsPlus
             }
         }
 
-        // Add this property to allow derived classes to specify the port ID
+        // Optionally, make RibbonPortId abstract or virtual if you want each sensor to specify its port.
         protected virtual HashedString RibbonPortId => new HashedString("GenericSensorRibbonOutput");
 
-        // Refactored SendRibbonSignal to use SensorHelpers
+        // Add or update this in the base class
         protected virtual void SendRibbonSignal(int signal)
         {
             SensorHelpers.SendRibbonSignal(
@@ -93,6 +106,12 @@ namespace SensorsPlus
                 case "threshold2": return smoothedSecond;
                 default: return lastValue;
             }
+        }
+
+        protected override void OnSpawn()
+        {
+            base.OnSpawn();
+            EnsureRandomID();
         }
     }
 }

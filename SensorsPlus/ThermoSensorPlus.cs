@@ -23,25 +23,6 @@ namespace SensorsPlus
     [SerializationConfig(MemberSerialization.OptIn)]
     public partial class ThermoSensorStateComponent : ThresholdSwitchStateComponentBase, ISim1000ms
     {
-        [Serialize]
-        private int RandomID = 0;
-
-        public ThermoSensorStateComponent()
-        {
-            // Only keep module load or error messages. Remove constructor Debug.Log.
-        }
-
-        [OnSerializing]
-        private void OnSerializing()
-        {
-            // Debugging code removed as requested
-        }
-
-        private void OnDeserialized()
-        {
-            // Debugging code removed as requested
-        }
-
         private float? lastValue = null;
         private float? lastFirstDerivative = null;
 
@@ -78,14 +59,6 @@ namespace SensorsPlus
             SmoothedSecond = smoothedSecond;
         }
 
-        protected override void OnSpawn()
-        {
-            base.OnSpawn();
-
-            if (RandomID == 0)
-                RandomID = UnityEngine.Random.Range(100000, 999999);
-        }
-
         public void Sim1000ms(float dt)
         {
             int signal = 0;
@@ -104,17 +77,6 @@ namespace SensorsPlus
             signal |= base.GetRegisteredSwitchSignal();
 
             SendRibbonSignal(signal);
-        }
-
-        protected override void SendRibbonSignal(int signal)
-        {
-            SensorHelpers.SendRibbonSignal(
-                RegisteredSwitches,
-                switchSignalStates,
-                gameObject,
-                ThermoSensorPatchNew.RIBBON_OUTPUT_PORT_ID,
-                signal
-            );
         }
 
         public override float GetValue(string fieldId)

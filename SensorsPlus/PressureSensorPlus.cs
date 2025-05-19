@@ -23,9 +23,6 @@ namespace SensorsPlus
     [SerializationConfig(MemberSerialization.OptIn)]
     public partial class PressureSensorStateComponent : ThresholdSwitchStateComponentBase, ISim1000ms
     {
-        [Serialize]
-        private int RandomID = 0;
-
         private float? lastValue = null;
         private float? lastFirstDerivative = null;
 
@@ -38,30 +35,6 @@ namespace SensorsPlus
         private const float SmoothingAlpha = 0.2f;
 
         private Dictionary<int, bool> switchSignalStates = new Dictionary<int, bool>();
-
-        public PressureSensorStateComponent()
-        {
-            // Constructor logic only
-        }
-
-        [OnSerializing]
-        private void OnSerializing()
-        {
-            // Debugging code removed as requested
-        }
-
-        private void OnDeserialized()
-        {
-            // Debugging code removed as requested
-        }
-
-        protected override void OnSpawn()
-        {
-            base.OnSpawn();
-
-            if (RandomID == 0)
-                RandomID = UnityEngine.Random.Range(1, int.MaxValue);
-        }
 
         public void UpdateDerivatives(float currentValue, float deltaT)
         {
@@ -104,7 +77,7 @@ namespace SensorsPlus
             switchSignalStates.Clear();
             signal |= base.GetRegisteredSwitchSignal();
 
-            SendRibbonSignal(signal);
+            base.SendRibbonSignal(signal);
         }
 
         protected override HashedString RibbonPortId
