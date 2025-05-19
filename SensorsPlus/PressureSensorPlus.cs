@@ -112,16 +112,6 @@ namespace SensorsPlus
             base.SendRibbonSignal(signal);
         }
 
-        public override float GetValue(string fieldId)
-        {
-            switch (fieldId)
-            {
-                case "threshold1": return FirstDerivative;
-                case "threshold2": return SecondDerivative;
-                default: return 0f;
-            }
-        }
-
         protected override HashedString RibbonPortId
         {
             get

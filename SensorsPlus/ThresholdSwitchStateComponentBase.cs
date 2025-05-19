@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using KSerialization;
@@ -16,6 +17,11 @@ namespace SensorsPlus
         private readonly List<MyThresholdSwitch> registeredSwitches = new List<MyThresholdSwitch>();
         protected IEnumerable<MyThresholdSwitch> RegisteredSwitches => registeredSwitches;
 
+        // Add missing properties
+        protected float LastValue { get; set; }
+        protected float FirstDerivative { get; set; }
+        protected float SecondDerivative { get; set; }
+
         public void RegisterSwitch(MyThresholdSwitch sw)
         {
             if (sw != null && !registeredSwitches.Contains(sw))
@@ -27,7 +33,26 @@ namespace SensorsPlus
             registeredSwitches.Clear();
         }
 
-        public abstract float GetValue(string fieldId);
+        public virtual float GetValue(string fieldId)
+        {
+            // Map known threshold fieldIds to actual values or custom fields
+            if (CustomFields != null && CustomFields.TryGetValue(fieldId, out var valueStr) && float.TryParse(valueStr, out var value))
+                return value;
+
+            // Add handling for default fields if needed
+            switch (fieldId)
+            {
+                case "LastValue":
+                    return LastValue;
+                case "FirstDerivative":
+                    return FirstDerivative;
+                case "SecondDerivative":
+                    return SecondDerivative;
+                default:
+                    // Instead of throwing, return a default or log a warning
+                    return 0f;
+            }
+        }
 
         protected virtual HashedString RibbonPortId => new HashedString("GenericSensorRibbonOutput");
 
