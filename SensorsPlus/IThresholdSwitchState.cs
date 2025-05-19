@@ -14,14 +14,5 @@ namespace SensorsPlus
 
     public partial class ThermoSensorStateComponent : ThresholdSwitchStateComponentBase, ISim1000ms
     {
-        public override float GetValue(string fieldId)
-        {
-            switch (fieldId)
-            {
-                case "threshold1": return SmoothedFirst;
-                case "threshold2": return SmoothedSecond;
-                default: return LastValue;
-            }
-        }
     }
 }
