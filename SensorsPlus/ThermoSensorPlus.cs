@@ -28,7 +28,7 @@ namespace SensorsPlus
 
         public ThermoSensorStateComponent()
         {
-            Debug.Log($"[{ThermoSensorGlobals.ModuleName}] ThermoSensorStateComponent CONSTRUCTOR called (fresh instance)");
+            // Only keep module load or error messages. Remove constructor Debug.Log.
         }
 
         [OnSerializing]

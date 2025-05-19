@@ -31,9 +31,9 @@ namespace SensorsPlus
                 }
                 File.AppendAllText(logFilePath, $"{System.DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} {message}\n");
             }
-            catch (System.Exception ex)
+            catch
             {
-                Debug.LogWarning($"[SensorsPlus] Failed to write to log file: {ex}");
+                // Swallow all exceptions silently, no Debug.Log or other output
             }
         }
 
