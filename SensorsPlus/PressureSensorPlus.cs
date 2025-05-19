@@ -107,11 +107,6 @@ namespace SensorsPlus
             SendRibbonSignal(signal);
         }
 
-        protected override void SendRibbonSignal(int signal)
-        {
-            base.SendRibbonSignal(signal);
-        }
-
         protected override HashedString RibbonPortId
         {
             get

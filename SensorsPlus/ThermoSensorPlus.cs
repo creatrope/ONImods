@@ -106,16 +106,7 @@ namespace SensorsPlus
             SendRibbonSignal(signal);
         }
 
-        protected override void SendRibbonSignal(int signal)
-        {
-            SensorHelpers.SendRibbonSignal(
-                RegisteredSwitches,
-                switchSignalStates,
-                gameObject,
-                ThermoSensorPatchNew.RIBBON_OUTPUT_PORT_ID,
-                signal
-            );
-        }
+        protected override HashedString RibbonPortId => ThermoSensorPatchNew.RIBBON_OUTPUT_PORT_ID;
     }
 
     [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]

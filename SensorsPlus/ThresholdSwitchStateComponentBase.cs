@@ -22,6 +22,9 @@ namespace SensorsPlus
         protected float FirstDerivative { get; set; }
         protected float SecondDerivative { get; set; }
 
+        // Add this dictionary for switch signal states if needed by all sensors
+        protected Dictionary<int, bool> switchSignalStates = new Dictionary<int, bool>();
+
         public void RegisterSwitch(MyThresholdSwitch sw)
         {
             if (sw != null && !registeredSwitches.Contains(sw))
@@ -54,14 +57,19 @@ namespace SensorsPlus
             }
         }
 
+        // Add this property to allow derived classes to specify the port ID
         protected virtual HashedString RibbonPortId => new HashedString("GenericSensorRibbonOutput");
 
+        // Refactored SendRibbonSignal to use SensorHelpers
         protected virtual void SendRibbonSignal(int signal)
         {
-            if (TryGetComponent<LogicPorts>(out var ports))
-            {
-                ports.SendSignal(RibbonPortId, signal);
-            }
+            SensorHelpers.SendRibbonSignal(
+                RegisteredSwitches,
+                switchSignalStates,
+                gameObject,
+                RibbonPortId,
+                signal
+            );
         }
 
         protected int GetRegisteredSwitchSignal()
