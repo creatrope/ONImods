@@ -41,7 +41,7 @@ namespace SensorsPlus
 
         public PressureSensorStateComponent()
         {
-            SensorHelpers.LogToFile($"[{PressureSensorGlobals.ModuleName}] PressureSensorStateComponent CONSTRUCTOR called (fresh instance)");
+            // Constructor logic only
         }
 
         [OnSerializing]
@@ -90,14 +90,11 @@ namespace SensorsPlus
         {
             int signal = 0;
 
+            // Only one LogicPressureSensor component is used for both gas and liquid sensors.
             if (TryGetComponent<LogicPressureSensor>(out var sensor))
             {
                 float currentValue = sensor.CurrentValue;
                 UpdateDerivatives(currentValue, dt);
-
-                // Log derivative values to SensorsPlus.log
-                SensorHelpers.LogToFile($"[PressureSensorPlus] FirstDerivative: {FirstDerivative}, SecondDerivative: {SecondDerivative}");
-
                 if (sensor.IsSwitchedOn)
                 {
                     signal |= 1 << 0;
@@ -107,21 +104,12 @@ namespace SensorsPlus
             switchSignalStates.Clear();
             signal |= base.GetRegisteredSwitchSignal();
 
-            SensorHelpers.LogToFile($"[PressureSensorPlus] Sim1000ms: signal before SendRibbonSignal = {Convert.ToString(signal, 2).PadLeft(8, '0')}");
-
             SendRibbonSignal(signal);
         }
 
         protected override void SendRibbonSignal(int signal)
         {
-            // Use the static port ID for ribbon output, just like ThermoSensorPlus
-            SensorHelpers.SendRibbonSignal(
-                RegisteredSwitches,
-                switchSignalStates,
-                gameObject,
-                PressureSensorPatchNew.RIBBON_OUTPUT_PORT_ID,
-                signal
-            );
+            base.SendRibbonSignal(signal);
         }
 
         public override float GetValue(string fieldId)
@@ -131,6 +119,17 @@ namespace SensorsPlus
                 case "threshold1": return FirstDerivative;
                 case "threshold2": return SecondDerivative;
                 default: return 0f;
+            }
+        }
+
+        protected override HashedString RibbonPortId
+        {
+            get
+            {
+                // Use the correct port for gas or liquid sensor by checking desiredState
+                if (TryGetComponent<LogicPressureSensor>(out var sensor) && sensor.desiredState == Element.State.Liquid)
+                    return PressureSensorPatchNewLiquid.RIBBON_OUTPUT_PORT_ID;
+                return PressureSensorPatchNew.RIBBON_OUTPUT_PORT_ID;
             }
         }
     }
@@ -143,6 +142,11 @@ namespace SensorsPlus
         [HarmonyPostfix]
         public static void Postfix(GameObject go)
         {
+            if (go == null)
+            {
+                return;
+            }
+
             if (go.GetComponent<PressureSensorStateComponent>() == null)
                 go.AddComponent<PressureSensorStateComponent>();
 
@@ -166,10 +170,14 @@ namespace SensorsPlus
         [HarmonyPostfix]
         public static void Postfix(GameObject go)
         {
+            if (go == null)
+            {
+                return;
+            }
+
             if (go.GetComponent<PressureSensorStateComponent>() == null)
                 go.AddComponent<PressureSensorStateComponent>();
 
-            // Fix: Use LogicPortSpriteType.RibbonOutput for the liquid sensor as well
             SensorsPlus.SensorHelpers.ConfigureRibbonOutputPort(
                 go,
                 RIBBON_OUTPUT_PORT_ID,

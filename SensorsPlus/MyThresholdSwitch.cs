@@ -1,6 +1,7 @@
 using PeterHan.PLib.UI;
 using TMPro;
 using UnityEngine;
+using System.Collections.Generic; // Add this namespace for Dictionary<,>
 
 namespace SensorsPlus
 {
@@ -93,7 +94,6 @@ namespace SensorsPlus
 
         public GameObject Build(GameObject parent)
         {
-            // The stateComponent should be set externally for generality
             var row = new PPanel("RowPanel_" + fieldId)
             {
                 Direction = PanelDirection.Horizontal,
@@ -117,10 +117,8 @@ namespace SensorsPlus
                 Text = defaultValue,
                 MinWidth = 60,
                 OnTextChanged = (source, val) => {
-                    Debug.Log($"[MyThresholdSwitch] OnTextChanged: fieldId={fieldId}, val={val}, stateComponent null? {stateComponent == null}");
                     if (stateComponent != null) {
                         stateComponent.CustomFields[fieldId] = val;
-                        Debug.Log($"[MyThresholdSwitch] SaveState: fieldId={fieldId}, value={val}");
                     }
                 }
             }
@@ -166,10 +164,8 @@ namespace SensorsPlus
                 Text = defaultValue,
                 MinWidth = 60,
                 OnTextChanged = (source, val) => {
-                    Debug.Log($"[MyThresholdSwitch] OnTextChanged: fieldId={fieldId}, val={val}, stateComponent null? {stateComponent == null}");
                     if (stateComponent != null) {
                         stateComponent.CustomFields[fieldId] = val;
-                        Debug.Log($"[MyThresholdSwitch] SaveState: fieldId={fieldId}, value={val}");
                     }
                 }
             }
@@ -190,59 +186,71 @@ namespace SensorsPlus
             return row.AddTo(parent);
         }
 
-        // The following methods should be adapted for your specific stateComponent implementation
-
         public void SetTarget(object state)
         {
             stateComponent = state as IThresholdSwitchState;
-
             if (stateComponent != null)
             {
-                string val = defaultValue;
-                if (stateComponent.CustomFields.TryGetValue(fieldId, out string savedVal))
-                    val = savedVal;
+                // Restore input field value, or set default if not present
+                string valueToSet = defaultValue;
+                if (stateComponent.CustomFields != null && stateComponent.CustomFields.TryGetValue(fieldId, out var savedValue))
+                {
+                    valueToSet = savedValue;
+                }
+                else
+                {
+                    if (stateComponent.CustomFields == null)
+                        stateComponent.CustomFields = new Dictionary<string, string>();
+                    stateComponent.CustomFields[fieldId] = defaultValue;
+                }
+                if (unityInputField != null)
+                    unityInputField.text = valueToSet;
 
-                Debug.Log($"[MyThresholdSwitch] SetTarget: fieldId={fieldId}, restoring value={val}");
-
-                if (inputField != null)
-                    inputField.Text = val;
-                if (unityInputField != null && unityInputField.text != val)
-                    unityInputField.text = val;
-
-                isAButtonPressed = false;
-                isBButtonPressed = false;
-                isAButtonInteractable = true;
-                isBButtonInteractable = true;
+                // Restore button states, or set defaults if not present
+                bool hasA = false, hasB = false;
                 if (stateComponent.ButtonStates != null)
                 {
-                    if (stateComponent.ButtonStates.TryGetValue($"{fieldId}_A", out bool savedA))
-                        isAButtonPressed = savedA;
-                    if (stateComponent.ButtonStates.TryGetValue($"{fieldId}_B", out bool savedB))
-                        isBButtonPressed = savedB;
-                    if (stateComponent.ButtonStates.TryGetValue($"{fieldId}_A_interactable", out bool savedAInteract))
-                        isAButtonInteractable = savedAInteract;
-                    if (stateComponent.ButtonStates.TryGetValue($"{fieldId}_B_interactable", out bool savedBInteract))
-                        isBButtonInteractable = savedBInteract;
+                    if (stateComponent.ButtonStates.TryGetValue(fieldId + "_A", out var aState))
+                    {
+                        isAButtonPressed = aState;
+                        hasA = true;
+                    }
+                    if (stateComponent.ButtonStates.TryGetValue(fieldId + "_B", out var bState))
+                    {
+                        isBButtonPressed = bState;
+                        hasB = true;
+                    }
                 }
-            }
+                if (!hasA && !hasB)
+                {
+                    isAButtonPressed = true;
+                    isBButtonPressed = false;
+                    if (stateComponent.ButtonStates == null)
+                        stateComponent.ButtonStates = new Dictionary<string, bool>();
+                    stateComponent.ButtonStates[fieldId + "_A"] = true;
+                    stateComponent.ButtonStates[fieldId + "_B"] = false;
+                }
 
-            UpdateButtonVisual();
-            UpdateOutput();
+                // Always refresh interactable state
+                isAButtonInteractable = !isAButtonPressed;
+                isBButtonInteractable = !isBButtonPressed;
+
+                UpdateButtonVisual();
+            }
         }
 
         private void SaveState()
         {
             if (stateComponent != null)
             {
-                stateComponent.ButtonStates[$"{fieldId}_A"] = isAButtonPressed;
-                stateComponent.ButtonStates[$"{fieldId}_B"] = isBButtonPressed;
-                stateComponent.ButtonStates[$"{fieldId}_A_interactable"] = isAButtonInteractable;
-                stateComponent.ButtonStates[$"{fieldId}_B_interactable"] = isBButtonInteractable;
-                if (inputField != null)
-                {
-                    stateComponent.CustomFields[fieldId] = inputField.Text;
-                    Debug.Log($"[MyThresholdSwitch] SaveState: fieldId={fieldId}, value={inputField.Text}");
-                }
+                if (stateComponent.CustomFields == null)
+                    stateComponent.CustomFields = new Dictionary<string, string>();
+                stateComponent.CustomFields[fieldId] = unityInputField?.text ?? defaultValue;
+
+                if (stateComponent.ButtonStates == null)
+                    stateComponent.ButtonStates = new Dictionary<string, bool>();
+                stateComponent.ButtonStates[fieldId + "_A"] = IsAButtonPressed;
+                stateComponent.ButtonStates[fieldId + "_B"] = IsBButtonPressed;
             }
         }
 
@@ -267,7 +275,6 @@ namespace SensorsPlus
         public void UpdateOutput()
         {
             float val = 0f;
-            // Use the generic GetValue method for any IThresholdSwitchState implementation
             if (stateComponent != null)
             {
                 val = stateComponent.GetValue(fieldId);
@@ -281,7 +288,6 @@ namespace SensorsPlus
         {
             if (stateComponent == null)
             {
-                Debug.Log($"[MyThresholdSwitch] GetSignalOn: fieldId={fieldId}, stateComponent is null");
                 return false;
             }
 
@@ -294,8 +300,6 @@ namespace SensorsPlus
             bool above = isAButtonPressed && outputVal > inputVal;
             bool below = isBButtonPressed && outputVal < inputVal;
             bool result = above || below;
-
-            Debug.Log($"[MyThresholdSwitch] GetSignalOn: fieldId={fieldId}, outputVal={outputVal}, inputVal={inputVal}, isAButtonPressed={isAButtonPressed}, isBButtonPressed={isBButtonPressed}, result={result}");
 
             return result;
         }
