@@ -93,24 +93,7 @@
   </PropertyGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Message Text="ArtifactsPlus PostBuild target running!" Importance="high" />
-    <Copy
-      SourceFiles="$(TargetPath)"
-      DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\"
-      OverwriteReadOnlyFiles="true" />
-    <Copy
-      SourceFiles="ArtifactsConfig.json"
-      DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\"
-      OverwriteReadOnlyFiles="true"
-      SkipUnchangedFiles="true" />
-    <Copy
-      SourceFiles="mod.yaml"
-      DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\"
-      OverwriteReadOnlyFiles="true"
-      SkipUnchangedFiles="true" />
-    <Copy
-      SourceFiles="mod_info.yaml"
-      DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\"
-      OverwriteReadOnlyFiles="true"
-      SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="ArtifactsConfig.json" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
   </Target>
 </Project>
