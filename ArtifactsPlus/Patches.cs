@@ -9,29 +9,24 @@ using Klei.AI;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 
-// using PeterHan.PLib.Core; // Uncomment if you use PLib
-
 namespace ArtifactsPlus
 {
     public static class ModInit
     {
-        // Variable holding the path to the user's desktop directory
         public static readonly string DesktopLogPath =
             Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop), "ArtifactsPlus.log");
 
         private static bool _logInitialized = false;
 
-        // Custom logger writes to ArtifactsPlus.log on the desktop
         public static void CustomLog(string message)
         {
             if (!_logInitialized)
             {
-                File.WriteAllText(DesktopLogPath, string.Empty); // Start fresh each run
+                File.WriteAllText(DesktopLogPath, string.Empty);
                 _logInitialized = true;
             }
             string timestamped = $"[{System.DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
-            // Use StreamWriter with AutoFlush to ensure immediate flush
-            using (var writer = new StreamWriter(DesktopLogPath, true))
+            using (var writer = new StreamWriter(DesktopLogPath, true, System.Text.Encoding.UTF8))
             {
                 writer.AutoFlush = true;
                 writer.WriteLine(timestamped);
@@ -46,47 +41,7 @@ namespace ArtifactsPlus
             Debug.Log("[ArtifactsPlus] OnLoad() was called!");
             Debug.Log($"[ArtifactsPlus] Custom log file location: {DesktopLogPath}");
             CustomLog("Test message: custom log initialized and working.");
-            //PrintAllAttributes(); // <-- Add this line to call the function when the mod loads
-            // All other debug messages should use CustomLog
-            //RegisterArtifactPowers();
-        }
-
-        private static void RegisterArtifactPowers()
-        {
-            string configPath = ArtifactPowersConfigPath;
-
-            if (File.Exists(configPath))
-            {
-                CustomLog($"Loaded configuration from: {configPath}");
-                // TODO: Deserialize and use the config as needed
-            }
-            else
-            {
-                CustomLog($"Configuration file not found: {configPath}");
-            }
-        }
-
-        public static void PrintAllAttributes()
-        {
-            try
-            {
-                // Ensure Db is initialized before accessing attributes
-                if (Db.Get() != null && Db.Get().Attributes != null)
-                {
-                    foreach (var attribute in Db.Get().Attributes.resources)
-                    {
-                        CustomLog($"Attribute ID: {attribute.Id}, Name: {attribute.Name}, Description: {attribute.Description}");
-                    }
-                }
-                else
-                {
-                    CustomLog("Db or Db.Get().Attributes is not initialized yet.");
-                }
-            }
-            catch (Exception ex)
-            {
-                CustomLog($"Exception while printing attributes: {ex}");
-            }
+            ArtifactStateTracker.LoadArtifactAttributeMap();
         }
     }
 
@@ -99,11 +54,15 @@ namespace ArtifactsPlus
 
     public static class ArtifactStateTracker
     {
-        // Tracks the state of each artifact by instance ID
         internal static readonly Dictionary<int, ArtifactState> ArtifactStates = new Dictionary<int, ArtifactState>();
         internal static readonly HashSet<GameObject> ArtifactsOnPedestals = new HashSet<GameObject>();
 
         private static Dictionary<string, Dictionary<string, float>> artifactAttributeMap;
+
+        private static int globalRoomSizeMin = 6;
+        private static int globalRoomSizeMax = 32;
+        private static int decorMinimum = 0;
+        private static readonly string GlowChildName = "ArtifactGlowFX";
 
         public static void RegisterArtifactOnPedestal(GameObject artifact)
         {
@@ -135,7 +94,6 @@ namespace ArtifactsPlus
             state.IsActive = onPedestal && meetsRoomSize;
 
             string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-            // Try to get the in-game display name
             string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
                 ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
                 ?? internalName;
@@ -156,15 +114,70 @@ namespace ArtifactsPlus
 
                 AdjustAllDupesAttributes(internalName, state.IsActive);
             }
+
+            ApplyGlowEffect(artifact, state.IsActive);
         }
 
-        private static void LoadArtifactAttributeMap()
+        public static void ApplyGlowEffect(GameObject artifact, bool enable)
+        {
+            var parent = artifact.transform;
+            var glowChild = parent.Find(GlowChildName)?.gameObject;
+
+            if (enable)
+            {
+                if (glowChild == null)
+                {
+                    glowChild = new GameObject(GlowChildName);
+                    glowChild.transform.SetParent(parent, false);
+
+                    var light2D = glowChild.AddComponent<Light2D>();
+                    light2D.overlayColour = new Color(1f, 1f, 1f, 0.2f); // Replace LIGHT2D.FLOORLAMP_OVERLAYCOLOR
+                    light2D.Color = Color.yellow; // Replace LIGHT2D.FLOORLAMP_COLOR
+                    light2D.Range = 4f;
+                    light2D.Lux = 1800;
+                    light2D.Offset = new Vector2(0, 0.5f);
+                    light2D.shape = LightShape.Circle;
+                    light2D.drawOverlay = true;
+                }
+                else
+                {
+                    var light2D = glowChild.GetComponent<Light2D>();
+                    if (light2D != null)
+                        light2D.enabled = true;
+                }
+            }
+            else if (glowChild != null)
+            {
+                GameObject.Destroy(glowChild);
+            }
+        }
+
+        public static void LoadArtifactAttributeMap()
         {
             artifactAttributeMap = new Dictionary<string, Dictionary<string, float>>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                var arr = JArray.Parse(File.ReadAllText(ModInit.ArtifactPowersConfigPath));
+                var configText = File.ReadAllText(ModInit.ArtifactPowersConfigPath);
+                var configJson = JObject.Parse(configText);
+
+                if (!(configJson["Artifacts"] is JArray arr))
+                {
+                    ModInit.CustomLog("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
+                    return;
+                }
+
+                if (configJson.TryGetValue("GlobalRoomSizeMinimum", out var minToken) && minToken.Type == JTokenType.Integer)
+                    globalRoomSizeMin = (int)minToken;
+                if (configJson.TryGetValue("GlobalRoomSizeMaximum", out var maxToken) && maxToken.Type == JTokenType.Integer)
+                    globalRoomSizeMax = (int)maxToken;
+                if (configJson.TryGetValue("DecorMinimum", out var decorToken) && decorToken.Type == JTokenType.Integer)
+                    decorMinimum = (int)decorToken;
+
+                ModInit.CustomLog($"[CONFIG] GlobalRoomSizeMinimum: {globalRoomSizeMin}");
+                ModInit.CustomLog($"[CONFIG] GlobalRoomSizeMaximum: {globalRoomSizeMax}");
+                ModInit.CustomLog($"[CONFIG] DecorMinimum: {decorMinimum}");
+
                 foreach (var obj in arr)
                 {
                     var artifactId = (string)obj["ArtifactId"];
@@ -175,11 +188,11 @@ namespace ArtifactsPlus
                         {
                             if (float.TryParse(prop.Value.ToString(), out float val))
                                 dict[prop.Name] = val;
-                        }
+                        }   
                         artifactAttributeMap[artifactId] = dict;
                     }
                 }
-                ModInit.CustomLog("[DEBUG] Loaded artifact attribute map from config.");
+                ModInit.CustomLog("[DEBUG] Loaded artifact attribute map and config values from config.");
             }
             catch (Exception ex)
             {
@@ -210,7 +223,6 @@ namespace ArtifactsPlus
                         string attrName = kvp.Key;
                         float value = kvp.Value * sign;
 
-                        // Try to match by Id or Name (case-insensitive)
                         Klei.AI.Attribute attribute = Db.Get().Attributes.resources
                             .FirstOrDefault(a => string.Equals(a.Id, attrName, StringComparison.OrdinalIgnoreCase) ||
                                                  string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));
@@ -266,7 +278,7 @@ namespace ArtifactsPlus
                     if (room != null && room.cavity != null)
                         roomSize = room.cavity.numCells;
                 }
-                bool meetsRoomSize = roomSize > 0 && roomSize < 32;
+                bool meetsRoomSize = roomSize >= globalRoomSizeMin && roomSize <= globalRoomSizeMax;
                 UpdateArtifactState(artifact, true, meetsRoomSize);
             }
         }
