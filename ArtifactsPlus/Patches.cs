@@ -57,12 +57,12 @@ namespace ArtifactsPlus
         internal static readonly Dictionary<int, ArtifactState> ArtifactStates = new Dictionary<int, ArtifactState>();
         internal static readonly HashSet<GameObject> ArtifactsOnPedestals = new HashSet<GameObject>();
 
-        private static Dictionary<string, Dictionary<string, float>> artifactAttributeMap;
-
-        private static int globalRoomSizeMin = 6;
-        private static int globalRoomSizeMax = 32;
+        internal static int globalRoomSizeMin = 6;
+        internal static int globalRoomSizeMax = 32;
         private static int decorMinimum = 0;
         private static readonly string GlowChildName = "ArtifactGlowFX";
+
+        private static Dictionary<string, Dictionary<string, float>> artifactAttributeMap;
 
         public static void RegisterArtifactOnPedestal(GameObject artifact)
         {

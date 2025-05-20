@@ -1,8 +1,7 @@
 {
   "GlobalRoomSizeMinimum": 6,
   "GlobalRoomSizeMaximum": 32,
-  "DecorMinimum": 0,
-  "GlowKAnim": "harvestglow_kanim",
+  "DecorMinimum": 5,
   "Artifacts": [
     {
       "ArtifactId": "artifact_sandstone",
