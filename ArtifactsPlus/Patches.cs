@@ -271,15 +271,53 @@ namespace ArtifactsPlus
                     continue;
                 int cell = Grid.PosToCell(artifact.transform.position);
                 int roomSize = -1;
+                float roomDecor = float.MinValue;
+                bool meetsRoomSize = false;
+                bool meetsDecor = false;
+
                 if (Game.Instance != null && Game.Instance.roomProber != null)
                 {
                     var cavity = Game.Instance.roomProber.GetCavityForCell(cell);
                     var room = cavity?.room;
                     if (room != null && room.cavity != null)
+                    {
                         roomSize = room.cavity.numCells;
+                        meetsRoomSize = roomSize >= globalRoomSizeMin && roomSize <= globalRoomSizeMax;
+
+                        // Calculate average decor in the room
+                        int decorSum = 0;
+                        int decorCount = 0;
+                        foreach (var building in room.cavity.buildings)
+                        {
+                            if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
+                            {
+                                decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
+                                decorCount++;
+                            }
+                        }
+                        if (decorCount > 0)
+                        {
+                            roomDecor = (float)decorSum / decorCount;
+                        }
+                        else
+                        {
+                            roomDecor = 0f;
+                        }
+                        meetsDecor = roomDecor >= decorMinimum;
+                    }
                 }
-                bool meetsRoomSize = roomSize >= globalRoomSizeMin && roomSize <= globalRoomSizeMax;
-                UpdateArtifactState(artifact, true, meetsRoomSize);
+
+                // Artifact is active only if both room size and decor requirements are met
+                bool meetsAll = meetsRoomSize && meetsDecor;
+                if (!meetsAll && meetsRoomSize && !meetsDecor)
+                {
+                    ModInit.CustomLog($"[DEBUG] Artifact '{artifact.name}' inactive due to decor: {roomDecor} (minimum required: {decorMinimum})");
+                }
+                else if (meetsAll)
+                {
+                    ModInit.CustomLog($"[DEBUG] Artifact '{artifact.name}' active with decor: {roomDecor}");
+                }
+                UpdateArtifactState(artifact, true, meetsAll);
             }
         }
     }

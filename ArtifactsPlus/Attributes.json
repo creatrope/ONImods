@@ -1,0 +1,24 @@
+{
+  "Attributes": [
+    {
+      "Id": "Learning",
+      "Name": "Learning",
+      "Description": "Affects how quickly duplicants gain new skills."
+    },
+    {
+      "Id": "Machinery",
+      "Name": "Machinery",
+      "Description": "Affects duplicants' ability to operate complex machines."
+    },
+    {
+      "Id": "Athletics",
+      "Name": "Athletics",
+      "Description": "Affects duplicants' movement speed."
+    },
+    {
+      "Id": "Cooking",
+      "Name": "Cooking",
+      "Description": "Affects duplicants' ability to cook food."
+    }
+  ]
+}

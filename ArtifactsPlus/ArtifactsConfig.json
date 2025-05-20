@@ -1,7 +1,7 @@
 {
   "GlobalRoomSizeMinimum": 6,
   "GlobalRoomSizeMaximum": 32,
-  "DecorMinimum": 5,
+  "DecorMinimum": 100,
   "Artifacts": [
     {
       "ArtifactId": "artifact_sandstone",
