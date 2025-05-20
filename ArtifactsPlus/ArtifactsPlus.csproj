@@ -42,9 +42,8 @@
       <HintPath>..\lib\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="PLib, Version=4.17.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\PLib.4.17.1\lib\net471\PLib.dll</HintPath>
-      <Private>false</Private>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -78,22 +77,40 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ArtifactsConfig.json" />
     <None Include="mod.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="mod_info.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
-  <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(MSBuildProjectDirectory)\bin\Release\ThermoSensorPlus.dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\ThermoSensorPlus.dll&quot; &quot;$(SolutionDir)lib\PLib.dll&quot;" />
-  </Target>
-  <Target Name="RunDeploy" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(MSBuildProjectDirectory)\..\deploy.bat&quot; &quot;$(MSBuildProjectDirectory)&quot;" />
-  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>
     </PostBuildEvent>
   </PropertyGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Message Text="ArtifactsPlus PostBuild target running!" Importance="high" />
+    <Copy
+      SourceFiles="$(TargetPath)"
+      DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\"
+      OverwriteReadOnlyFiles="true" />
+    <Copy
+      SourceFiles="ArtifactsConfig.json"
+      DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\"
+      OverwriteReadOnlyFiles="true"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="mod.yaml"
+      DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\"
+      OverwriteReadOnlyFiles="true"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="mod_info.yaml"
+      DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\"
+      OverwriteReadOnlyFiles="true"
+      SkipUnchangedFiles="true" />
+  </Target>
 </Project>

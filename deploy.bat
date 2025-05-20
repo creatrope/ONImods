@@ -27,7 +27,7 @@ if not exist "%DEST_DIR%" (
 set "MOVED_FILES="
 
 :: Static files to copy (file or folder)
-set FILE_LIST=preview.png mod.yaml mod_info.yaml %MOD_NAME%.dll anim
+set FILE_LIST=preview.png mod.yaml mod_info.yaml %MOD_NAME%.dll anim ArtifactsConfig.json
 
 for %%F in (%FILE_LIST%) do (
     set "SRC_FILE=%PROJECT_DIR%\%%F"
