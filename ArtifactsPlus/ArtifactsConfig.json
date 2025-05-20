@@ -5,11 +5,17 @@
   },
   {
     "ArtifactId": "artifact_sink",
-    "Attributes": {}
+    "Attributes": {
+      "Learning": 5,
+      "Machinery": 2
+    }
   },
   {
     "ArtifactId": "artifact_rubikscube",
-    "Attributes": {}
+    "Attributes": {
+      "Athletics": 5,
+      "Cooking": -1
+    }
   },
   {
     "ArtifactId": "artifact_officemug",

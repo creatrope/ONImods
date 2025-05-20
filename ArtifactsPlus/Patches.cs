@@ -3,7 +3,11 @@ using UnityEngine;
 using System.IO;
 using KMod;
 using System.Collections.Generic;
-using System.Linq; // Add this at the top of the file
+using System.Linq;
+using System;
+using Klei.AI;
+using System.Reflection;
+using Newtonsoft.Json.Linq;
 
 // using PeterHan.PLib.Core; // Uncomment if you use PLib
 
@@ -41,8 +45,8 @@ namespace ArtifactsPlus
         {
             Debug.Log("[ArtifactsPlus] OnLoad() was called!");
             Debug.Log($"[ArtifactsPlus] Custom log file location: {DesktopLogPath}");
-            // Write a test message to the custom log
             CustomLog("Test message: custom log initialized and working.");
+            //PrintAllAttributes(); // <-- Add this line to call the function when the mod loads
             // All other debug messages should use CustomLog
             //RegisterArtifactPowers();
         }
@@ -53,13 +57,35 @@ namespace ArtifactsPlus
 
             if (File.Exists(configPath))
             {
-                string json = File.ReadAllText(configPath);
                 CustomLog($"Loaded configuration from: {configPath}");
                 // TODO: Deserialize and use the config as needed
             }
             else
             {
                 CustomLog($"Configuration file not found: {configPath}");
+            }
+        }
+
+        public static void PrintAllAttributes()
+        {
+            try
+            {
+                // Ensure Db is initialized before accessing attributes
+                if (Db.Get() != null && Db.Get().Attributes != null)
+                {
+                    foreach (var attribute in Db.Get().Attributes.resources)
+                    {
+                        CustomLog($"Attribute ID: {attribute.Id}, Name: {attribute.Name}, Description: {attribute.Description}");
+                    }
+                }
+                else
+                {
+                    CustomLog("Db or Db.Get().Attributes is not initialized yet.");
+                }
+            }
+            catch (Exception ex)
+            {
+                CustomLog($"Exception while printing attributes: {ex}");
             }
         }
     }
@@ -75,23 +101,21 @@ namespace ArtifactsPlus
     {
         // Tracks the state of each artifact by instance ID
         internal static readonly Dictionary<int, ArtifactState> ArtifactStates = new Dictionary<int, ArtifactState>();
-
-        // Changed from private to internal to make it accessible within the same assembly
         internal static readonly HashSet<GameObject> ArtifactsOnPedestals = new HashSet<GameObject>();
+
+        private static Dictionary<string, Dictionary<string, float>> artifactAttributeMap;
 
         public static void RegisterArtifactOnPedestal(GameObject artifact)
         {
             if (artifact != null)
-            {
                 ArtifactsOnPedestals.Add(artifact);
-            }
         }
 
         public static void UnregisterArtifactOnPedestal(GameObject artifact)
         {
             if (artifact != null)
             {
-                UpdateArtifactState(artifact, false, false); // Ensure state is set to inactive and debug message is logged
+                UpdateArtifactState(artifact, false, false);
                 ArtifactsOnPedestals.Remove(artifact);
             }
         }
@@ -99,8 +123,7 @@ namespace ArtifactsPlus
         public static void UpdateArtifactState(GameObject artifact, bool onPedestal, bool meetsRoomSize)
         {
             int id = artifact.GetInstanceID();
-            ArtifactState state;
-            if (!ArtifactStates.TryGetValue(id, out state))
+            if (!ArtifactStates.TryGetValue(id, out var state))
             {
                 state = new ArtifactState();
                 ArtifactStates[id] = state;
@@ -111,10 +134,110 @@ namespace ArtifactsPlus
             state.MeetsRoomSize = meetsRoomSize;
             state.IsActive = onPedestal && meetsRoomSize;
 
-            string displayName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
+            string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
+            // Try to get the in-game display name
+            string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
+                ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
+                ?? internalName;
+
             if (wasActive != state.IsActive)
             {
-                ModInit.CustomLog($"***** [ArtifactState] Artifact '{displayName}' (ID={artifact.name}) changed state: {(state.IsActive ? "ACTIVE" : "INACTIVE")}");
+                string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
+                ModInit.CustomLog($"***** [ArtifactState] Artifact '{displayName}' (ID={artifact.name}) changed state: {stateText}");
+
+                PopFXManager.Instance.SpawnFX(
+                    state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
+                    $"Artifact '{displayName}' is now {stateText}",
+                    artifact.transform,
+                    new Vector3(0, 0, 0),
+                    2f,
+                    false
+                );
+
+                AdjustAllDupesAttributes(internalName, state.IsActive);
+            }
+        }
+
+        private static void LoadArtifactAttributeMap()
+        {
+            artifactAttributeMap = new Dictionary<string, Dictionary<string, float>>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                var arr = JArray.Parse(File.ReadAllText(ModInit.ArtifactPowersConfigPath));
+                foreach (var obj in arr)
+                {
+                    var artifactId = (string)obj["ArtifactId"];
+                    if (artifactId != null && obj["Attributes"] is JObject attributes)
+                    {
+                        var dict = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var prop in attributes.Properties())
+                        {
+                            if (float.TryParse(prop.Value.ToString(), out float val))
+                                dict[prop.Name] = val;
+                        }
+                        artifactAttributeMap[artifactId] = dict;
+                    }
+                }
+                ModInit.CustomLog("[DEBUG] Loaded artifact attribute map from config.");
+            }
+            catch (Exception ex)
+            {
+                ModInit.CustomLog($"[ERROR] Failed to load artifact config: {ex}");
+            }
+        }
+
+        public static void AdjustAllDupesAttributes(string artifactName, bool isActive)
+        {
+            if (artifactAttributeMap == null)
+                LoadArtifactAttributeMap();
+
+            if (!artifactAttributeMap.TryGetValue(artifactName, out var attributes) || attributes.Count == 0)
+            {
+                ModInit.CustomLog($"[DEBUG] No attribute adjustments found for artifact '{artifactName}'. Skipping adjustment.");
+                return;
+            }
+
+            ModInit.CustomLog($"[DEBUG] Found {attributes.Count} attribute adjustment(s) for artifact '{artifactName}' (isActive={isActive}).");
+
+            float sign = isActive ? 1f : -1f;
+            foreach (var minion in UnityEngine.Object.FindObjectsOfType<MinionIdentity>())
+            {
+                if (minion.GetComponent<MinionModifiers>() is MinionModifiers minionModifiers)
+                {
+                    foreach (var kvp in attributes)
+                    {
+                        string attrName = kvp.Key;
+                        float value = kvp.Value * sign;
+
+                        // Try to match by Id or Name (case-insensitive)
+                        Klei.AI.Attribute attribute = Db.Get().Attributes.resources
+                            .FirstOrDefault(a => string.Equals(a.Id, attrName, StringComparison.OrdinalIgnoreCase) ||
+                                                 string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));
+
+                        if (attribute == null)
+                        {
+                            ModInit.CustomLog($"[DEBUG] Attribute '{attrName}' not found by Id or Name in Db for {minion.name}.");
+                            continue;
+                        }
+
+                        var attrInstance = minionModifiers.attributes?.Get(attribute);
+                        if (attrInstance != null)
+                        {
+                            var modifier = new AttributeModifier(attribute.Id, value, $"Artifact Effect: {artifactName}");
+                            attrInstance.Add(modifier);
+                            ModInit.CustomLog($"[DEBUG] {minion.name}: modified '{attribute.Id}' by {value} from '{artifactName}'.");
+                        }
+                        else
+                        {
+                            ModInit.CustomLog($"[DEBUG] {minion.name} does not have attribute '{attribute.Id}'.");
+                        }
+                    }
+                }
+                else
+                {
+                    ModInit.CustomLog($"[DEBUG] {minion.name} has no MinionModifiers.");
+                }
             }
         }
 
@@ -128,29 +251,22 @@ namespace ArtifactsPlus
             }
         }
 
-        // Poll only artifacts that are on pedestals
         public static void PollAllArtifacts()
         {
             foreach (var artifact in ArtifactsOnPedestals)
             {
                 if (artifact == null)
-                {
                     continue;
-                }
-                bool meetsRoomSize = false;
-                Vector3 position = artifact.transform.position;
-                int cell = Grid.PosToCell(position);
+                int cell = Grid.PosToCell(artifact.transform.position);
                 int roomSize = -1;
                 if (Game.Instance != null && Game.Instance.roomProber != null)
                 {
                     var cavity = Game.Instance.roomProber.GetCavityForCell(cell);
                     var room = cavity?.room;
                     if (room != null && room.cavity != null)
-                    {
                         roomSize = room.cavity.numCells;
-                    }
                 }
-                meetsRoomSize = roomSize > 0 && roomSize < 32;
+                bool meetsRoomSize = roomSize > 0 && roomSize < 32;
                 UpdateArtifactState(artifact, true, meetsRoomSize);
             }
         }
@@ -159,7 +275,7 @@ namespace ArtifactsPlus
     public class ArtifactStatePoller : MonoBehaviour
     {
         private int tickCounter = 0;
-        private const int PollInterval = 20; // Adjust as needed
+        private const int PollInterval = 20;
 
         public ArtifactStatePoller() { }
         void Awake() { }
@@ -182,7 +298,7 @@ namespace ArtifactsPlus
             base.OnLoad(harmony);
             Debug.Log("[ArtifactsPlus] Mod loaded and Harmony patches applied.");
             harmony.PatchAll();
-            ModInit.OnLoad(); // Ensure your custom initialization runs
+            ModInit.OnLoad();
 
             if (Game.Instance != null)
             {
@@ -197,21 +313,19 @@ namespace ArtifactsPlus
     [HarmonyPatch(typeof(ItemPedestal), "OnOccupantChanged")]
     public static class ItemPedestal_OnOccupantChanged_Patch
     {
-        public static void Postfix(ItemPedestal __instance, object data)
+        public static void Postfix(ItemPedestal __instance)
         {
-            var receptacleField = typeof(ItemPedestal).GetField("receptacle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
             var receptacle = receptacleField?.GetValue(__instance) as SingleEntityReceptacle;
             var occupant = receptacle?.Occupant;
 
-            // Remove all artifacts that were previously registered for this pedestal
             foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals.ToArray())
             {
                 if (artifact == null) continue;
-                // If this artifact is no longer on any pedestal, unregister it
                 bool stillOnPedestal = false;
                 foreach (var pedestal in GameObject.FindObjectsOfType<ItemPedestal>())
                 {
-                    var recField = typeof(ItemPedestal).GetField("receptacle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    var recField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
                     var rec = recField?.GetValue(pedestal) as SingleEntityReceptacle;
                     if (rec != null && rec.Occupant == artifact)
                     {
@@ -223,7 +337,6 @@ namespace ArtifactsPlus
                     ArtifactStateTracker.UnregisterArtifactOnPedestal(artifact);
             }
 
-            // Register the new occupant if present
             if (occupant != null)
                 ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
         }
@@ -232,11 +345,11 @@ namespace ArtifactsPlus
     [HarmonyPatch(typeof(Game), "OnPrefabInit")]
     public static class Game_OnPrefabInit_Patch
     {
-        public static void Postfix(Game __instance)
+        public static void Postfix()
         {
-            if (__instance != null && __instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
+            if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
             {
-                __instance.gameObject.AddComponent<ArtifactStatePoller>();
+                Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
             }
         }
     }
