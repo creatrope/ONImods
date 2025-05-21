@@ -2,7 +2,7 @@
   "GlobalRoomSizeMinimum": 6,
   "GlobalRoomSizeMaximum": 32,
   "DecorMinimum": 100,
-  "Filter": "InWorld",
+  "Filter": "All",
   "Artifacts": [
     {
       "ArtifactId": "artifact_sandstone",
@@ -11,8 +11,8 @@
     {
       "ArtifactId": "artifact_sink",
       "Attributes": {
-        "Learning": 5,
-        "Machinery": 2
+        "Cooking": 10,
+        "Machinery": 5
       },
       "Traits": [
         "Twinkletoes"
@@ -20,10 +20,11 @@
     },
     {
       "ArtifactId": "artifact_rubikscube",
+      "RoomSizeMin": 32,
+      "RoomSizeMax": 64,
+      "DecorMinimum": 140,
       "Attributes": {
-        "Learning" : 1,
-        "Athletics": 5,
-        "Cooking": -1
+        "Learning": 10
       }
     },
     {

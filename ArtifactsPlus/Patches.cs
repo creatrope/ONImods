@@ -45,6 +45,26 @@ namespace ArtifactsPlus
         public bool IsActive;
     }
 
+    public class ArtifactConfig
+    {
+        public int RoomSizeMin;
+        public int RoomSizeMax;
+        public int DecorMinimum;
+        public string Filter;
+        public Dictionary<string, float> Attributes;
+        public List<string> Traits;
+
+        public ArtifactConfig(int globalMin, int globalMax, int globalDecor, string globalFilter)
+        {
+            RoomSizeMin = globalMin;
+            RoomSizeMax = globalMax;
+            DecorMinimum = globalDecor;
+            Filter = globalFilter;
+            Attributes = new Dictionary<string, float>();
+            Traits = new List<string>();
+        }
+    }
+
     public static class ArtifactStateTracker
     {
         internal static readonly Dictionary<int, ArtifactState> ArtifactStates = new Dictionary<int, ArtifactState>();
@@ -55,7 +75,7 @@ namespace ArtifactsPlus
         private static int decorMinimum = 0;
         private static readonly string GlowChildName = "ArtifactGlowFX";
 
-        private static Dictionary<string, Dictionary<string, float>> artifactAttributeMap;
+        private static Dictionary<string, ArtifactConfig> artifactConfigMap;
 
         public static void RegisterArtifactOnPedestal(GameObject artifact)
         {
@@ -136,6 +156,14 @@ namespace ArtifactsPlus
                 ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
                 ?? internalName;
 
+            // Get artifact config
+            var config = GetArtifactConfig(internalName);
+            if (config == null)
+            {
+                CustomLogger.Log($"[WARN] No config found for artifact '{internalName}'");
+                return;
+            }
+
             if (wasActive != state.IsActive)
             {
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
@@ -151,22 +179,15 @@ namespace ArtifactsPlus
                     false
                 );
 
-                string filter = "All";
-                try
-                {
-                    var configText = File.ReadAllText(ModInit.ArtifactPowersConfigPath);
-                    var configJson = JObject.Parse(configText);
-                    filter = (string)configJson["Filter"] ?? "All";
-                }
-                catch { }
-
-                // Log the filter being applied
-                CustomLogger.Log($"[DEBUG] Minion filter being applied: {filter}");
+                // Print out the config being honored
+                CustomLogger.Log(
+                    $"[CONFIG] Using for '{internalName}': RoomSizeMin={config.RoomSizeMin}, RoomSizeMax={config.RoomSizeMax}, DecorMinimum={config.DecorMinimum}, Filter={config.Filter}"
+                );
 
                 List<GameObject> minionList;
-                if (filter == "InRoom")
+                if (config.Filter == "InRoom")
                     minionList = GetMinionsInSameRoom(artifact);
-                else if (filter == "InWorld")
+                else if (config.Filter == "InWorld")
                     minionList = GetMinionsInSameWorld(artifact);
                 else
                     minionList = GetAllMinions();
@@ -180,8 +201,9 @@ namespace ArtifactsPlus
 
         public static bool TryGetArtifactAttributes(string artifactId, out Dictionary<string, float> attributes)
         {
-            if (artifactAttributeMap != null && artifactAttributeMap.TryGetValue(artifactId, out attributes))
+            if (artifactConfigMap != null && artifactConfigMap.TryGetValue(artifactId, out var config))
             {
+                attributes = config.Attributes;
                 return true;
             }
             attributes = null;
@@ -229,12 +251,17 @@ namespace ArtifactsPlus
 
         public static void LoadArtifactAttributeMap()
         {
-            artifactAttributeMap = new Dictionary<string, Dictionary<string, float>>(StringComparer.OrdinalIgnoreCase);
+            artifactConfigMap = new Dictionary<string, ArtifactConfig>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
                 var configText = File.ReadAllText(ModInit.ArtifactPowersConfigPath);
                 var configJson = JObject.Parse(configText);
+
+                int globalRoomSizeMin = (int)(configJson["GlobalRoomSizeMinimum"] ?? 6);
+                int globalRoomSizeMax = (int)(configJson["GlobalRoomSizeMaximum"] ?? 32);
+                int globalDecorMinimum = (int)(configJson["DecorMinimum"] ?? 0);
+                string globalFilter = (string)(configJson["Filter"] ?? "All");
 
                 if (!(configJson["Artifacts"] is JArray arr))
                 {
@@ -242,37 +269,54 @@ namespace ArtifactsPlus
                     return;
                 }
 
-                if (configJson.TryGetValue("GlobalRoomSizeMinimum", out var minToken) && minToken.Type == JTokenType.Integer)
-                    globalRoomSizeMin = (int)minToken;
-                if (configJson.TryGetValue("GlobalRoomSizeMaximum", out var maxToken) && maxToken.Type == JTokenType.Integer)
-                    globalRoomSizeMax = (int)maxToken;
-                if (configJson.TryGetValue("DecorMinimum", out var decorToken) && decorToken.Type == JTokenType.Integer)
-                    decorMinimum = (int)decorToken;
-
-                CustomLogger.Log($"[CONFIG] GlobalRoomSizeMinimum: {globalRoomSizeMin}");
-                CustomLogger.Log($"[CONFIG] GlobalRoomSizeMaximum: {globalRoomSizeMax}");
-                CustomLogger.Log($"[CONFIG] DecorMinimum: {decorMinimum}");
-
                 foreach (var obj in arr)
                 {
                     var artifactId = (string)obj["ArtifactId"];
-                    if (artifactId != null && obj["Attributes"] is JObject attributes)
+                    if (artifactId == null) continue;
+
+                    // Inherit global config
+                    var artifactConfig = new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, globalDecorMinimum, globalFilter);
+
+                    // Local overrides
+                    if (obj["RoomSizeMin"] != null) artifactConfig.RoomSizeMin = (int)obj["RoomSizeMin"];
+                    if (obj["RoomSizeMax"] != null) artifactConfig.RoomSizeMax = (int)obj["RoomSizeMax"];
+                    if (obj["DecorMinimum"] != null) artifactConfig.DecorMinimum = (int)obj["DecorMinimum"];
+                    if (obj["Filter"] != null) artifactConfig.Filter = (string)obj["Filter"];
+
+                    if (obj["Attributes"] is JObject attributes)
                     {
-                        var dict = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
                         foreach (var prop in attributes.Properties())
                         {
                             if (float.TryParse(prop.Value.ToString(), out float val))
-                                dict[prop.Name] = val;
+                                artifactConfig.Attributes[prop.Name] = val;
                         }
-                        artifactAttributeMap[artifactId] = dict;
                     }
+
+                    if (obj["Traits"] is JArray traits)
+                    {
+                        foreach (var trait in traits)
+                        {
+                            artifactConfig.Traits.Add((string)trait);
+                        }
+                    }
+
+                    artifactConfigMap[artifactId] = artifactConfig;
                 }
-                CustomLogger.Log("[DEBUG] Loaded artifact attribute map and config values from config.");
+                CustomLogger.Log("[DEBUG] Loaded artifact config map with inheritance.");
             }
             catch (Exception ex)
             {
                 CustomLogger.Log($"[ERROR] Failed to load artifact config: {ex}");
             }
+        }
+
+        public static ArtifactConfig GetArtifactConfig(string artifactId)
+        {
+            if (artifactConfigMap != null && artifactConfigMap.TryGetValue(artifactId, out var config))
+                return config;
+
+            // Return a config using global values if not found
+            return new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, decorMinimum, "All");
         }
 
         public static void RemoveArtifact(GameObject artifact)
@@ -291,10 +335,15 @@ namespace ArtifactsPlus
             {
                 if (artifact == null)
                     continue;
+
                 int cell = Grid.PosToCell(artifact.transform.position);
                 float roomDecor = float.MinValue;
                 bool meetsRoomSize = false;
                 bool meetsDecor = false;
+
+                // Get artifact config using internal name
+                string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
+                var config = GetArtifactConfig(internalName);
 
                 if (Game.Instance != null && Game.Instance.roomProber != null)
                 {
@@ -302,7 +351,8 @@ namespace ArtifactsPlus
                     var room = cavity?.room;
                     if (room != null && room.cavity != null)
                     {
-                        meetsRoomSize = room.cavity.numCells >= globalRoomSizeMin && room.cavity.numCells <= globalRoomSizeMax;
+                        // Use config.RoomSizeMin and config.RoomSizeMax instead of globalRoomSizeMin/globalRoomSizeMax
+                        meetsRoomSize = room.cavity.numCells >= config.RoomSizeMin && room.cavity.numCells <= config.RoomSizeMax;
 
                         int decorSum = 0;
                         int decorCount = 0;
@@ -322,7 +372,8 @@ namespace ArtifactsPlus
                         {
                             roomDecor = 0f;
                         }
-                        meetsDecor = roomDecor >= decorMinimum;
+                        // Use config.DecorMinimum instead of decorMinimum
+                        meetsDecor = roomDecor >= config.DecorMinimum;
                     }
                 }
 
@@ -413,4 +464,16 @@ namespace ArtifactsPlus
             }
         }
     }
+
+    // Remove or comment out this patch if MinionIdentity.OnWorldChanged does not exist
+    /*
+    [HarmonyPatch(typeof(MinionIdentity), "OnWorldChanged")]
+    public static class MinionIdentity_OnWorldChanged_Patch
+    {
+        public static void Postfix(MinionIdentity __instance, int oldWorldId, int newWorldId)
+        {
+            // ... your code ...
+        }
+    }
+    */
 }
