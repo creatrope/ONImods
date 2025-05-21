@@ -30,8 +30,10 @@ namespace ArtifactsPlus
         public static void OnLoad()
         {
             Debug.Log("[ArtifactsPlus] OnLoad() was called!");
-            Debug.Log($"[ArtifactsPlus] Custom log file location: {DesktopLogPath}");
+            Debug.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
             CustomLogger.Log("Test message: custom log initialized and working.");
+
+            CustomLogger.Log("[DEBUG] Calling LoadArtifactAttributeMap()");
             ArtifactStateTracker.LoadArtifactAttributeMap();
         }
     }
@@ -104,12 +106,27 @@ namespace ArtifactsPlus
                     false
                 );
 
-                // Debug log for attribute adjustment trigger
-                CustomLogger.Log($"[DEBUG] Triggering attribute adjustment for '{internalName}' (Active={state.IsActive})");
-                AdjustAllDupesAttributesTracked(artifact, internalName, state.IsActive);
+                // Call ArtifactEffectTracker to update minion attributes
+                ArtifactEffectTracker.OnArtifactStateChanged(artifact, internalName, state.IsActive);
+                CustomLogger.Log($"[DEBUG] Called ArtifactEffectTracker.OnArtifactStateChanged for '{internalName}' (active={state.IsActive})");
             }
 
             ApplyGlowEffect(artifact, state.IsActive);
+        }
+
+        public static bool TryGetArtifactAttributes(string artifactId, out Dictionary<string, float> attributes)
+        {
+            if (artifactAttributeMap != null && artifactAttributeMap.TryGetValue(artifactId, out attributes))
+            {
+                return true;
+            }
+            attributes = null;
+            return false;
+        }
+
+        public static bool TryGetArtifactEffects(string artifactId, out Dictionary<string, float> effects)
+        {
+            return TryGetArtifactAttributes(artifactId, out effects);
         }
 
         public static void ApplyGlowEffect(GameObject artifact, bool enable)
@@ -191,61 +208,6 @@ namespace ArtifactsPlus
             catch (Exception ex)
             {
                 CustomLogger.Log($"[ERROR] Failed to load artifact config: {ex}");
-            }
-        }
-
-        public static void AdjustAllDupesAttributesTracked(GameObject artifact, string artifactName, bool isActive)
-        {
-            if (artifactAttributeMap == null)
-                LoadArtifactAttributeMap();
-
-            if (!artifactAttributeMap.TryGetValue(artifactName, out var attributes) || attributes.Count == 0)
-            {
-                CustomLogger.Log($"[DEBUG] No attribute adjustments found for artifact '{artifactName}'. Skipping adjustment.");
-                return;
-            }
-
-            float sign = isActive ? 1f : -1f;
-            CustomLogger.Log($"[DEBUG] Found {attributes.Count} attribute adjustments for artifact '{artifactName}'. Applying with sign {sign}.");
-            foreach (var minion in UnityEngine.Object.FindObjectsOfType<MinionIdentity>())
-            {
-                CustomLogger.Log($"[DEBUG] Checking minion: {minion.name}");
-                if (minion.GetComponent<MinionModifiers>() is MinionModifiers minionModifiers)
-                {
-                    foreach (var kvp in attributes)
-                    {
-                        string attrName = kvp.Key;
-                        float value = kvp.Value * sign;
-
-                        Klei.AI.Attribute attribute = Db.Get().Attributes.resources
-                            .FirstOrDefault(a => string.Equals(a.Id, attrName, StringComparison.OrdinalIgnoreCase) ||
-                                                 string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));
-
-                        if (attribute == null)
-                        {
-                            CustomLogger.Log($"[DEBUG] Attribute '{attrName}' not found by Id or Name in Db for {minion.name}.");
-                            continue;
-                        }
-
-                        var attrInstance = minionModifiers.attributes?.Get(attribute);
-                        if (attrInstance != null)
-                        {
-                            float currentValue = attrInstance.GetTotalValue();
-                            float newValue = currentValue + value;
-                            CustomLogger.Log($"[DEBUG] {minion.name}: {attribute.Id} {currentValue} ({(value >= 0 ? "+" : "")}{value}) -> {newValue}");
-                            var modifier = new AttributeModifier(attribute.Id, value, $"Artifact Effect: {artifactName}");
-                            attrInstance.Add(modifier);
-                        }
-                        else
-                        {
-                            CustomLogger.Log($"[DEBUG] {minion.name} does not have attribute '{attribute.Id}'.");
-                        }
-                    }
-                }
-                else
-                {
-                    CustomLogger.Log($"[DEBUG] {minion.name} has no MinionModifiers.");
-                }
             }
         }
 

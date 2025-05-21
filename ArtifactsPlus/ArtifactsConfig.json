@@ -1,5 +1,4 @@
 {
-  "DebugLogPath": "C:\\Users\\sendh\\Desktop\\ArtifactsPlus.log",
   "GlobalRoomSizeMinimum": 6,
   "GlobalRoomSizeMaximum": 32,
   "DecorMinimum": 100,
@@ -21,6 +20,7 @@
     {
       "ArtifactId": "artifact_rubikscube",
       "Attributes": {
+        "Learning" : 1,
         "Athletics": 5,
         "Cooking": -1
       }

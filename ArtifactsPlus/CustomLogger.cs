@@ -1,75 +1,43 @@
 using System;
 using System.IO;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace ArtifactsPlus
 {
     public static class CustomLogger
     {
-        private static string logPath;
-        private static bool useCustomLog = true;
-        private static bool initialized = false;
-
-        public static string LogPath
-        {
-            get
-            {
-                EnsureInitialized();
-                return logPath;
-            }
-        }
+        private static bool _initialized = false;
+        // Hardcoded log path
+        public static string LogPath { get; } = "c:\\users\\sendh\\Desktop\\ArtifactsPlus.log";
 
         public static void Log(string message)
         {
-            EnsureInitialized();
-            if (useCustomLog && !string.IsNullOrEmpty(logPath))
+            if (!_initialized)
             {
-                try
-                {
-                    File.AppendAllText(logPath, $"[{System.DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.Log($"[ArtifactsPlus] Failed to write to custom log: {ex.Message}");
-                    useCustomLog = false;
-                    Debug.Log($"[ArtifactsPlus] {message}");
-                }
+                // Overwrite the log file on first use (start fresh)
+                File.WriteAllText(LogPath, $"[ArtifactsPlus] Log started at {System.DateTime.Now}\n");
+                _initialized = true;
             }
-            else
-            {
-                Debug.Log($"[ArtifactsPlus] {message}");
-            }
+            File.AppendAllText(LogPath, message + "\n");
         }
 
-        private static void EnsureInitialized()
+        // Call this at the start of each game load to reset the log
+        public static void ResetLog()
         {
-            if (initialized) return;
-            initialized = true;
+            File.WriteAllText(LogPath, $"[ArtifactsPlus] Log started at {System.DateTime.Now}\n");
+            _initialized = true;
+        }
 
-            try
+        // No longer reads log path from config
+        public static void InitializeFromConfig(string configPath)
+        {
+            // You may still want to read other config values here, but log path is now hardcoded.
+            if (File.Exists(configPath))
             {
-                string configPath = ModInit.ArtifactPowersConfigPath;
-                if (File.Exists(configPath))
-                {
-                    var configText = File.ReadAllText(configPath);
-                    var configJson = Newtonsoft.Json.Linq.JObject.Parse(configText);
-                    var logPathToken = configJson["DebugLogPath"];
-                    if (logPathToken != null && !string.IsNullOrWhiteSpace(logPathToken.ToString()))
-                    {
-                        logPath = logPathToken.ToString();
-                        useCustomLog = true;
-                        return;
-                    }
-                }
+                var json = File.ReadAllText(configPath);
+                // Deserialize or process other config values as needed
             }
-            catch (Exception ex)
-            {
-                Debug.Log($"[ArtifactsPlus] Error reading config for log path: {ex.Message}");
-            }
-
-            useCustomLog = false;
-            logPath = null;
-            Debug.Log("[ArtifactsPlus] No custom log path found in config. Using Debug.Log for logging.");
         }
     }
 }
