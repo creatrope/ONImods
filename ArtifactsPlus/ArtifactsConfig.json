@@ -13,7 +13,10 @@
       "Attributes": {
         "Learning": 5,
         "Machinery": 2
-      }
+      },
+      "Traits": [
+        "+Twinkletoes"
+      ]
     },
     {
       "ArtifactId": "artifact_rubikscube",

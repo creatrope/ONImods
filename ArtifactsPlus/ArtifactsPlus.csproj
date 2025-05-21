@@ -76,7 +76,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ArtifactSideScreen.cs" />
+    <Compile Include="ArtifactEffectTracker.cs" />
     <Compile Include="CustomLogger.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

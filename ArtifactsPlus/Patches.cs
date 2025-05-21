@@ -104,7 +104,9 @@ namespace ArtifactsPlus
                     false
                 );
 
-                AdjustAllDupesAttributes(internalName, state.IsActive);
+                // Debug log for attribute adjustment trigger
+                CustomLogger.Log($"[DEBUG] Triggering attribute adjustment for '{internalName}' (Active={state.IsActive})");
+                AdjustAllDupesAttributesTracked(artifact, internalName, state.IsActive);
             }
 
             ApplyGlowEffect(artifact, state.IsActive);
@@ -192,7 +194,7 @@ namespace ArtifactsPlus
             }
         }
 
-        public static void AdjustAllDupesAttributes(string artifactName, bool isActive)
+        public static void AdjustAllDupesAttributesTracked(GameObject artifact, string artifactName, bool isActive)
         {
             if (artifactAttributeMap == null)
                 LoadArtifactAttributeMap();
@@ -204,8 +206,10 @@ namespace ArtifactsPlus
             }
 
             float sign = isActive ? 1f : -1f;
+            CustomLogger.Log($"[DEBUG] Found {attributes.Count} attribute adjustments for artifact '{artifactName}'. Applying with sign {sign}.");
             foreach (var minion in UnityEngine.Object.FindObjectsOfType<MinionIdentity>())
             {
+                CustomLogger.Log($"[DEBUG] Checking minion: {minion.name}");
                 if (minion.GetComponent<MinionModifiers>() is MinionModifiers minionModifiers)
                 {
                     foreach (var kvp in attributes)
@@ -226,6 +230,9 @@ namespace ArtifactsPlus
                         var attrInstance = minionModifiers.attributes?.Get(attribute);
                         if (attrInstance != null)
                         {
+                            float currentValue = attrInstance.GetTotalValue();
+                            float newValue = currentValue + value;
+                            CustomLogger.Log($"[DEBUG] {minion.name}: {attribute.Id} {currentValue} ({(value >= 0 ? "+" : "")}{value}) -> {newValue}");
                             var modifier = new AttributeModifier(attribute.Id, value, $"Artifact Effect: {artifactName}");
                             attrInstance.Add(modifier);
                         }
