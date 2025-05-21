@@ -1,9 +1,14 @@
 {
   "Attributes": [
     {
-      "Id": "Learning",
-      "Name": "Learning",
-      "Description": "Affects how quickly duplicants gain new skills."
+      "Id": "Construction",
+      "Name": "Construction",
+      "Description": "Affects duplicants' building speed and efficiency."
+    },
+    {
+      "Id": "Digging",
+      "Name": "Digging",
+      "Description": "Affects duplicants' ability to dig and excavate tiles."
     },
     {
       "Id": "Machinery",
@@ -16,9 +21,396 @@
       "Description": "Affects duplicants' movement speed."
     },
     {
+      "Id": "Learning",
+      "Name": "Learning",
+      "Description": "Affects how quickly duplicants gain new skills."
+    },
+    {
       "Id": "Cooking",
       "Name": "Cooking",
       "Description": "Affects duplicants' ability to cook food."
+    },
+    {
+      "Id": "Caring",
+      "Name": "Caring",
+      "Description": "Affects duplicants' ability to care for others and perform medical tasks."
+    },
+    {
+      "Id": "Strength",
+      "Name": "Strength",
+      "Description": "Affects duplicants' carrying capacity."
+    },
+    {
+      "Id": "Art",
+      "Name": "Art",
+      "Description": "Affects duplicants' ability to create art."
+    },
+    {
+      "Id": "Botanist",
+      "Name": "Botanist",
+      "Description": "Affects duplicants' plant tending and farming skills."
+    },
+    {
+      "Id": "Ranching",
+      "Name": "Ranching",
+      "Description": "Affects duplicants' ability to care for critters."
+    },
+    {
+      "Id": "LifeSupport",
+      "Name": "Life Support",
+      "Description": "Affects duplicants' ability to maintain life support systems."
+    },
+    {
+      "Id": "Toggle",
+      "Name": "Toggle",
+      "Description": "Affects duplicants' ability to toggle switches and controls."
+    },
+    {
+      "Id": "PowerTinker",
+      "Name": "Power Tinker",
+      "Description": "Affects duplicants' ability to tune power systems."
+    },
+    {
+      "Id": "FarmTinker",
+      "Name": "Farm Tinker",
+      "Description": "Affects duplicants' ability to tune farm buildings."
+    },
+    {
+      "Id": "SpaceNavigation",
+      "Name": "Space Navigation",
+      "Description": "Affects duplicants' ability to navigate in space."
+    },
+    {
+      "Id": "Immunity",
+      "Name": "Immunity",
+      "Description": "Affects duplicants' resistance to disease."
+    },
+    {
+      "Id": "GermResistance",
+      "Name": "Germ Resistance",
+      "Description": "Affects duplicants' resistance to germs."
+    },
+    {
+      "Id": "BionicBoosterSlots",
+      "Name": "Bionic Booster Slots",
+      "Description": "Affects the number of bionic booster slots available."
+    },
+    {
+      "Id": "BionicBatteryCountCapacity",
+      "Name": "Bionic Battery Count Capacity",
+      "Description": "Affects the capacity for bionic batteries."
+    },
+    {
+      "Id": "Insulation",
+      "Name": "Insulation",
+      "Description": "Affects duplicants' resistance to temperature changes."
+    },
+    {
+      "Id": "Luminescence",
+      "Name": "Luminescence",
+      "Description": "Affects duplicants' ability to emit light."
+    },
+    {
+      "Id": "ThermalConductivityBarrier",
+      "Name": "Thermal Conductivity Barrier",
+      "Description": "Affects duplicants' thermal insulation."
+    },
+    {
+      "Id": "Decor",
+      "Name": "Decor",
+      "Description": "Affects duplicants' perception of decor."
+    },
+    {
+      "Id": "FoodQuality",
+      "Name": "Food Quality",
+      "Description": "Affects duplicants' expectations for food quality."
+    },
+    {
+      "Id": "ScaldingThreshold",
+      "Name": "Scalding Threshold",
+      "Description": "Affects the temperature at which duplicants begin to scald."
+    },
+    {
+      "Id": "ScoldingThreshold",
+      "Name": "Scolding Threshold",
+      "Description": "Affects the temperature at which duplicants begin to overheat."
+    },
+    {
+      "Id": "GeneratorOutput",
+      "Name": "Generator Output",
+      "Description": "Affects the output of generators operated by duplicants."
+    },
+    {
+      "Id": "MachinerySpeed",
+      "Name": "Machinery Speed",
+      "Description": "Affects the speed at which duplicants operate machinery."
+    },
+    {
+      "Id": "RadiationResistance",
+      "Name": "Radiation Resistance",
+      "Description": "Affects duplicants' resistance to radiation."
+    },
+    {
+      "Id": "RadiationRecovery",
+      "Name": "Radiation Recovery",
+      "Description": "Affects duplicants' recovery from radiation exposure."
+    },
+    {
+      "Id": "DecorExpectation",
+      "Name": "Decor Expectation",
+      "Description": "Affects duplicants' decor expectations."
+    },
+    {
+      "Id": "FoodExpectation",
+      "Name": "Food Expectation",
+      "Description": "Affects duplicants' food quality expectations."
+    },
+    {
+      "Id": "RoomTemperaturePreference",
+      "Name": "Room Temperature Preference",
+      "Description": "Affects duplicants' preferred room temperature."
+    },
+    {
+      "Id": "QualityOfLifeExpectation",
+      "Name": "Quality of Life Expectation",
+      "Description": "Affects duplicants' quality of life expectations."
+    },
+    {
+      "Id": "AirConsumptionRate",
+      "Name": "Air Consumption Rate",
+      "Description": "Affects the rate at which duplicants consume air."
+    },
+    {
+      "Id": "MaxUnderwaterTravelCost",
+      "Name": "Max Underwater Travel Cost",
+      "Description": "Affects duplicants' ability to travel underwater."
+    },
+    {
+      "Id": "ToiletEfficiency",
+      "Name": "Toilet Efficiency",
+      "Description": "Affects duplicants' efficiency when using toilets."
+    },
+    {
+      "Id": "Sneezyness",
+      "Name": "Sneezyness",
+      "Description": "Affects how often duplicants sneeze."
+    },
+    {
+      "Id": "TransitTubeTravelSpeed",
+      "Name": "Transit Tube Travel Speed",
+      "Description": "Affects duplicants' speed in transit tubes."
+    },
+    {
+      "Id": "DiseaseCureSpeed",
+      "Name": "Disease Cure Speed",
+      "Description": "Affects how quickly duplicants recover from diseases."
+    },
+    {
+      "Id": "DoctoredLevel",
+      "Name": "Doctored Level",
+      "Description": "Affects the level of medical care received."
+    },
+    {
+      "Id": "CarryAmount",
+      "Name": "Carry Amount",
+      "Description": "Affects how much duplicants can carry."
+    },
+    {
+      "Id": "QualityOfLife",
+      "Name": "Quality of Life",
+      "Description": "Affects duplicants' overall morale and happiness."
+    }
+  ],
+  "Traits": [
+    {
+      "Id": "EarlyBird",
+      "Name": "Early Bird",
+      "Description": "Increased productivity during the early part of the day."
+    },
+    {
+      "Id": "NightOwl",
+      "Name": "Night Owl",
+      "Description": "Increased productivity during the night."
+    },
+    {
+      "Id": "Flatulence",
+      "Name": "Flatulence",
+      "Description": "Emits gas periodically."
+    },
+    {
+      "Id": "Narcolepsy",
+      "Name": "Narcolepsy",
+      "Description": "Falls asleep randomly."
+    },
+    {
+      "Id": "Anemic",
+      "Name": "Anemic",
+      "Description": "Reduced Athletics."
+    },
+    {
+      "Id": "SlowLearner",
+      "Name": "Slow Learner",
+      "Description": "Reduced Learning."
+    },
+    {
+      "Id": "NoodleArms",
+      "Name": "Noodle Arms",
+      "Description": "Reduced Strength."
+    },
+    {
+      "Id": "ConstructionDown",
+      "Name": "Construction Down",
+      "Description": "Reduced Construction."
+    },
+    {
+      "Id": "RanchingDown",
+      "Name": "Ranching Down",
+      "Description": "Reduced Ranching."
+    },
+    {
+      "Id": "DiggingDown",
+      "Name": "Digging Down",
+      "Description": "Reduced Digging."
+    },
+    {
+      "Id": "MachineryDown",
+      "Name": "Machinery Down",
+      "Description": "Reduced Machinery."
+    },
+    {
+      "Id": "CookingDown",
+      "Name": "Cooking Down",
+      "Description": "Reduced Cooking and increased food expectation."
+    },
+    {
+      "Id": "ArtDown",
+      "Name": "Art Down",
+      "Description": "Reduced Art and increased decor expectation."
+    },
+    {
+      "Id": "CaringDown",
+      "Name": "Caring Down",
+      "Description": "Reduced Caring."
+    },
+    {
+      "Id": "BotanistDown",
+      "Name": "Botanist Down",
+      "Description": "Reduced Botanist."
+    },
+    {
+      "Id": "DecorDown",
+      "Name": "Decor Down",
+      "Description": "Reduced Decor."
+    },
+    {
+      "Id": "Regeneration",
+      "Name": "Regeneration",
+      "Description": "Regenerates health over time."
+    },
+    {
+      "Id": "DeeperDiversLungs",
+      "Name": "Deeper Diver's Lungs",
+      "Description": "Consumes less oxygen."
+    },
+    {
+      "Id": "SunnyDisposition",
+      "Name": "Sunny Disposition",
+      "Description": "Reduced stress."
+    },
+    {
+      "Id": "RockCrusher",
+      "Name": "Rock Crusher",
+      "Description": "Increased Strength."
+    },
+    {
+      "Id": "Uncultured",
+      "Name": "Uncultured",
+      "Description": "Increased decor expectation, cannot perform art."
+    },
+    {
+      "Id": "WeakImmuneSystem",
+      "Name": "Weak Immune System",
+      "Description": "Reduced germ resistance."
+    },
+    {
+      "Id": "IrritableBowel",
+      "Name": "Irritable Bowel",
+      "Description": "Reduced toilet efficiency."
+    },
+    {
+      "Id": "Snorer",
+      "Name": "Snorer",
+      "Description": "Snores loudly while sleeping."
+    },
+    {
+      "Id": "Twinkletoes",
+      "Name": "Twinkletoes",
+      "Description": "Increased Athletics."
+    },
+    {
+      "Id": "Greasemonkey",
+      "Name": "Greasemonkey",
+      "Description": "Increased Machinery."
+    },
+    {
+      "Id": "MoleHands",
+      "Name": "Mole Hands",
+      "Description": "Increased Digging."
+    },
+    {
+      "Id": "FastLearner",
+      "Name": "Fast Learner",
+      "Description": "Increased Learning."
+    },
+    {
+      "Id": "DiversLung",
+      "Name": "Diver's Lungs",
+      "Description": "Consumes less oxygen."
+    },
+    {
+      "Id": "StrongArm",
+      "Name": "Strong Arm",
+      "Description": "Increased Strength."
+    },
+    {
+      "Id": "DecorUp",
+      "Name": "Decor Up",
+      "Description": "Increased Decor."
+    },
+    {
+      "Id": "GreenThumb",
+      "Name": "Green Thumb",
+      "Description": "Increased Botanist."
+    },
+    {
+      "Id": "InteriorDecorator",
+      "Name": "Interior Decorator",
+      "Description": "Increased Art and reduced decor expectation."
+    },
+    {
+      "Id": "SimpleTastes",
+      "Name": "Simple Tastes",
+      "Description": "Reduced food expectation."
+    },
+    {
+      "Id": "Foodie",
+      "Name": "Foodie",
+      "Description": "Increased Cooking and reduced food expectation."
+    },
+    {
+      "Id": "BedsideManner",
+      "Name": "Bedside Manner",
+      "Description": "Increased Caring."
+    },
+    {
+      "Id": "ConstructionUp",
+      "Name": "Construction Up",
+      "Description": "Increased Construction."
+    },
+    {
+      "Id": "RanchingUp",
+      "Name": "Ranching Up",
+      "Description": "Increased Ranching."
     }
   ]
 }

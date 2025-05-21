@@ -8,39 +8,30 @@ using System;
 using Klei.AI;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
+using PeterHan.PLib.UI;
 
 namespace ArtifactsPlus
 {
     public static class ModInit
     {
-        public static readonly string DesktopLogPath =
-            Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop), "ArtifactsPlus.log");
+        public static string DesktopLogPath => CustomLogger.LogPath;
 
-        private static bool _logInitialized = false;
-
-        public static void CustomLog(string message)
+        public static string ArtifactPowersConfigPath
         {
-            if (!_logInitialized)
+            get
             {
-                File.WriteAllText(DesktopLogPath, string.Empty);
-                _logInitialized = true;
-            }
-            string timestamped = $"[{System.DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}";
-            using (var writer = new StreamWriter(DesktopLogPath, true, System.Text.Encoding.UTF8))
-            {
-                writer.AutoFlush = true;
-                writer.WriteLine(timestamped);
+                return Path.Combine(
+                    Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                    "ArtifactsConfig.json"
+                );
             }
         }
-
-        public static string ArtifactPowersConfigPath =>
-            @"C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\ArtifactsConfig.json";
 
         public static void OnLoad()
         {
             Debug.Log("[ArtifactsPlus] OnLoad() was called!");
             Debug.Log($"[ArtifactsPlus] Custom log file location: {DesktopLogPath}");
-            CustomLog("Test message: custom log initialized and working.");
+            CustomLogger.Log("Test message: custom log initialized and working.");
             ArtifactStateTracker.LoadArtifactAttributeMap();
         }
     }
@@ -101,7 +92,8 @@ namespace ArtifactsPlus
             if (wasActive != state.IsActive)
             {
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
-                ModInit.CustomLog($"***** [ArtifactState] Artifact '{displayName}' (ID={artifact.name}) changed state: {stateText}");
+                Debug.Log($"[ArtifactsPlus] Artifact '{displayName}' (ID={artifact.name}) changed state: {stateText}");
+                CustomLogger.Log($"[ArtifactState] Artifact '{displayName}' (ID={artifact.name}) changed state: {stateText}");
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
@@ -131,8 +123,8 @@ namespace ArtifactsPlus
                     glowChild.transform.SetParent(parent, false);
 
                     var light2D = glowChild.AddComponent<Light2D>();
-                    light2D.overlayColour = new Color(1f, 1f, 1f, 0.2f); // Replace LIGHT2D.FLOORLAMP_OVERLAYCOLOR
-                    light2D.Color = Color.yellow; // Replace LIGHT2D.FLOORLAMP_COLOR
+                    light2D.overlayColour = new Color(1f, 1f, 1f, 0.2f);
+                    light2D.Color = Color.yellow;
                     light2D.Range = 4f;
                     light2D.Lux = 1800;
                     light2D.Offset = new Vector2(0, 0.5f);
@@ -163,7 +155,7 @@ namespace ArtifactsPlus
 
                 if (!(configJson["Artifacts"] is JArray arr))
                 {
-                    ModInit.CustomLog("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
+                    CustomLogger.Log("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
                     return;
                 }
 
@@ -174,9 +166,9 @@ namespace ArtifactsPlus
                 if (configJson.TryGetValue("DecorMinimum", out var decorToken) && decorToken.Type == JTokenType.Integer)
                     decorMinimum = (int)decorToken;
 
-                ModInit.CustomLog($"[CONFIG] GlobalRoomSizeMinimum: {globalRoomSizeMin}");
-                ModInit.CustomLog($"[CONFIG] GlobalRoomSizeMaximum: {globalRoomSizeMax}");
-                ModInit.CustomLog($"[CONFIG] DecorMinimum: {decorMinimum}");
+                CustomLogger.Log($"[CONFIG] GlobalRoomSizeMinimum: {globalRoomSizeMin}");
+                CustomLogger.Log($"[CONFIG] GlobalRoomSizeMaximum: {globalRoomSizeMax}");
+                CustomLogger.Log($"[CONFIG] DecorMinimum: {decorMinimum}");
 
                 foreach (var obj in arr)
                 {
@@ -188,15 +180,15 @@ namespace ArtifactsPlus
                         {
                             if (float.TryParse(prop.Value.ToString(), out float val))
                                 dict[prop.Name] = val;
-                        }   
+                        }
                         artifactAttributeMap[artifactId] = dict;
                     }
                 }
-                ModInit.CustomLog("[DEBUG] Loaded artifact attribute map and config values from config.");
+                CustomLogger.Log("[DEBUG] Loaded artifact attribute map and config values from config.");
             }
             catch (Exception ex)
             {
-                ModInit.CustomLog($"[ERROR] Failed to load artifact config: {ex}");
+                CustomLogger.Log($"[ERROR] Failed to load artifact config: {ex}");
             }
         }
 
@@ -207,11 +199,9 @@ namespace ArtifactsPlus
 
             if (!artifactAttributeMap.TryGetValue(artifactName, out var attributes) || attributes.Count == 0)
             {
-                ModInit.CustomLog($"[DEBUG] No attribute adjustments found for artifact '{artifactName}'. Skipping adjustment.");
+                CustomLogger.Log($"[DEBUG] No attribute adjustments found for artifact '{artifactName}'. Skipping adjustment.");
                 return;
             }
-
-            ModInit.CustomLog($"[DEBUG] Found {attributes.Count} attribute adjustment(s) for artifact '{artifactName}' (isActive={isActive}).");
 
             float sign = isActive ? 1f : -1f;
             foreach (var minion in UnityEngine.Object.FindObjectsOfType<MinionIdentity>())
@@ -229,7 +219,7 @@ namespace ArtifactsPlus
 
                         if (attribute == null)
                         {
-                            ModInit.CustomLog($"[DEBUG] Attribute '{attrName}' not found by Id or Name in Db for {minion.name}.");
+                            CustomLogger.Log($"[DEBUG] Attribute '{attrName}' not found by Id or Name in Db for {minion.name}.");
                             continue;
                         }
 
@@ -238,17 +228,16 @@ namespace ArtifactsPlus
                         {
                             var modifier = new AttributeModifier(attribute.Id, value, $"Artifact Effect: {artifactName}");
                             attrInstance.Add(modifier);
-                            ModInit.CustomLog($"[DEBUG] {minion.name}: modified '{attribute.Id}' by {value} from '{artifactName}'.");
                         }
                         else
                         {
-                            ModInit.CustomLog($"[DEBUG] {minion.name} does not have attribute '{attribute.Id}'.");
+                            CustomLogger.Log($"[DEBUG] {minion.name} does not have attribute '{attribute.Id}'.");
                         }
                     }
                 }
                 else
                 {
-                    ModInit.CustomLog($"[DEBUG] {minion.name} has no MinionModifiers.");
+                    CustomLogger.Log($"[DEBUG] {minion.name} has no MinionModifiers.");
                 }
             }
         }
@@ -270,7 +259,6 @@ namespace ArtifactsPlus
                 if (artifact == null)
                     continue;
                 int cell = Grid.PosToCell(artifact.transform.position);
-                int roomSize = -1;
                 float roomDecor = float.MinValue;
                 bool meetsRoomSize = false;
                 bool meetsDecor = false;
@@ -281,10 +269,8 @@ namespace ArtifactsPlus
                     var room = cavity?.room;
                     if (room != null && room.cavity != null)
                     {
-                        roomSize = room.cavity.numCells;
-                        meetsRoomSize = roomSize >= globalRoomSizeMin && roomSize <= globalRoomSizeMax;
+                        meetsRoomSize = room.cavity.numCells >= globalRoomSizeMin && room.cavity.numCells <= globalRoomSizeMax;
 
-                        // Calculate average decor in the room
                         int decorSum = 0;
                         int decorCount = 0;
                         foreach (var building in room.cavity.buildings)
@@ -307,16 +293,7 @@ namespace ArtifactsPlus
                     }
                 }
 
-                // Artifact is active only if both room size and decor requirements are met
                 bool meetsAll = meetsRoomSize && meetsDecor;
-                if (!meetsAll && meetsRoomSize && !meetsDecor)
-                {
-                    ModInit.CustomLog($"[DEBUG] Artifact '{artifact.name}' inactive due to decor: {roomDecor} (minimum required: {decorMinimum})");
-                }
-                else if (meetsAll)
-                {
-                    ModInit.CustomLog($"[DEBUG] Artifact '{artifact.name}' active with decor: {roomDecor}");
-                }
                 UpdateArtifactState(artifact, true, meetsAll);
             }
         }

@@ -1,0 +1,1 @@
+// This file has been removed as part of removing all SideScreen functionality from the project.
