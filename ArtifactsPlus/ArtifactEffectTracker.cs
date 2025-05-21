@@ -24,7 +24,7 @@ namespace ArtifactsPlus
         }
 
         // Call this when an artifact changes state
-        public static void OnArtifactStateChanged(GameObject artifact, string artifactId, bool isActive)
+        public static void OnArtifactStateChanged(GameObject artifact, string artifactId, bool isActive, List<GameObject> minionList)
         {
             CustomLogger.Log($"\n[DEBUG] OnArtifactStateChanged called for artifact={artifact?.name ?? "null"}, artifactId={artifactId}, isActive={isActive}");
 
@@ -36,20 +36,20 @@ namespace ArtifactsPlus
 
             if (isActive)
             {
+                // history of minions that have already had this effect applied
                 if (!artifactHistoryMap.TryGetValue(artifact, out var minionSet))
                 {
                     minionSet = new HashSet<GameObject>();
                     artifactHistoryMap[artifact] = minionSet;
-                    CustomLogger.Log($"[DEBUG] Created new minionSet for artifact {artifact.name}");
+                    //CustomLogger.Log($"[DEBUG] Created new minionSet for artifact {artifact.name}");
                 }
 
                 int minionCount = 0;
-                foreach (var minion in GetAllMinions())
+                foreach (var minion in minionList)
                 {
                     minionCount++;
                     if (!minionSet.Contains(minion))
                     {
-                        //CustomLogger.Log($"[DEBUG] Applying effect to minion {minion.name} for artifactId={artifactId}");
                         ApplyEffectToMinion(minion, artifactId);
                         minionSet.Add(minion);
                     }
@@ -78,7 +78,6 @@ namespace ArtifactsPlus
                 }
             }
 
-            // At the end of the method, flush the log (force file write)
             System.IO.File.AppendAllText(CustomLogger.LogPath, ""); // No-op, ensures file is up to date
         }
 
@@ -102,7 +101,7 @@ namespace ArtifactsPlus
         // Apply the effect to a minion (using MinionModifiers, as in your working code)
         private static void ApplyEffectToMinion(GameObject minion, string artifactId)
         {
-            CustomLogger.Log($"[DEBUG] ApplyEffectToMinion called for minion={minion?.name ?? "null"}, artifactId={artifactId}");
+            //CustomLogger.Log($"[DEBUG] ApplyEffectToMinion called for minion={minion?.name ?? "null"}, artifactId={artifactId}");
             var minionModifiers = minion.GetComponent<MinionModifiers>();
             if (minionModifiers == null)
             {

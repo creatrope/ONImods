@@ -2,6 +2,7 @@
   "GlobalRoomSizeMinimum": 6,
   "GlobalRoomSizeMaximum": 32,
   "DecorMinimum": 100,
+  "Filter": "All",
   "Artifacts": [
     {
       "ArtifactId": "artifact_sandstone",
@@ -14,7 +15,7 @@
         "Machinery": 2
       },
       "Traits": [
-        "+Twinkletoes"
+        "Twinkletoes"
       ]
     },
     {

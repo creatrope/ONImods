@@ -72,6 +72,14 @@ namespace ArtifactsPlus
             }
         }
 
+        private static List<GameObject> GetAllMinions()
+        {
+            return UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Minion"))
+                .Select(kp => kp.gameObject)
+                .ToList();
+        }
+
         public static void UpdateArtifactState(GameObject artifact, bool onPedestal, bool meetsRoomSize)
         {
             int id = artifact.GetInstanceID();
@@ -107,7 +115,8 @@ namespace ArtifactsPlus
                 );
 
                 // Call ArtifactEffectTracker to update minion attributes
-                ArtifactEffectTracker.OnArtifactStateChanged(artifact, internalName, state.IsActive);
+                List<GameObject> minionList = GetAllMinions();
+                ArtifactEffectTracker.OnArtifactStateChanged(artifact, internalName, state.IsActive, minionList);
                 CustomLogger.Log($"[DEBUG] Called ArtifactEffectTracker.OnArtifactStateChanged for '{internalName}' (active={state.IsActive})");
             }
 
