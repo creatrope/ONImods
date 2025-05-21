@@ -2,7 +2,7 @@
   "GlobalRoomSizeMinimum": 6,
   "GlobalRoomSizeMaximum": 32,
   "DecorMinimum": 100,
-  "Filter": "All",
+  "Filter": "InWorld",
   "Artifacts": [
     {
       "ArtifactId": "artifact_sandstone",

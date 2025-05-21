@@ -80,6 +80,43 @@ namespace ArtifactsPlus
                 .ToList();
         }
 
+        private static List<GameObject> GetMinionsInSameRoom(GameObject artifact)
+        {
+            var minionsInRoom = new List<GameObject>();
+            int artifactCell = Grid.PosToCell(artifact.transform.position);
+            var artifactCavity = Game.Instance?.roomProber?.GetCavityForCell(artifactCell)?.room?.cavity;
+            if (artifactCavity == null)
+                return minionsInRoom;
+
+            foreach (var kp in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
+            {
+                if (kp != null && kp.HasTag("Minion"))
+                {
+                    int minionCell = Grid.PosToCell(kp.transform.position);
+                    var minionCavity = Game.Instance.roomProber.GetCavityForCell(minionCell)?.room?.cavity;
+                    if (minionCavity == artifactCavity)
+                        minionsInRoom.Add(kp.gameObject);
+                }
+            }
+            return minionsInRoom;
+        }
+
+        private static List<GameObject> GetMinionsInSameWorld(GameObject artifact)
+        {
+            var minionsInWorld = new List<GameObject>();
+            int artifactWorldId = Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)];
+            foreach (var kp in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
+            {
+                if (kp != null && kp.HasTag("Minion"))
+                {
+                    int minionWorldId = Grid.WorldIdx[Grid.PosToCell(kp.transform.position)];
+                    if (minionWorldId == artifactWorldId)
+                        minionsInWorld.Add(kp.gameObject);
+                }
+            }
+            return minionsInWorld;
+        }
+
         public static void UpdateArtifactState(GameObject artifact, bool onPedestal, bool meetsRoomSize)
         {
             int id = artifact.GetInstanceID();
@@ -114,8 +151,26 @@ namespace ArtifactsPlus
                     false
                 );
 
-                // Call ArtifactEffectTracker to update minion attributes
-                List<GameObject> minionList = GetAllMinions();
+                string filter = "All";
+                try
+                {
+                    var configText = File.ReadAllText(ModInit.ArtifactPowersConfigPath);
+                    var configJson = JObject.Parse(configText);
+                    filter = (string)configJson["Filter"] ?? "All";
+                }
+                catch { }
+
+                // Log the filter being applied
+                CustomLogger.Log($"[DEBUG] Minion filter being applied: {filter}");
+
+                List<GameObject> minionList;
+                if (filter == "InRoom")
+                    minionList = GetMinionsInSameRoom(artifact);
+                else if (filter == "InWorld")
+                    minionList = GetMinionsInSameWorld(artifact);
+                else
+                    minionList = GetAllMinions();
+
                 ArtifactEffectTracker.OnArtifactStateChanged(artifact, internalName, state.IsActive, minionList);
                 CustomLogger.Log($"[DEBUG] Called ArtifactEffectTracker.OnArtifactStateChanged for '{internalName}' (active={state.IsActive})");
             }
