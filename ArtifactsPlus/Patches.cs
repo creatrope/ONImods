@@ -9,6 +9,7 @@ using Klei.AI;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 using PeterHan.PLib.UI;
+using Object = UnityEngine.Object; // Explicitly alias UnityEngine.Object to avoid ambiguity
 
 namespace ArtifactsPlus
 {
@@ -417,6 +418,11 @@ namespace ArtifactsPlus
                 {
                     Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
                 }
+
+                if (Game.Instance.gameObject.GetComponent<ArtifactHotkeyListener>() == null)
+                {
+                    Game.Instance.gameObject.AddComponent<ArtifactHotkeyListener>();
+                }
             }
         }
     }
@@ -462,6 +468,15 @@ namespace ArtifactsPlus
             {
                 Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
             }
+
+            if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactHotkeyListener>() == null)
+            {
+                Game.Instance.gameObject.AddComponent<ArtifactHotkeyListener>();
+            }
+
+            var go = new GameObject("ArtifactHotkeyListener");
+            go.AddComponent<ArtifactHotkeyListener>();
+            Object.DontDestroyOnLoad(go); // Explicitly refers to UnityEngine.Object
         }
     }
 

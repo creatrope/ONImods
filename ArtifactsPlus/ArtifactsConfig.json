@@ -16,7 +16,8 @@
       },
       "Traits": [
         "Twinkletoes"
-      ]
+      ],
+      "Filter": "InWorld"
     },
     {
       "ArtifactId": "artifact_rubikscube",
@@ -25,7 +26,8 @@
       "DecorMinimum": 140,
       "Attributes": {
         "Learning": 10
-      }
+      },
+      "Filter": "InWorld"
     },
     {
       "ArtifactId": "artifact_officemug",
@@ -73,6 +75,7 @@
     },
     {
       "ArtifactId": "artifact_brickphone",
+      "DecorMinimum": 1000,
       "Attributes": {}
     },
     {
