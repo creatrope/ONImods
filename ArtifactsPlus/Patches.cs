@@ -480,15 +480,23 @@ namespace ArtifactsPlus
         }
     }
 
-    // Remove or comment out this patch if MinionIdentity.OnWorldChanged does not exist
-    /*
-    [HarmonyPatch(typeof(MinionIdentity), "OnWorldChanged")]
-    public static class MinionIdentity_OnWorldChanged_Patch
+    [HarmonyPatch(typeof(AssignmentManager), "MinionMigration")]
+    public static class AssignmentManager_MinionMigration_Patch
     {
-        public static void Postfix(MinionIdentity __instance, int oldWorldId, int newWorldId)
+        public static void Postfix(object data)
         {
-            // ... your code ...
+            // Try to cast to MinionMigrationEventArgs if available
+            var migrationEventArgs = data as MinionMigrationEventArgs;
+            if (migrationEventArgs != null)
+            {
+                var minionGo = migrationEventArgs.minionId?.gameObject;
+                string minionName = minionGo?.GetComponent<KSelectable>()?.GetProperName() ?? minionGo?.name ?? "unknown";
+                CustomLogger.Log($"[DEBUG] Minion '{minionName}' triggered MinionMigration event");
+            }
+            else
+            {
+                CustomLogger.Log("[DEBUG] MinionMigration event triggered, but data could not be cast.");
+            }
         }
     }
-    */
 }

@@ -1,13 +1,26 @@
-using HarmonyLib;
-using UnityEngine;
+// Decompiled with JetBrains decompiler
+// Type: WarpPortal
+// Assembly: Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+// MVID: 5D1EF2B8-AA4E-4702-B74E-0141C7D16DB1
+// Assembly location: C:\Users\sendh\Documents\GitHub\Sendhb-ONI\lib\Assembly-CSharp.dll
+// Metadata token values are shown
+
+using Klei.AI;
+using KSerialization;
+using STRINGS;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
+using HarmonyLib;
+using System.Reflection.Emit;
 
 namespace TeleportPlus
 {
     public static class TeleportConfig
     {
         // Set your desired recharge time here (in seconds)
-        public static float RechargeTime = 5f; // Example: 2 seconds
+        public static float WarpPortalRechargeTime = 5f;
     }
 
     public class Patches
@@ -22,37 +35,31 @@ namespace TeleportPlus
             }
         }
 
-        [HarmonyPatch(typeof(Teleporter), "TeleportObjects")]
-        public static class Teleporter_TeleportObjects_Patch
+        // Transpiler to replace the hardcoded 3000f recharge time in WarpPortal's state machine
+        [HarmonyPatch]
+        public static class WarpPortalSM_RechargeTime_Transpiler
         {
-            private static Dictionary<Teleporter, float> lastTeleportTime = new Dictionary<Teleporter, float>();
-
-            public static bool Prefix(Teleporter __instance)
+            static System.Reflection.MethodBase TargetMethod()
             {
-                float now = Time.time;
-                if (lastTeleportTime.TryGetValue(__instance, out float lastTime))
-                {
-                    if (now - lastTime < TeleportConfig.RechargeTime)
-                    {
-                        Debug.Log("[TeleportPlus] Teleporter is recharging.");
-                        return false; // Block teleport
-                    }
-                }
-                lastTeleportTime[__instance] = now;
-                return true; // Allow teleport
+                // Target the Update lambda in WarpPortal.WarpPortalSM.InitializeStates
+                var smType = AccessTools.Inner(typeof(WarpPortal), "WarpPortalSM");
+                // The lambda is usually named <InitializeStates>b__8_12
+                return AccessTools.Method(smType, "<InitializeStates>b__8_12");
             }
-        }
 
-        // Add a Harmony patch to listen for a key press in the DebugHandler.Update method
-        [HarmonyPatch(typeof(DebugHandler), "Update")]
-        public static class DebugHandler_Update_Patch
-        {
-            public static void Postfix()
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
-                // Example: Press F8 to log a debug message
-                if (UnityEngine.Input.GetKeyDown(KeyCode.F8)) // Fully qualify Input to avoid ambiguity
+                foreach (var code in instructions)
                 {
-                    Debug.Log("[TeleportPlus] F8 key pressed!");
+                    // Replace ldc.r4 3000 with our config value
+                    if (code.opcode == OpCodes.Ldc_R4 && (float)code.operand == 3000f)
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(TeleportConfig), nameof(TeleportConfig.WarpPortalRechargeTime)));
+                    }
+                    else
+                    {
+                        yield return code;
+                    }
                 }
             }
         }
