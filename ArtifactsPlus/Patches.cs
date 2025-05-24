@@ -93,6 +93,7 @@ namespace ArtifactsPlus
             {
                 UpdateArtifactState(artifact, false, false);
                 ArtifactsOnPedestals.Remove(artifact);
+                ArtifactStates.Remove(artifact.GetInstanceID());
             }
         }
 
@@ -502,6 +503,8 @@ namespace ArtifactsPlus
                     int oldWorldId = migrationEventArgs.prevWorldId;
                     int newWorldId = migrationEventArgs.targetWorldId;
 
+                    CustomLogger.Log($"[DEBUG][Migration] Minion '{minionGo.name}' migration event: oldWorldId={oldWorldId}, newWorldId={newWorldId}");
+
                     if (!MinionMigrationState.TryGetValue(minionGo, out var state))
                     {
                         // First message: state 1
@@ -523,8 +526,10 @@ namespace ArtifactsPlus
 
                             if (artifactWorldId == state.oldWorldId && config.Filter == "InWorld")
                             {
-                                CustomLogger.Log($"[DEBUG][Migration] Removing effects from minion {minionGo.name} for artifact {internalName} in old world {state.oldWorldId}");
+                                CustomLogger.Log($"[DEBUG][Migration] Removing modifiers for artifact '{internalName}' (worldId={artifactWorldId}) from minion '{minionGo.name}'");
                                 ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, internalName, false);
+                                CustomLogger.Log($"[DEBUG][Migration] Removing effects for artifact '{internalName}' (worldId={artifactWorldId}) from minion '{minionGo.name}'");
+                                ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, internalName, false);
                             }
                         }
 
@@ -538,8 +543,10 @@ namespace ArtifactsPlus
 
                             if (artifactWorldId == state.newWorldId && config.Filter == "InWorld")
                             {
-                                CustomLogger.Log($"[DEBUG][Migration] Adding effects to minion {minionGo.name} for artifact {internalName} in new world {state.newWorldId}");
+                                CustomLogger.Log($"[DEBUG][Migration] Applying modifiers for artifact '{internalName}' (worldId={artifactWorldId}) to minion '{minionGo.name}'");
                                 ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, internalName, true);
+                                CustomLogger.Log($"[DEBUG][Migration] Applying effects for artifact '{internalName}' (worldId={artifactWorldId}) to minion '{minionGo.name}'");
+                                ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, internalName, true);
                             }
                         }
 

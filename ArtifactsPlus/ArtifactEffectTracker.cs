@@ -64,7 +64,7 @@ namespace ArtifactsPlus
                     if (!minionSet.Contains(minion))
                     {
                         ApplyOrRemoveArtifactModifiersToMinion(minion, artifactId, true);
-                        ApplyOrRemoveArtifactStatusesToMinion(minion, artifactId, true);
+                        ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifactId, true);
                         minionSet.Add(minion);
                     }
                     else
@@ -82,7 +82,7 @@ namespace ArtifactsPlus
                     foreach (var minion in minionSet)
                     {
                         ApplyOrRemoveArtifactModifiersToMinion(minion, artifactId, false);
-                        ApplyOrRemoveArtifactStatusesToMinion(minion, artifactId, false);
+                        ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifactId, false);
                     }
                     minionSet.Clear();
                     artifactHistoryMap.Remove(artifact);
@@ -233,34 +233,50 @@ namespace ArtifactsPlus
         /// <param name="minion">The minion GameObject.</param>
         /// <param name="artifactId">The artifact ID.</param>
         /// <param name="apply">True to apply, false to remove.</param>
-        public static void ApplyOrRemoveArtifactStatusesToMinion(GameObject minion, string artifactId, bool apply)
+        public static void ApplyOrRemoveArtifactStatusEffectsToMinion(GameObject minion, string artifactId, bool apply)
         {
-            if (minion == null)
-                return;
-
-            if (TryGetArtifactStatuses(artifactId, out var statuses))
+            // Get the artifact config to retrieve status effects (called "Effects" in config)
+            var config = ArtifactsPlus.ArtifactStateTracker.GetArtifactConfig(artifactId);
+            if (config == null || config.Effects == null)
             {
+                CustomLogger.Log($"[ArtifactEffectTracker][DEBUG] No config or effects found for artifact '{artifactId}' when {(apply ? "applying" : "removing")} status effects to minion '{minion?.name ?? "null"}'.");
+                return;
+            }
+
+            foreach (var effectId in config.Effects)
+            {
+                if (string.IsNullOrEmpty(effectId))
+                    continue;
+
                 var effects = minion.GetComponent<Effects>();
                 if (effects == null)
-                    return;
-
-                foreach (var status in statuses)
                 {
-                    if (apply)
+                    CustomLogger.Log($"[ArtifactEffectTracker][DEBUG] Minion '{minion?.name ?? "null"}' does not have Effects component when processing '{effectId}' for artifact '{artifactId}'.");
+                    continue;
+                }
+
+                if (apply)
+                {
+                    if (!effects.HasEffect(effectId))
                     {
-                        if (!effects.HasEffect(status))
-                        {
-                            effects.Add(status, true);
-                            CustomLogger.Log($"[EFFECT] Applied status '{status}' to minion '{minion.name}' (Artifact: {artifactId})");
-                        }
+                        effects.Add(effectId, true);
+                        CustomLogger.Log($"[ArtifactEffectTracker] Added status effect '{effectId}' to minion '{minion.name}' from artifact '{artifactId}'.");
                     }
                     else
                     {
-                        if (effects.HasEffect(status))
-                        {
-                            effects.Remove(status);
-                            CustomLogger.Log($"[EFFECT] Removed status '{status}' from minion '{minion.name}' (Artifact: {artifactId})");
-                        }
+                        CustomLogger.Log($"[ArtifactEffectTracker][DEBUG] Minion '{minion.name}' already has status effect '{effectId}' from artifact '{artifactId}'.");
+                    }
+                }
+                else
+                {
+                    if (effects.HasEffect(effectId))
+                    {
+                        effects.Remove(effectId);
+                        CustomLogger.Log($"[ArtifactEffectTracker] Removed status effect '{effectId}' from minion '{minion.name}' from artifact '{artifactId}'.");
+                    }
+                    else
+                    {
+                        CustomLogger.Log($"[ArtifactEffectTracker][DEBUG] Minion '{minion.name}' did not have status effect '{effectId}' to remove for artifact '{artifactId}'.");
                     }
                 }
             }

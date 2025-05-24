@@ -6,8 +6,6 @@ using Klei.AI; // Add this using directive for AttributeModifier
 
 public class ArtifactHotkeyListener : MonoBehaviour
 {
-    private const string StatusId = "SoakingWet"; // Example status effect
-
     void Start()
     {
         CustomLogger.Log("[HOTKEY] ArtifactHotkeyListener attached and Start() called.");
@@ -15,20 +13,9 @@ public class ArtifactHotkeyListener : MonoBehaviour
 
     void Update()
     {
-        // F7: Add status to all minions
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F7))
-        {
-            CustomLogger.Log("[HOTKEY] F7 pressed: Adding status to all minions.");
-            AddStatusToAllMinions(StatusId);
-        }
-        // F8: Remove status from all minions
-        else if (UnityEngine.Input.GetKeyDown(KeyCode.F8))
-        {
-            CustomLogger.Log("[HOTKEY] F8 pressed: Removing status from all minions.");
-            RemoveStatusFromAllMinions(StatusId);
-        }
+  
         // F9: Print artifact-induced modifiers on all minions
-        else if (UnityEngine.Input.GetKeyDown(KeyCode.F9))
+        if (UnityEngine.Input.GetKeyDown(KeyCode.F9))
         {
             PrintArtifactModifiersOnAllMinions();
             DumpAllEffects();
@@ -37,32 +24,6 @@ public class ArtifactHotkeyListener : MonoBehaviour
         else if (UnityEngine.Input.GetKeyDown(KeyCode.F10))
         {
             PrintAllActiveArtifacts();
-        }
-    }
-
-    private void AddStatusToAllMinions(string statusId)
-    {
-        foreach (var minion in GetAllMinions())
-        {
-            var effects = minion.GetComponent<Effects>();
-            if (effects != null && !effects.HasEffect(statusId))
-            {
-                effects.Add(statusId, true);
-                CustomLogger.Log($"[HOTKEY] Added status '{statusId}' to minion '{minion.name}'");
-            }
-        }
-    }
-
-    private void RemoveStatusFromAllMinions(string statusId)
-    {
-        foreach (var minion in GetAllMinions())
-        {
-            var effects = minion.GetComponent<Effects>();
-            if (effects != null && effects.HasEffect(statusId))
-            {
-                effects.Remove(statusId);
-                CustomLogger.Log($"[HOTKEY] Removed status '{statusId}' from minion '{minion.name}'");
-            }
         }
     }
 

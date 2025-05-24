@@ -5,10 +5,6 @@
   "Filter": "All",
   "Artifacts": [
     {
-      "ArtifactId": "artifact_sandstone",
-      "Attributes": {}
-    },
-    {
       "ArtifactId": "artifact_sink",
       "Filter": "InWorld",
       "Attributes": {
@@ -25,38 +21,54 @@
       "RoomSizeMin": 32,
       "RoomSizeMax": 64,
       "DecorMinimum": 140,
+      "Filter": "InWorld",
       "Attributes": {
         "Learning": 10
       },
-      "Filter": "InWorld",
       "Effects": [
         "AnewHope",
         "PeacefulSleep"
       ]
-    },
-    {
-      "ArtifactId": "artifact_officemug",
-      "Attributes": {}
     },
     {
       "ArtifactId": "artifact_obelisk",
       "Attributes": {},
+      "Filter": "InWorld",
       "Effects": [
-        "WellFed",
-        "AnewHope",
-        "PeacefulSleep"
+        "FloorSleep",
+        "NarcolepticSleep"
       ]
-    },
-    {
-      "ArtifactId": "artifact_okayxray",
-      "Attributes": {}
     },
     {
       "ArtifactId": "artifact_blender",
       "Filter": "InWorld",
       "Attributes": {
         "Athletics": 10
-      }
+      },
+      "Effects": [
+        "RestfulSleep",
+        "Mourning"
+      ]
+    },
+    {
+      "ArtifactId": "artifact_reactormodel",
+      "Attributes": {},
+      "Effects": [
+        "NewCrewArrival",
+        "UnderWater"
+      ]
+    },
+    {
+      "ArtifactId": "artifact_sandstone",
+      "Attributes": {}
+    },
+    {
+      "ArtifactId": "artifact_officemug",
+      "Attributes": {}
+    },
+    {
+      "ArtifactId": "artifact_okayxray",
+      "Attributes": {}
     },
     {
       "ArtifactId": "artifact_moldavite",
@@ -158,19 +170,6 @@
     {
       "ArtifactId": "artifact_moonmoonmoon",
       "Attributes": {}
-    },
-    {
-      "ArtifactId": "artifact_reactormodel",
-      "Attributes": {}
-    },
-    {
-      "ArtifactId": "artifact_1",
-      "RoomSizeMin": 8,
-      "RoomSizeMax": 20,
-      "DecorMinimum": 10,
-      "Filter": "InRoom",
-      "Attributes": { "Strength": 2.0 },
-      "Effects": [ "StatusEffect1", "StatusEffect2" ]
     }
   ]
 }
