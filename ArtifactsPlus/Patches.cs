@@ -53,7 +53,10 @@ namespace ArtifactsPlus
         public int DecorMinimum;
         public string Filter;
         public Dictionary<string, float> Attributes;
-        public List<string> Traits;
+        /// <summary>
+        /// List of status effect IDs to apply to minions (called "Effects" in config, but these are statuses).
+        /// </summary>
+        public List<string> Effects;
 
         public ArtifactConfig(int globalMin, int globalMax, int globalDecor, string globalFilter)
         {
@@ -62,7 +65,7 @@ namespace ArtifactsPlus
             DecorMinimum = globalDecor;
             Filter = globalFilter;
             Attributes = new Dictionary<string, float>();
-            Traits = new List<string>();
+            Effects = new List<string>();
         }
     }
 
@@ -291,11 +294,12 @@ namespace ArtifactsPlus
                         }
                     }
 
-                    if (obj["Traits"] is JArray traits)
+                    // Load Effects (statuses) from config
+                    if (obj["Effects"] is JArray effects)
                     {
-                        foreach (var trait in traits)
+                        foreach (var effect in effects)
                         {
-                            artifactConfig.Traits.Add((string)trait);
+                            artifactConfig.Effects.Add((string)effect);
                         }
                     }
 
@@ -520,7 +524,7 @@ namespace ArtifactsPlus
                             if (artifactWorldId == state.oldWorldId && config.Filter == "InWorld")
                             {
                                 CustomLogger.Log($"[DEBUG][Migration] Removing effects from minion {minionGo.name} for artifact {internalName} in old world {state.oldWorldId}");
-                                ArtifactEffectTracker.ApplyOrRemoveArtifactEffectsToMinion(minionGo, internalName, false);
+                                ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, internalName, false);
                             }
                         }
 
@@ -535,7 +539,7 @@ namespace ArtifactsPlus
                             if (artifactWorldId == state.newWorldId && config.Filter == "InWorld")
                             {
                                 CustomLogger.Log($"[DEBUG][Migration] Adding effects to minion {minionGo.name} for artifact {internalName} in new world {state.newWorldId}");
-                                ArtifactEffectTracker.ApplyOrRemoveArtifactEffectsToMinion(minionGo, internalName, true);
+                                ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, internalName, true);
                             }
                         }
 

@@ -6,6 +6,8 @@ using Klei.AI; // Add this using directive for AttributeModifier
 
 public class ArtifactHotkeyListener : MonoBehaviour
 {
+    private const string StatusId = "SoakingWet"; // Example status effect
+
     void Start()
     {
         CustomLogger.Log("[HOTKEY] ArtifactHotkeyListener attached and Start() called.");
@@ -13,41 +15,62 @@ public class ArtifactHotkeyListener : MonoBehaviour
 
     void Update()
     {
-        // F1-F12 hotkey debug messages
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F1))
-            CustomLogger.Log("[HOTKEY] F1 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F2))
-            CustomLogger.Log("[HOTKEY] F2 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F3))
-            CustomLogger.Log("[HOTKEY] F3 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F4))
-            CustomLogger.Log("[HOTKEY] F4 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F5))
-            CustomLogger.Log("[HOTKEY] F5 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F6))
-            CustomLogger.Log("[HOTKEY] F6 pressed.");
+        // F7: Add status to all minions
         if (UnityEngine.Input.GetKeyDown(KeyCode.F7))
-            CustomLogger.Log("[HOTKEY] F7 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F8))
-            CustomLogger.Log("[HOTKEY] F8 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F9))
-            CustomLogger.Log("[HOTKEY] F9 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F10))
-            CustomLogger.Log("[HOTKEY] F10 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F11))
-            CustomLogger.Log("[HOTKEY] F11 pressed.");
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F12))
-            CustomLogger.Log("[HOTKEY] F12 pressed.");
-
-        // Existing hotkey logic (update to F8/F9 if needed)
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F8))
+        {
+            CustomLogger.Log("[HOTKEY] F7 pressed: Adding status to all minions.");
+            AddStatusToAllMinions(StatusId);
+        }
+        // F8: Remove status from all minions
+        else if (UnityEngine.Input.GetKeyDown(KeyCode.F8))
+        {
+            CustomLogger.Log("[HOTKEY] F8 pressed: Removing status from all minions.");
+            RemoveStatusFromAllMinions(StatusId);
+        }
+        // F9: Print artifact-induced modifiers on all minions
+        else if (UnityEngine.Input.GetKeyDown(KeyCode.F9))
+        {
+            PrintArtifactModifiersOnAllMinions();
+            DumpAllEffects();
+        }
+        // F10: Print all active artifacts
+        else if (UnityEngine.Input.GetKeyDown(KeyCode.F10))
         {
             PrintAllActiveArtifacts();
         }
-        if (UnityEngine.Input.GetKeyDown(KeyCode.F9))
+    }
+
+    private void AddStatusToAllMinions(string statusId)
+    {
+        foreach (var minion in GetAllMinions())
         {
-            PrintArtifactModifiersOnAllMinions();
+            var effects = minion.GetComponent<Effects>();
+            if (effects != null && !effects.HasEffect(statusId))
+            {
+                effects.Add(statusId, true);
+                CustomLogger.Log($"[HOTKEY] Added status '{statusId}' to minion '{minion.name}'");
+            }
         }
+    }
+
+    private void RemoveStatusFromAllMinions(string statusId)
+    {
+        foreach (var minion in GetAllMinions())
+        {
+            var effects = minion.GetComponent<Effects>();
+            if (effects != null && effects.HasEffect(statusId))
+            {
+                effects.Remove(statusId);
+                CustomLogger.Log($"[HOTKEY] Removed status '{statusId}' from minion '{minion.name}'");
+            }
+        }
+    }
+
+    private IEnumerable<GameObject> GetAllMinions()
+    {
+        return UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+            .Where(kp => kp != null && kp.HasTag("Minion"))
+            .Select(kp => kp.gameObject);
     }
 
     private void PrintAllActiveArtifacts()
@@ -105,5 +128,14 @@ public class ArtifactHotkeyListener : MonoBehaviour
                 }
             }
         }
+    }
+
+    private void DumpAllEffects()
+    {
+        foreach (var effect in Db.Get().effects.resources)
+        {
+            CustomLogger.Log($"Effect: {effect.Id} - {effect.Name} (Duration: {effect.duration})");
+        }
+        Debug.Log("[ArtifactsPlus] Dumped all effects to log.");
     }
 }

@@ -88,6 +88,7 @@
   <ItemGroup>
     <None Include="ArtifactsConfig.json" />
     <None Include="Attributes.json" />
+    <None Include="Effects.json" />
     <None Include="mod.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

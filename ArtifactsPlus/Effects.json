@@ -1,0 +1,1117 @@
+[
+  {
+    "Id": "Sleep",
+    "Name": "Sleeping",
+    "Duration": 0
+  },
+  {
+    "Id": "FloorSleep",
+    "Name": "Sleeping On Floor",
+    "Duration": 0
+  },
+  {
+    "Id": "NarcolepticSleep",
+    "Name": "Narcoleptic Nap",
+    "Duration": 0
+  },
+  {
+    "Id": "RestfulSleep",
+    "Name": "Sleeping Peacefully",
+    "Duration": 0
+  },
+  {
+    "Id": "AnewHope",
+    "Name": "New Hope",
+    "Duration": 1800
+  },
+  {
+    "Id": "MegaBrainTankStress",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEGABRAINTANKSTRESS.NAME",
+    "Duration": 0
+  },
+  {
+    "Id": "MegaBrainTankRelax",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEGABRAINTANKRELAX.NAME",
+    "Duration": 0
+  },
+  {
+    "Id": "Mourning",
+    "Name": "Mourning",
+    "Duration": 1800
+  },
+  {
+    "Id": "NewCrewArrival",
+    "Name": "New Friend",
+    "Duration": 1800
+  },
+  {
+    "Id": "UnderWater",
+    "Name": "Underwater",
+    "Duration": 0
+  },
+  {
+    "Id": "FullBladder",
+    "Name": "Full Bladder",
+    "Duration": 0
+  },
+  {
+    "Id": "StressfulyEmptyingBladder",
+    "Name": "Making a mess",
+    "Duration": 0
+  },
+  {
+    "Id": "RedAlert",
+    "Name": "Red Alert!",
+    "Duration": 0
+  },
+  {
+    "Id": "MentalBreak",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MENTALBREAK.NAME",
+    "Duration": 600
+  },
+  {
+    "Id": "SteppedInContaminatedWater",
+    "Name": "Stepped in polluted water",
+    "Duration": 150
+  },
+  {
+    "Id": "WellFed",
+    "Name": "Well fed",
+    "Duration": 600
+  },
+  {
+    "Id": "StaleFood",
+    "Name": "Bad leftovers",
+    "Duration": 300
+  },
+  {
+    "Id": "AteFrozenFood",
+    "Name": "Ate frozen food",
+    "Duration": 600
+  },
+  {
+    "Id": "SmelledPutridOdour",
+    "Name": "Smelled a putrid odor",
+    "Duration": 30
+  },
+  {
+    "Id": "SmelledStinky",
+    "Name": "Smelled Stinky",
+    "Duration": 18
+  },
+  {
+    "Id": "Vomiting",
+    "Name": "Vomiting",
+    "Duration": 0
+  },
+  {
+    "Id": "Showered",
+    "Name": "Showered",
+    "Duration": 540
+  },
+  {
+    "Id": "LightWounds",
+    "Name": "Light Wounds",
+    "Duration": 0
+  },
+  {
+    "Id": "ModerateWounds",
+    "Name": "Moderate Wounds",
+    "Duration": 0
+  },
+  {
+    "Id": "SevereWounds",
+    "Name": "Severe Wounds",
+    "Duration": 0
+  },
+  {
+    "Id": "LightWoundsCritter",
+    "Name": "Light Wounds",
+    "Duration": 0
+  },
+  {
+    "Id": "ModerateWoundsCritter",
+    "Name": "Moderate Wounds",
+    "Duration": 0
+  },
+  {
+    "Id": "SevereWoundsCritter",
+    "Name": "Severe Wounds",
+    "Duration": 0
+  },
+  {
+    "Id": "WasAttacked",
+    "Name": "Recently assailed",
+    "Duration": 300
+  },
+  {
+    "Id": "SoreBack",
+    "Name": "Sore Back",
+    "Duration": 300
+  },
+  {
+    "Id": "WarmAir",
+    "Name": "Toasty Surroundings",
+    "Duration": 0
+  },
+  {
+    "Id": "ColdAir",
+    "Name": "Chilly Surroundings",
+    "Duration": 0
+  },
+  {
+    "Id": "Hypothermia",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.HYPOTHERMIA.NAME",
+    "Duration": 0
+  },
+  {
+    "Id": "Hyperthermia",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.HYPERTHERMIA.NAME",
+    "Duration": 0
+  },
+  {
+    "Id": "GoodEats",
+    "Name": "Soul Food",
+    "Duration": 1200
+  },
+  {
+    "Id": "HotStuff",
+    "Name": "Hot Stuff",
+    "Duration": 1200
+  },
+  {
+    "Id": "LowOxygen",
+    "Name": "Low Oxygen",
+    "Duration": 0
+  },
+  {
+    "Id": "NoOxygen",
+    "Name": "No Oxygen",
+    "Duration": 0
+  },
+  {
+    "Id": "CarpetFeet",
+    "Name": "Tickled Tootsies",
+    "Duration": 15
+  },
+  {
+    "Id": "WetFeet",
+    "Name": "Soggy Feet",
+    "Duration": 120
+  },
+  {
+    "Id": "SoakingWet",
+    "Name": "Sopping Wet",
+    "Duration": 150
+  },
+  {
+    "Id": "SoiledSuit",
+    "Name": "Soiled Suit",
+    "Duration": 0
+  },
+  {
+    "Id": "CryFace",
+    "Name": "Cry Face",
+    "Duration": 600
+  },
+  {
+    "Id": "WailedAt",
+    "Name": "Disturbed by Wailing",
+    "Duration": 300
+  },
+  {
+    "Id": "NoisePeaceful",
+    "Name": "Peace and Quiet",
+    "Duration": 0
+  },
+  {
+    "Id": "NoiseMinor",
+    "Name": "Loud Noises",
+    "Duration": 0
+  },
+  {
+    "Id": "NoiseMajor",
+    "Name": "Cacophony!",
+    "Duration": 0
+  },
+  {
+    "Id": "BadSleep",
+    "Name": "Unrested: Too Bright",
+    "Duration": 450
+  },
+  {
+    "Id": "BadSleepAfraidOfDark",
+    "Name": "Unrested: Afraid of Dark",
+    "Duration": 450
+  },
+  {
+    "Id": "BadSleepMovement",
+    "Name": "Unrested: Bed Jostling",
+    "Duration": 150
+  },
+  {
+    "Id": "BadSleepCold",
+    "Name": "Unrested: Cold Bedroom",
+    "Duration": 150
+  },
+  {
+    "Id": "TerribleSleep",
+    "Name": "Dead Tired: Snoring Friend",
+    "Duration": 450
+  },
+  {
+    "Id": "PeacefulSleep",
+    "Name": "Well Rested",
+    "Duration": 450
+  },
+  {
+    "Id": "Diarrhea",
+    "Name": "Diarrhea",
+    "Duration": 540
+  },
+  {
+    "Id": "BedStamina",
+    "Name": "Sleeping in a cot",
+    "Duration": 0
+  },
+  {
+    "Id": "LadderBedStamina",
+    "Name": "Sleeping in a ladder bed",
+    "Duration": 0
+  },
+  {
+    "Id": "LuxuryBedStamina",
+    "Name": "Sleeping in a comfy bed",
+    "Duration": 0
+  },
+  {
+    "Id": "BedroomStamina",
+    "Name": "Private Bedroom",
+    "Duration": 0
+  },
+  {
+    "Id": "BarracksStamina",
+    "Name": "Barracks",
+    "Duration": 0
+  },
+  {
+    "Id": "BedHealth",
+    "Name": "Bed Rest",
+    "Duration": 0
+  },
+  {
+    "Id": "MedicalCot",
+    "Name": "Triage Cot Rest",
+    "Duration": 0
+  },
+  {
+    "Id": "MedicalCotDoctored",
+    "Name": "Receiving treatment",
+    "Duration": 300
+  },
+  {
+    "Id": "DoctoredOffCotEffect",
+    "Name": "Runaway Patient",
+    "Duration": 300
+  },
+  {
+    "Id": "Rejuvenator",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.REJUVENATOR.NAME",
+    "Duration": 0
+  },
+  {
+    "Id": "RejuvenatorDoctored",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.REJUVENATORDOCTORED.NAME",
+    "Duration": 450
+  },
+  {
+    "Id": "DoctoredOffRejuvenatorEffect",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.DOCTOREDOFFREJUVENATOREFFECT.NAME",
+    "Duration": 450
+  },
+  {
+    "Id": "PostDiseaseRecovery",
+    "Name": "Feeling better",
+    "Duration": 900
+  },
+  {
+    "Id": "ImmuneSystemOverwhelmed",
+    "Name": "Immune System Overwhelmed",
+    "Duration": 0
+  },
+  {
+    "Id": "Medicine_VitaminSupplement",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEDICINE_VITAMINSUPPLEMENT.NAME",
+    "Duration": 1200
+  },
+  {
+    "Id": "Medicine_GenericPill",
+    "Name": "Placebo",
+    "Duration": 540
+  },
+  {
+    "Id": "Medicine_BasicBooster",
+    "Name": "Vitamin Chews",
+    "Duration": 600
+  },
+  {
+    "Id": "Medicine_IntermediateBooster",
+    "Name": "Immuno Booster",
+    "Duration": 1200
+  },
+  {
+    "Id": "Medicine_BasicRadPill",
+    "Name": "Basic Rad Pill",
+    "Duration": 600
+  },
+  {
+    "Id": "Medicine_IntermediateRadPill",
+    "Name": "Intermediate Rad Pill",
+    "Duration": 600
+  },
+  {
+    "Id": "Sunlight_Pleasant",
+    "Name": "Bright and Cheerful",
+    "Duration": 0
+  },
+  {
+    "Id": "Sunlight_Burning",
+    "Name": "Intensely Bright",
+    "Duration": 0
+  },
+  {
+    "Id": "Socialized",
+    "Name": "Socialized",
+    "Duration": 660
+  },
+  {
+    "Id": "PoppedEarDrums",
+    "Name": "Popped Eardrums",
+    "Duration": 300
+  },
+  {
+    "Id": "RoomLatrine",
+    "Name": "Latrine",
+    "Duration": 660
+  },
+  {
+    "Id": "RoomBathroom",
+    "Name": "Washroom",
+    "Duration": 660
+  },
+  {
+    "Id": "RoomMessHall",
+    "Name": "Mess Hall",
+    "Duration": 660
+  },
+  {
+    "Id": "RoomGreatHall",
+    "Name": "Great Hall",
+    "Duration": 660
+  },
+  {
+    "Id": "RoomBarracks",
+    "Name": "Barracks",
+    "Duration": 660
+  },
+  {
+    "Id": "RoomBedroom",
+    "Name": "Luxury Barracks",
+    "Duration": 660
+  },
+  {
+    "Id": "RoomPrivateBedroom",
+    "Name": "Private Bedroom",
+    "Duration": 660
+  },
+  {
+    "Id": "RoomPark",
+    "Name": "Park",
+    "Duration": 240
+  },
+  {
+    "Id": "RoomNatureReserve",
+    "Name": "Nature Reserve",
+    "Duration": 240
+  },
+  {
+    "Id": "ArcadePlaying",
+    "Name": "Gaming",
+    "Duration": 0
+  },
+  {
+    "Id": "PlayedArcade",
+    "Name": "Played Video Games",
+    "Duration": 2370
+  },
+  {
+    "Id": "Dancing",
+    "Name": "Dancing",
+    "Duration": 0
+  },
+  {
+    "Id": "Danced",
+    "Name": "Recently Danced",
+    "Duration": 2370
+  },
+  {
+    "Id": "Espresso",
+    "Name": "Drank Espresso",
+    "Duration": 450
+  },
+  {
+    "Id": "Juicer",
+    "Name": "Drank Juice",
+    "Duration": 450
+  },
+  {
+    "Id": "MechanicalSurfing",
+    "Name": "Surfin'",
+    "Duration": 0
+  },
+  {
+    "Id": "MechanicalSurfboard",
+    "Name": "Stoked",
+    "Duration": 2370
+  },
+  {
+    "Id": "SaunaRelaxing",
+    "Name": "Relaxing",
+    "Duration": 0
+  },
+  {
+    "Id": "Sauna",
+    "Name": "Steam Powered",
+    "Duration": 2370
+  },
+  {
+    "Id": "HotTubRelaxing",
+    "Name": "Relaxing",
+    "Duration": 0
+  },
+  {
+    "Id": "HotTub",
+    "Name": "Hot Tubbed",
+    "Duration": 4770
+  },
+  {
+    "Id": "SodaFountain",
+    "Name": "Soda Filled",
+    "Duration": 450
+  },
+  {
+    "Id": "VerticalWindTunnelFlying",
+    "Name": "Airborne",
+    "Duration": 0
+  },
+  {
+    "Id": "VerticalWindTunnel",
+    "Name": "Wind Swept",
+    "Duration": 4770
+  },
+  {
+    "Id": "BeachChairRelaxing",
+    "Name": "Totally Chill",
+    "Duration": 0
+  },
+  {
+    "Id": "BeachChairLit",
+    "Name": "Sun Kissed",
+    "Duration": 7170
+  },
+  {
+    "Id": "BeachChairUnlit",
+    "Name": "Passably Relaxed",
+    "Duration": 7170
+  },
+  {
+    "Id": "TelephoneChat",
+    "Name": "Full of Gossip",
+    "Duration": 450
+  },
+  {
+    "Id": "TelephoneBabble",
+    "Name": "Less Anxious",
+    "Duration": 450
+  },
+  {
+    "Id": "TelephoneLongDistance",
+    "Name": "Sociable",
+    "Duration": 450
+  },
+  {
+    "Id": "RecentlyPlayedArcade",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYPLAYEDARCADE.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlyPlayedSinglePlayerArcade",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYPLAYEDSINGLEPLAYERARCADE.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlyDanced",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYDANCED.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlyMechanicalSurfboard",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYMECHANICALSURFBOARD.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlySauna",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYSAUNA.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlyHotTub",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYHOTTUB.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlyVerticalWindTunnel",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYVERTICALWINDTUNNEL.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlyRecDrink",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYRECDRINK.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlyBeachChair",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYBEACHCHAIR.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlySocialized",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYSOCIALIZED.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlyTelephoned",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYTELEPHONED.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "RecentlySawRoboDancer",
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.RECENTLYSAWROBODANCER.NAME",
+    "Duration": 300
+  },
+  {
+    "Id": "EdibleMinus3",
+    "Name": "Grisly Meal",
+    "Duration": 660
+  },
+  {
+    "Id": "EdibleMinus2",
+    "Name": "Terrible Meal",
+    "Duration": 660
+  },
+  {
+    "Id": "EdibleMinus1",
+    "Name": "Poor Meal",
+    "Duration": 660
+  },
+  {
+    "Id": "Edible0",
+    "Name": "Standard Meal",
+    "Duration": 660
+  },
+  {
+    "Id": "Edible1",
+    "Name": "Good Meal",
+    "Duration": 660
+  },
+  {
+    "Id": "Edible2",
+    "Name": "Great Meal",
+    "Duration": 660
+  },
+  {
+    "Id": "Edible3",
+    "Name": "Superb Meal",
+    "Duration": 660
+  },
+  {
+    "Id": "MessTableSalt",
+    "Name": "Salted Food",
+    "Duration": 660
+  },
+  {
+    "Id": "DecorMinus1",
+    "Name": "Last Cycle's Decor: Ugly",
+    "Duration": 660
+  },
+  {
+    "Id": "Decor0",
+    "Name": "Last Cycle's Decor: Poor",
+    "Duration": 660
+  },
+  {
+    "Id": "Decor1",
+    "Name": "Last Cycle's Decor: Mediocre",
+    "Duration": 660
+  },
+  {
+    "Id": "Decor2",
+    "Name": "Last Cycle's Decor: Average",
+    "Duration": 660
+  },
+  {
+    "Id": "Decor3",
+    "Name": "Last Cycle's Decor: Nice",
+    "Duration": 660
+  },
+  {
+    "Id": "Decor4",
+    "Name": "Last Cycle's Decor: Charming",
+    "Duration": 660
+  },
+  {
+    "Id": "Decor5",
+    "Name": "Last Cycle's Decor: Gorgeous",
+    "Duration": 660
+  },
+  {
+    "Id": "Break1",
+    "Name": "One Shift Break",
+    "Duration": 660
+  },
+  {
+    "Id": "Break2",
+    "Name": "Two Shift Break",
+    "Duration": 660
+  },
+  {
+    "Id": "Break3",
+    "Name": "Three Shift Break",
+    "Duration": 660
+  },
+  {
+    "Id": "Break4",
+    "Name": "Four Shift Break",
+    "Duration": 660
+  },
+  {
+    "Id": "Break5",
+    "Name": "Five Shift Break",
+    "Duration": 660
+  },
+  {
+    "Id": "GoodConversation",
+    "Name": "Pleasant Chitchat",
+    "Duration": 60
+  },
+  {
+    "Id": "WorkEncouraged",
+    "Name": "Appreciated",
+    "Duration": 60
+  },
+  {
+    "Id": "Greeting",
+    "Name": "Saw Friend",
+    "Duration": 60
+  },
+  {
+    "Id": "Hugged",
+    "Name": "Hugged",
+    "Duration": 300
+  },
+  {
+    "Id": "DuplicantGotMilk",
+    "Name": "Extra Hydrated",
+    "Duration": 600
+  },
+  {
+    "Id": "SpaceTourist",
+    "Name": "Visited Space",
+    "Duration": 15000
+  },
+  {
+    "Id": "SmelledFlowers",
+    "Name": "Smelled Flowers",
+    "Duration": 180
+  },
+  {
+    "Id": "HistamineSuppression",
+    "Name": "Antihistamines",
+    "Duration": 720
+  },
+  {
+    "Id": "FoodSicknessRecovery",
+    "Name": "Food Poisoning Antibodies",
+    "Duration": 900
+  },
+  {
+    "Id": "SlimeSicknessRecovery",
+    "Name": "Slimelung Antibodies",
+    "Duration": 1500
+  },
+  {
+    "Id": "ZombieSicknessRecovery",
+    "Name": "Zombie Spores Antibodies",
+    "Duration": 2100
+  },
+  {
+    "Id": "RadiationExposureMinor",
+    "Name": "Minor Radiation Sickness",
+    "Duration": 0
+  },
+  {
+    "Id": "RadiationExposureMajor",
+    "Name": "Major Radiation Sickness",
+    "Duration": 0
+  },
+  {
+    "Id": "RadiationExposureExtreme",
+    "Name": "Extreme Radiation Sickness",
+    "Duration": 0
+  },
+  {
+    "Id": "BionicRadiationExposureMinor",
+    "Name": "Minor Radiation Sickness",
+    "Duration": 0
+  },
+  {
+    "Id": "BionicRadiationExposureMajor",
+    "Name": "Major Radiation Sickness",
+    "Duration": 0
+  },
+  {
+    "Id": "BionicRadiationExposureExtreme",
+    "Name": "Extreme Radiation Sickness",
+    "Duration": 0
+  },
+  {
+    "Id": "IsSparkleStreaker",
+    "Name": "Sparkle Streaking",
+    "Duration": 570
+  },
+  {
+    "Id": "SawSparkleStreaker",
+    "Name": "Sparkle Flattered",
+    "Duration": 570
+  },
+  {
+    "Id": "IsRoboDancer",
+    "Name": "Doing the Robot",
+    "Duration": 1200
+  },
+  {
+    "Id": "SawRoboDancer",
+    "Name": "Hyped",
+    "Duration": 1200
+  },
+  {
+    "Id": "IsJoySinger",
+    "Name": "Yodeling",
+    "Duration": 570
+  },
+  {
+    "Id": "HeardJoySinger",
+    "Name": "Serenaded",
+    "Duration": 0
+  },
+  {
+    "Id": "HasBalloon",
+    "Name": "Balloon Buddy",
+    "Duration": 0
+  },
+  {
+    "Id": "RecentlyPartied",
+    "Name": "Partied Hard",
+    "Duration": 600
+  },
+  {
+    "Id": "NoFunAllowed",
+    "Name": "Fun Interrupted",
+    "Duration": 600
+  },
+  {
+    "Id": "SeafoodRadiationResistance",
+    "Name": "Radiation Resistant: Aquatic Diet",
+    "Duration": 1200
+  },
+  {
+    "Id": "ContaminatedLungs",
+    "Name": "Yucky Lungs",
+    "Duration": 120
+  },
+  {
+    "Id": "MinorIrritation",
+    "Name": "Minor Eye Irritation",
+    "Duration": 0
+  },
+  {
+    "Id": "MajorIrritation",
+    "Name": "Major Eye Irritation",
+    "Duration": 0
+  },
+  {
+    "Id": "SleepClinic",
+    "Name": "Nodding Off",
+    "Duration": 0
+  },
+  {
+    "Id": "PowerTinker",
+    "Name": "Engie's Tune-Up",
+    "Duration": 1800
+  },
+  {
+    "Id": "FarmTinker",
+    "Name": "Farmer's Touch",
+    "Duration": 600
+  },
+  {
+    "Id": "MachineTinker",
+    "Name": "Engie's Jerry Rig",
+    "Duration": 1200
+  },
+  {
+    "Id": "Charging",
+    "Name": "Charging",
+    "Duration": 0
+  },
+  {
+    "Id": "BotSweeping",
+    "Name": "Sweeping",
+    "Duration": 0
+  },
+  {
+    "Id": "BotMopping",
+    "Name": "Mopping",
+    "Duration": 0
+  },
+  {
+    "Id": "ScoutBotCharging",
+    "Name": "Charging",
+    "Duration": 0
+  },
+  {
+    "Id": "SuddenMoraleHelper",
+    "Name": "Morale Upgrade Helper",
+    "Duration": 3000
+  },
+  {
+    "Id": "CryoFriend",
+    "Name": "Motivated By Friend",
+    "Duration": 6000
+  },
+  {
+    "Id": "Claustrophobic",
+    "Name": "Claustrophobic",
+    "Duration": 150
+  },
+  {
+    "Id": "UncomfortableFeet",
+    "Name": "Aching Feet",
+    "Duration": 150
+  },
+  {
+    "Id": "UnfashionableClothing",
+    "Name": "Fashion Crime",
+    "Duration": 150
+  },
+  {
+    "Id": "Restless",
+    "Name": "Restless",
+    "Duration": 150
+  },
+  {
+    "Id": "Vertigo",
+    "Name": "Vertigo",
+    "Duration": 150
+  },
+  {
+    "Id": "PeopleTooCloseWhileSleeping",
+    "Name": "Personal Bubble Burst",
+    "Duration": 150
+  },
+  {
+    "Id": "Thriver",
+    "Name": "Clutchy",
+    "Duration": 0
+  },
+  {
+    "Id": "Loner",
+    "Name": "Alone",
+    "Duration": 0
+  },
+  {
+    "Id": "StarryEyed",
+    "Name": "Starry Eyed",
+    "Duration": 0
+  },
+  {
+    "Id": "PassedOutSleep",
+    "Name": "Exhausted",
+    "Duration": 0
+  },
+  {
+    "Id": "WarmTouch",
+    "Name": "Frost Resistant",
+    "Duration": 120
+  },
+  {
+    "Id": "WarmTouchFood",
+    "Name": "Frost Resistant: Spicy Diet",
+    "Duration": 600
+  },
+  {
+    "Id": "RefreshingTouch",
+    "Name": "Heat Resistant",
+    "Duration": 120
+  },
+  {
+    "Id": "GunkSick",
+    "Name": "Gunk Extraction Required",
+    "Duration": 0
+  },
+  {
+    "Id": "ExpellingGunk",
+    "Name": "Making a mess",
+    "Duration": 0
+  },
+  {
+    "Id": "GunkHungover",
+    "Name": "Gunk Mouth",
+    "Duration": 600
+  },
+  {
+    "Id": "NoLubricationMinor",
+    "Name": "Grinding Gears (Reduced)",
+    "Duration": 0
+  },
+  {
+    "Id": "NoLubricationMajor",
+    "Name": "Grinding Gears",
+    "Duration": 0
+  },
+  {
+    "Id": "BionicOffline",
+    "Name": "Powerless",
+    "Duration": 0
+  },
+  {
+    "Id": "BionicBedTimeEffect",
+    "Name": "Defragmenting",
+    "Duration": 0
+  },
+  {
+    "Id": "BionicWaterStress",
+    "Name": "Liquid Exposure",
+    "Duration": 0
+  },
+  {
+    "Id": "RecentlySlippedTracker",
+    "Name": "Slipped",
+    "Duration": 100
+  },
+  {
+    "Id": "FreshOil_CrudeOil",
+    "Name": "Fresh Oil",
+    "Duration": 4800
+  },
+  {
+    "Id": "FreshOil_PhytoOil",
+    "Name": "Fresh Oil",
+    "Duration": 4800
+  },
+  {
+    "Id": "Ranched",
+    "Name": "Groomed",
+    "Duration": 600
+  },
+  {
+    "Id": "HadMilk",
+    "Name": "Hydrated",
+    "Duration": 600
+  },
+  {
+    "Id": "EggSong",
+    "Name": "Lullabied",
+    "Duration": 600
+  },
+  {
+    "Id": "EggHug",
+    "Name": "Cuddled",
+    "Duration": 600
+  },
+  {
+    "Id": "HuggingFrenzy",
+    "Name": "Hugging Spree",
+    "Duration": 600
+  },
+  {
+    "Id": "DivergentCropTended",
+    "Name": "Sweetle Tending",
+    "Duration": 600
+  },
+  {
+    "Id": "DivergentCropTendedWorm",
+    "Name": "Grubgrub Rub",
+    "Duration": 600
+  },
+  {
+    "Id": "MooWellFed",
+    "Name": "Welcoming Moo'd",
+    "Duration": 1
+  },
+  {
+    "Id": "WoodDeerWellFed",
+    "Name": "Just Ate",
+    "Duration": 1
+  },
+  {
+    "Id": "IceBellyWellFed",
+    "Name": "Just Ate",
+    "Duration": 1
+  },
+  {
+    "Id": "GoldBellyWellFed",
+    "Name": "Regal Meal",
+    "Duration": 1
+  },
+  {
+    "Id": "CenterOfAttention",
+    "Name": "Center of Attention",
+    "Duration": 0
+  },
+  {
+    "Id": "InteractedWithAirborneCondo",
+    "Name": "Cozy",
+    "Duration": 600
+  },
+  {
+    "Id": "InteractedWithCritterCondo",
+    "Name": "Cozy",
+    "Duration": 600
+  },
+  {
+    "Id": "AteFromFeeder",
+    "Name": "Ate From Feeder",
+    "Duration": 1200
+  },
+  {
+    "Id": "PILOTING_SPICE",
+    "Name": "<link=\"PILOTINGSPICE\">Rocketeer Spice</link>",
+    "Duration": 600
+  },
+  {
+    "Id": "STRENGTH_SPICE",
+    "Name": "<link=\"STRENGTHSPICE\">Brawny Spice</link>",
+    "Duration": 600
+  },
+  {
+    "Id": "MACHINERY_SPICE",
+    "Name": "<link=\"MACHINERYSPICE\">Machinist Spice</link>",
+    "Duration": 600
+  },
+  {
+    "Id": "InteractedWithUnderwaterCondo",
+    "Name": "Cozy",
+    "Duration": 600
+  }
+]

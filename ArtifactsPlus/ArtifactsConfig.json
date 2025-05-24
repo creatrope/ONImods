@@ -15,8 +15,9 @@
         "Cooking": 10,
         "Machinery": 5
       },
-      "Traits": [
-        "Twinkletoes"
+      "Effects": [
+        "WellFed",
+        "SoakingWet"
       ]
     },
     {
@@ -27,7 +28,11 @@
       "Attributes": {
         "Learning": 10
       },
-      "Filter": "InWorld"
+      "Filter": "InWorld",
+      "Effects": [
+        "AnewHope",
+        "PeacefulSleep"
+      ]
     },
     {
       "ArtifactId": "artifact_officemug",
@@ -35,7 +40,12 @@
     },
     {
       "ArtifactId": "artifact_obelisk",
-      "Attributes": {}
+      "Attributes": {},
+      "Effects": [
+        "WellFed",
+        "AnewHope",
+        "PeacefulSleep"
+      ]
     },
     {
       "ArtifactId": "artifact_okayxray",
@@ -152,6 +162,15 @@
     {
       "ArtifactId": "artifact_reactormodel",
       "Attributes": {}
+    },
+    {
+      "ArtifactId": "artifact_1",
+      "RoomSizeMin": 8,
+      "RoomSizeMax": 20,
+      "DecorMinimum": 10,
+      "Filter": "InRoom",
+      "Attributes": { "Strength": 2.0 },
+      "Effects": [ "StatusEffect1", "StatusEffect2" ]
     }
   ]
 }

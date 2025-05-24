@@ -14,13 +14,26 @@ namespace ArtifactsPlus
         // For each artifact, track the history of minions that have had its effect applied
         private static readonly Dictionary<GameObject, HashSet<GameObject>> artifactHistoryMap = new Dictionary<GameObject, HashSet<GameObject>>();
 
-        // Map of artifactId to its effects (what the artifact does)
-        private static readonly Dictionary<string, Dictionary<string, float>> artifactEffectsMap = new Dictionary<string, Dictionary<string, float>>();
+        // Map of artifactId to its modifiers (what the artifact does)
+        private static readonly Dictionary<string, Dictionary<string, float>> artifactModifiersMap = new Dictionary<string, Dictionary<string, float>>();
 
-        // Use only this method for retrieving artifact effects
-        public static bool TryGetArtifactEffects(string artifactId, out Dictionary<string, float> effects)
+        // Use only this method for retrieving artifact modifiers
+        public static bool TryGetArtifactModifiers(string artifactId, out Dictionary<string, float> modifiers)
         {
-            return ArtifactStateTracker.TryGetArtifactAttributes(artifactId, out effects);
+            return ArtifactStateTracker.TryGetArtifactAttributes(artifactId, out modifiers);
+        }
+
+        // Helper to get statuses for an artifact
+        private static bool TryGetArtifactStatuses(string artifactId, out List<string> statuses)
+        {
+            statuses = null;
+            var config = ArtifactStateTracker.GetArtifactConfig(artifactId);
+            if (config != null && config.Effects != null && config.Effects.Count > 0)
+            {
+                statuses = config.Effects;
+                return true;
+            }
+            return false;
         }
 
         // Call this when an artifact changes state
@@ -50,7 +63,8 @@ namespace ArtifactsPlus
                     minionCount++;
                     if (!minionSet.Contains(minion))
                     {
-                        ApplyOrRemoveArtifactEffectsToMinion(minion, artifactId, true);
+                        ApplyOrRemoveArtifactModifiersToMinion(minion, artifactId, true);
+                        ApplyOrRemoveArtifactStatusesToMinion(minion, artifactId, true);
                         minionSet.Add(minion);
                     }
                     else
@@ -67,7 +81,8 @@ namespace ArtifactsPlus
                     CustomLogger.Log($"[DEBUG] Removing effects from {minionSet.Count} minions for artifact {artifact.name}");
                     foreach (var minion in minionSet)
                     {
-                        ApplyOrRemoveArtifactEffectsToMinion(minion, artifactId, false);
+                        ApplyOrRemoveArtifactModifiersToMinion(minion, artifactId, false);
+                        ApplyOrRemoveArtifactStatusesToMinion(minion, artifactId, false);
                     }
                     minionSet.Clear();
                     artifactHistoryMap.Remove(artifact);
@@ -98,15 +113,47 @@ namespace ArtifactsPlus
         }
 
         /// <summary>
+        /// Adds a status effect to all minions.
+        /// </summary>
+        public static void AddStatusToAllMinions(string statusId)
+        {
+            foreach (var minion in GetAllMinions())
+            {
+                var effects = minion.GetComponent<Effects>();
+                if (effects != null && !effects.HasEffect(statusId))
+                {
+                    effects.Add(statusId, true);
+                    CustomLogger.Log($"[HOTKEY] Added status '{statusId}' to minion '{minion.name}'");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Removes a status effect from all minions.
+        /// </summary>
+        public static void RemoveStatusFromAllMinions(string statusId)
+        {
+            foreach (var minion in GetAllMinions())
+            {
+                var effects = minion.GetComponent<Effects>();
+                if (effects != null && effects.HasEffect(statusId))
+                {
+                    effects.Remove(statusId);
+                    CustomLogger.Log($"[HOTKEY] Removed status '{statusId}' from minion '{minion.name}'");
+                }
+            }
+        }
+
+        /// <summary>
         /// Applies or removes artifact attribute modifiers to a minion.
         /// </summary>
         /// <param name="minion">The minion GameObject.</param>
         /// <param name="artifactId">The artifact ID.</param>
         /// <param name="apply">True to apply, false to remove.</param>
-        public static void ApplyOrRemoveArtifactEffectsToMinion(GameObject minion, string artifactId, bool apply)
+        public static void ApplyOrRemoveArtifactModifiersToMinion(GameObject minion, string artifactId, bool apply)
         {
             string action = apply ? "Applying" : "Removing";
-            CustomLogger.Log($"[EffectTracker] {action} effects for minion '{minion?.name ?? "null"}' and artifact '{artifactId}'");
+            CustomLogger.Log($"[EffectTracker] {action} modifiers for minion '{minion?.name ?? "null"}' and artifact '{artifactId}'");
 
             if (minion == null)
                 return;
@@ -118,9 +165,9 @@ namespace ArtifactsPlus
                 return;
             }
 
-            if (TryGetArtifactEffects(artifactId, out var effectDict))
+            if (TryGetArtifactModifiers(artifactId, out var modifierDict))
             {
-                foreach (var kvp in effectDict)
+                foreach (var kvp in modifierDict)
                 {
                     string attrName = kvp.Key;
                     float modValue = kvp.Value;
@@ -141,10 +188,10 @@ namespace ArtifactsPlus
                         if (apply)
                         {
                             float before = attrInstance.GetTotalValue();
-                            var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Effect: {artifactId}");
+                            var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Modifier: {artifactId}");
                             attrInstance.Add(modifier);
                             float after = attrInstance.GetTotalValue();
-                            CustomLogger.Log($"[EFFECT] Applied: {minion.GetProperName()} {attribute.Id} += {modValue} (Artifact: {artifactId}) [{before} -> {after}]");
+                            CustomLogger.Log($"[MODIFIER] Applied: {minion.GetProperName()} {attribute.Id} += {modValue} (Artifact: {artifactId}) [{before} -> {after}]");
                         }
                         else
                         {
@@ -153,7 +200,7 @@ namespace ArtifactsPlus
                             for (int i = 0; i < modifiers.Count; i++)
                             {
                                 var mod = modifiers[i];
-                                if (mod.Description == $"Artifact Effect: {artifactId}")
+                                if (mod.Description == $"Artifact Modifier: {artifactId}")
                                     toRemove.Add(mod);
                             }
                             if (toRemove.Count > 0)
@@ -164,7 +211,7 @@ namespace ArtifactsPlus
                                     attrInstance.Remove(mod);
                                 }
                                 float after = attrInstance.GetTotalValue();
-                                CustomLogger.Log($"[EFFECT] Removed: {minion.GetProperName()} {attribute.Id} (Artifact: {artifactId}) [{before} -> {after}]");
+                                CustomLogger.Log($"[MODIFIER] Removed: {minion.GetProperName()} {attribute.Id} (Artifact: {artifactId}) [{before} -> {after}]");
                             }
                         }
                     }
@@ -176,7 +223,46 @@ namespace ArtifactsPlus
             }
             else
             {
-                CustomLogger.Log($"[DEBUG] No artifact effects found for artifactId={artifactId}");
+                CustomLogger.Log($"[DEBUG] No artifact modifiers found for artifactId={artifactId}");
+            }
+        }
+
+        /// <summary>
+        /// Applies or removes artifact status effects to a minion.
+        /// </summary>
+        /// <param name="minion">The minion GameObject.</param>
+        /// <param name="artifactId">The artifact ID.</param>
+        /// <param name="apply">True to apply, false to remove.</param>
+        public static void ApplyOrRemoveArtifactStatusesToMinion(GameObject minion, string artifactId, bool apply)
+        {
+            if (minion == null)
+                return;
+
+            if (TryGetArtifactStatuses(artifactId, out var statuses))
+            {
+                var effects = minion.GetComponent<Effects>();
+                if (effects == null)
+                    return;
+
+                foreach (var status in statuses)
+                {
+                    if (apply)
+                    {
+                        if (!effects.HasEffect(status))
+                        {
+                            effects.Add(status, true);
+                            CustomLogger.Log($"[EFFECT] Applied status '{status}' to minion '{minion.name}' (Artifact: {artifactId})");
+                        }
+                    }
+                    else
+                    {
+                        if (effects.HasEffect(status))
+                        {
+                            effects.Remove(status);
+                            CustomLogger.Log($"[EFFECT] Removed status '{status}' from minion '{minion.name}' (Artifact: {artifactId})");
+                        }
+                    }
+                }
             }
         }
     }
