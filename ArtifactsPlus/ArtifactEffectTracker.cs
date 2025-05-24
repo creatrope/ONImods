@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Klei.AI; // Add this at the top for AttributeModifier and Attributes
+using Klei.AI;
 
 namespace ArtifactsPlus
 {
@@ -26,7 +26,7 @@ namespace ArtifactsPlus
         // Call this when an artifact changes state
         public static void OnArtifactStateChanged(GameObject artifact, string artifactId, bool isActive, List<GameObject> minionList)
         {
-            CustomLogger.Log($"\n[DEBUG] OnArtifactStateChanged called for artifact={artifact?.name ?? "null"}, artifactId={artifactId}, isActive={isActive}");
+            CustomLogger.Log($"[EffectTracker] Artifact '{artifactId}' state changed. isActive={isActive}");
 
             if (artifact == null)
             {
@@ -41,16 +41,16 @@ namespace ArtifactsPlus
                 {
                     minionSet = new HashSet<GameObject>();
                     artifactHistoryMap[artifact] = minionSet;
-                    //CustomLogger.Log($"[DEBUG] Created new minionSet for artifact {artifact.name}");
                 }
 
                 int minionCount = 0;
                 foreach (var minion in minionList)
                 {
+                    CustomLogger.Log($"[EffectTracker] Processing minion '{minion.name}' for artifact '{artifactId}'");
                     minionCount++;
                     if (!minionSet.Contains(minion))
                     {
-                        ApplyEffectToMinion(minion, artifactId);
+                        ApplyOrRemoveArtifactEffectsToMinion(minion, artifactId, true);
                         minionSet.Add(minion);
                     }
                     else
@@ -67,9 +67,9 @@ namespace ArtifactsPlus
                     CustomLogger.Log($"[DEBUG] Removing effects from {minionSet.Count} minions for artifact {artifact.name}");
                     foreach (var minion in minionSet)
                     {
-                        RemoveEffectFromMinion(minion, artifactId);
+                        ApplyOrRemoveArtifactEffectsToMinion(minion, artifactId, false);
                     }
-                    minionSet.Clear(); // Ensure the set is cleared
+                    minionSet.Clear();
                     artifactHistoryMap.Remove(artifact);
                 }
                 else
@@ -91,17 +91,26 @@ namespace ArtifactsPlus
                 if (minion != null && minion.HasTag("Minion"))
                 {
                     count++;
-                    //CustomLogger.Log($"[DEBUG] Found minion: {minion.gameObject.name}");
                     yield return minion.gameObject;
                 }
             }
             CustomLogger.Log($"[DEBUG] GetAllMinions found {count} minions.");
         }
 
-        // Apply the effect to a minion (using MinionModifiers, as in your working code)
-        private static void ApplyEffectToMinion(GameObject minion, string artifactId)
+        /// <summary>
+        /// Applies or removes artifact attribute modifiers to a minion.
+        /// </summary>
+        /// <param name="minion">The minion GameObject.</param>
+        /// <param name="artifactId">The artifact ID.</param>
+        /// <param name="apply">True to apply, false to remove.</param>
+        public static void ApplyOrRemoveArtifactEffectsToMinion(GameObject minion, string artifactId, bool apply)
         {
-            //CustomLogger.Log($"[DEBUG] ApplyEffectToMinion called for minion={minion?.name ?? "null"}, artifactId={artifactId}");
+            string action = apply ? "Applying" : "Removing";
+            CustomLogger.Log($"[EffectTracker] {action} effects for minion '{minion?.name ?? "null"}' and artifact '{artifactId}'");
+
+            if (minion == null)
+                return;
+
             var minionModifiers = minion.GetComponent<MinionModifiers>();
             if (minionModifiers == null)
             {
@@ -109,12 +118,12 @@ namespace ArtifactsPlus
                 return;
             }
 
-            if (TryGetArtifactEffects(artifactId, out var attributes))
+            if (TryGetArtifactEffects(artifactId, out var effectDict))
             {
-                foreach (var kvp in attributes)
+                foreach (var kvp in effectDict)
                 {
                     string attrName = kvp.Key;
-                    float value = kvp.Value;
+                    float modValue = kvp.Value;
 
                     Klei.AI.Attribute attribute = Db.Get().Attributes.resources
                         .FirstOrDefault(a => string.Equals(a.Id, attrName, StringComparison.OrdinalIgnoreCase) ||
@@ -129,116 +138,40 @@ namespace ArtifactsPlus
                     var attrInstance = minionModifiers.attributes?.Get(attribute);
                     if (attrInstance != null)
                     {
-                        float before = attrInstance.GetTotalValue();
-                        var modifier = new AttributeModifier(attribute.Id, value, $"Artifact Effect: {artifactId}");
-                        attrInstance.Add(modifier);
-                        float after = attrInstance.GetTotalValue();
-                        CustomLogger.Log($"[EFFECT] Applied: {minion.GetProperName()} {attribute.Id} += {value} (Artifact: {artifactId}) [{before} -> {after}]");
-                    }
-                    else
-                    {
-                        CustomLogger.Log($"[DEBUG] {minion.name} does not have attribute '{attribute.Id}'.");
-                    }
-                }
-            }
-            else
-            {
-                CustomLogger.Log($"[DEBUG] No artifact effects found for artifactId={artifactId}");
-            }
-        }
-
-        // Remove the effect from a minion (using MinionModifiers, as in your working code)
-        private static void RemoveEffectFromMinion(GameObject minion, string artifactId)
-        {
-            //CustomLogger.Log($"[DEBUG] RemoveEffectFromMinion called for minion={minion?.name ?? "null"}, artifactId={artifactId}");
-            var minionModifiers = minion.GetComponent<MinionModifiers>();
-            if (minionModifiers == null)
-            {
-                CustomLogger.Log($"[DEBUG] Minion {minion.name} does not have MinionModifiers component.");
-                return;
-            }
-
-            if (TryGetArtifactEffects(artifactId, out var attributes))
-            {
-                foreach (var kvp in attributes)
-                {
-                    string attrName = kvp.Key;
-
-                    Klei.AI.Attribute attribute = Db.Get().Attributes.resources
-                        .FirstOrDefault(a => string.Equals(a.Id, attrName, StringComparison.OrdinalIgnoreCase) ||
-                                             string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));
-
-                    if (attribute == null)
-                    {
-                        CustomLogger.Log($"[DEBUG] Attribute '{attrName}' not found by Id or Name in Db for {minion.name}.");
-                        continue;
-                    }
-
-                    var attrInstance = minionModifiers.attributes?.Get(attribute);
-                    if (attrInstance != null)
-                    {
-                        var toRemove = new List<AttributeModifier>();
-                        var modifiers = attrInstance.Modifiers;
-                        for (int i = 0; i < modifiers.Count; i++)
-                        {
-                            var mod = modifiers[i];
-                            if (mod.Description == $"Artifact Effect: {artifactId}")
-                                toRemove.Add(mod);
-                        }
-                        if (toRemove.Count > 0)
+                        if (apply)
                         {
                             float before = attrInstance.GetTotalValue();
-                            foreach (var mod in toRemove)
-                            {
-                                attrInstance.Remove(mod);
-                            }
+                            var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Effect: {artifactId}");
+                            attrInstance.Add(modifier);
                             float after = attrInstance.GetTotalValue();
-                            CustomLogger.Log($"[EFFECT] Removed: {minion.GetProperName()} {attribute.Id} (Artifact: {artifactId}) [{before} -> {after}]");
+                            CustomLogger.Log($"[EFFECT] Applied: {minion.GetProperName()} {attribute.Id} += {modValue} (Artifact: {artifactId}) [{before} -> {after}]");
+                        }
+                        else
+                        {
+                            var toRemove = new List<AttributeModifier>();
+                            var modifiers = attrInstance.Modifiers;
+                            for (int i = 0; i < modifiers.Count; i++)
+                            {
+                                var mod = modifiers[i];
+                                if (mod.Description == $"Artifact Effect: {artifactId}")
+                                    toRemove.Add(mod);
+                            }
+                            if (toRemove.Count > 0)
+                            {
+                                float before = attrInstance.GetTotalValue();
+                                foreach (var mod in toRemove)
+                                {
+                                    attrInstance.Remove(mod);
+                                }
+                                float after = attrInstance.GetTotalValue();
+                                CustomLogger.Log($"[EFFECT] Removed: {minion.GetProperName()} {attribute.Id} (Artifact: {artifactId}) [{before} -> {after}]");
+                            }
                         }
                     }
                     else
                     {
                         CustomLogger.Log($"[DEBUG] {minion.name} does not have attribute '{attribute.Id}'.");
                     }
-                }
-            }
-            else
-            {
-                CustomLogger.Log($"[DEBUG] No artifact effects found for artifactId={artifactId}");
-            }
-        }
-
-        // Apply all artifact effects to a minion (just print what would be applied)
-        private static void ApplyArtifactEffectsToMinion(GameObject minion, string artifactId)
-        {
-            CustomLogger.Log($"[DEBUG] ApplyArtifactEffectsToMinion called for minion={minion?.name ?? "null"}, artifactId={artifactId}");
-            if (TryGetArtifactEffects(artifactId, out var effectDict))
-            {
-                CustomLogger.Log($"[DEBUG] Artifact effects found for artifactId={artifactId}, count={effectDict.Count}");
-                foreach (var kvp in effectDict)
-                {
-                    string effectName = kvp.Key;
-                    float modValue = kvp.Value;
-                    CustomLogger.Log($"[EFFECT] Would apply: {minion.GetProperName()} {effectName} += {modValue} (Artifact: {artifactId})");
-                }
-            }
-            else
-            {
-                CustomLogger.Log($"[DEBUG] No artifact effects found for artifactId={artifactId}");
-            }
-        }
-
-        // Remove all artifact effects from a minion (just print what would be removed)
-        private static void RemoveArtifactEffectsFromMinion(GameObject minion, string artifactId)
-        {
-            CustomLogger.Log($"[DEBUG] RemoveArtifactEffectsFromMinion called for minion={minion?.name ?? "null"}, artifactId={artifactId}");
-            if (TryGetArtifactEffects(artifactId, out var effectDict))
-            {
-                foreach (var kvp in effectDict)
-                {
-                    string effectName = kvp.Key;
-                    float modValue = kvp.Value;
-                    CustomLogger.Log($"[EFFECT] Would remove: {minion.GetProperName()} {effectName} -= {modValue} (Artifact: {artifactId})");
                 }
             }
             else

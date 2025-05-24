@@ -10,14 +10,14 @@
     },
     {
       "ArtifactId": "artifact_sink",
+      "Filter": "InWorld",
       "Attributes": {
         "Cooking": 10,
         "Machinery": 5
       },
       "Traits": [
         "Twinkletoes"
-      ],
-      "Filter": "InWorld"
+      ]
     },
     {
       "ArtifactId": "artifact_rubikscube",
@@ -43,7 +43,10 @@
     },
     {
       "ArtifactId": "artifact_blender",
-      "Attributes": {}
+      "Filter": "InWorld",
+      "Attributes": {
+        "Athletics": 10
+      }
     },
     {
       "ArtifactId": "artifact_moldavite",

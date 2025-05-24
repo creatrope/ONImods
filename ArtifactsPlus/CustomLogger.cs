@@ -19,7 +19,7 @@ namespace ArtifactsPlus
                 File.WriteAllText(LogPath, $"[ArtifactsPlus] Log started at {System.DateTime.Now}\n");
                 _initialized = true;
             }
-            File.AppendAllText(LogPath, message + "\n");
+            File.AppendAllText(LogPath, message + Environment.NewLine);
         }
 
         // Call this at the start of each game load to reset the log
@@ -38,6 +38,16 @@ namespace ArtifactsPlus
                 var json = File.ReadAllText(configPath);
                 // Deserialize or process other config values as needed
             }
+        }
+    }
+
+    public static class DebugLogger
+    {
+        public static void LogDebugMessages()
+        {
+            CustomLogger.Log("[DEBUG] Top-level operation");
+            CustomLogger.Log("[DEBUG] Nested operation");
+            CustomLogger.Log("[DEBUG] Deeper nested operation");
         }
     }
 }
