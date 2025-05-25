@@ -10,6 +10,7 @@ using System.Reflection;
 using Newtonsoft.Json.Linq;
 using PeterHan.PLib.UI;
 using Object = UnityEngine.Object; // Explicitly alias UnityEngine.Object to avoid ambiguity
+using System.Text; // <-- Add this for StringBuilder
 
 namespace ArtifactsPlus
 {
@@ -81,6 +82,62 @@ namespace ArtifactsPlus
 
         private static Dictionary<string, ArtifactConfig> artifactConfigMap;
 
+        public struct ArtifactCriteriaResult
+        {
+            public int ActualRoomSize;
+            public bool MeetsRoomSize;
+            public float ActualDecor;
+            public bool MeetsDecor;
+            public string Filter;
+            public bool MeetsAll; // Add this field
+        }
+
+        public static ArtifactCriteriaResult EvaluateArtifactCriteria(GameObject artifact, ArtifactConfig config)
+        {
+            int actualRoomSize = -1;
+            float actualDecor = float.NaN;
+            bool meetsRoomSize = false;
+            bool meetsDecor = false;
+
+            int cell = Grid.PosToCell(artifact.transform.position);
+            if (Game.Instance != null && Game.Instance.roomProber != null)
+            {
+                var cavity = Game.Instance.roomProber.GetCavityForCell(cell);
+                var room = cavity?.room;
+                if (room != null && room.cavity != null)
+                {
+                    actualRoomSize = room.cavity.numCells;
+                    meetsRoomSize = actualRoomSize >= config.RoomSizeMin && actualRoomSize <= config.RoomSizeMax;
+
+                    int decorSum = 0;
+                    int decorCount = 0;
+                    foreach (var building in room.cavity.buildings)
+                    {
+                        if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
+                        {
+                            decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
+                            decorCount++;
+                        }
+                    }
+                    if (decorCount > 0)
+                        actualDecor = (float)decorSum / decorCount;
+                    else
+                        actualDecor = 0f;
+                    meetsDecor = actualDecor >= config.DecorMinimum;
+                }
+            }
+
+            return new ArtifactCriteriaResult
+            {
+                ActualRoomSize = actualRoomSize,
+                MeetsRoomSize = meetsRoomSize,
+                ActualDecor = actualDecor,
+                MeetsDecor = meetsDecor,
+                Filter = config.Filter,
+                MeetsAll = meetsRoomSize && meetsDecor // Set MeetsAll here
+            };
+        }
+
         public static void RegisterArtifactOnPedestal(GameObject artifact)
         {
             if (artifact != null)
@@ -91,9 +148,13 @@ namespace ArtifactsPlus
         {
             if (artifact != null)
             {
-                UpdateArtifactState(artifact, false, false);
+                // Take a snapshot of the artifact before modifying the collection
+                var artifactId = artifact.GetInstanceID();
+                // Remove from collections first to avoid modifying during enumeration in callbacks
                 ArtifactsOnPedestals.Remove(artifact);
-                ArtifactStates.Remove(artifact.GetInstanceID());
+                // Trigger state update BEFORE removing from ArtifactStates, so OnArtifactStateChanged is called
+                UpdateArtifactState(artifact, false, false);
+                ArtifactStates.Remove(artifactId);
             }
         }
 
@@ -335,53 +396,48 @@ namespace ArtifactsPlus
 
         public static void PollAllArtifacts()
         {
-            foreach (var artifact in ArtifactsOnPedestals)
+            var artifactsSnapshot = ArtifactsOnPedestals.ToArray();
+
+            foreach (var artifact in artifactsSnapshot)
             {
                 if (artifact == null)
                     continue;
 
-                int cell = Grid.PosToCell(artifact.transform.position);
-                float roomDecor = float.MinValue;
-                bool meetsRoomSize = false;
-                bool meetsDecor = false;
-
-                // Get artifact config using internal name
                 string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
                 var config = GetArtifactConfig(internalName);
 
-                if (Game.Instance != null && Game.Instance.roomProber != null)
-                {
-                    var cavity = Game.Instance.roomProber.GetCavityForCell(cell);
-                    var room = cavity?.room;
-                    if (room != null && room.cavity != null)
-                    {
-                        // Use config.RoomSizeMin and config.RoomSizeMax instead of globalRoomSizeMin/globalRoomSizeMax
-                        meetsRoomSize = room.cavity.numCells >= config.RoomSizeMin && room.cavity.numCells <= config.RoomSizeMax;
+                // Use the shared criteria evaluation
+                var criteria = EvaluateArtifactCriteria(artifact, config);
 
-                        int decorSum = 0;
-                        int decorCount = 0;
-                        foreach (var building in room.cavity.buildings)
-                        {
-                            if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
-                            {
-                                decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
-                                decorCount++;
-                            }
-                        }
-                        if (decorCount > 0)
-                        {
-                            roomDecor = (float)decorSum / decorCount;
-                        }
-                        else
-                        {
-                            roomDecor = 0f;
-                        }
-                        // Use config.DecorMinimum instead of decorMinimum
-                        meetsDecor = roomDecor >= config.DecorMinimum;
-                    }
+                bool meetsAll = criteria.MeetsAll;
+                int id = artifact.GetInstanceID();
+                bool wasActive = false;
+                if (ArtifactStates.TryGetValue(id, out var state))
+                    wasActive = state.IsActive;
+
+                // Only print if state is changing
+                if (!wasActive && meetsAll)
+                {
+                    CustomLogger.Log(
+                        $"[ArtifactState] '{internalName}' became ACTIVE: " +
+                        $"Pedestal(OK) " +
+                        $"RoomSize({criteria.MeetsRoomSize.ToString().ToUpper()}, min={config.RoomSizeMin}, max={config.RoomSizeMax}, actual={criteria.ActualRoomSize}) " +
+                        $"Decor({criteria.MeetsDecor.ToString().ToUpper()}, min={config.DecorMinimum}, actual={criteria.ActualDecor})"
+                    );
+                }
+                else if (wasActive && !meetsAll)
+                {
+                    var reasons = new List<string>();
+                    reasons.Add("Pedestal(OK)");
+                    reasons.Add($"RoomSize({(criteria.MeetsRoomSize ? "OK" : "FAIL")}, min={config.RoomSizeMin}, max={config.RoomSizeMax}, actual={criteria.ActualRoomSize})");
+                    reasons.Add($"Decor({(criteria.MeetsDecor ? "OK" : "FAIL")}, min={config.DecorMinimum}, actual={criteria.ActualDecor})");
+
+                    CustomLogger.Log(
+                        $"[ArtifactState] '{internalName}' became INACTIVE: " +
+                        string.Join(" ", reasons.Where(r => r.Contains("FAIL") || r.StartsWith("Pedestal")))
+                    );
                 }
 
-                bool meetsAll = meetsRoomSize && meetsDecor;
                 UpdateArtifactState(artifact, true, meetsAll);
             }
         }
@@ -458,7 +514,9 @@ namespace ArtifactsPlus
             }
 
             if (occupant != null)
+            {
                 ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
+            }
         }
     }
 
@@ -558,6 +616,76 @@ namespace ArtifactsPlus
                 {
                     CustomLogger.Log("[DEBUG][Migration] migrationEventArgs is null or not of expected type.");
                 }
+            }
+        }
+    }
+
+    public static class ArtifactMinionConsistencyHelper
+    {
+        /// <summary>
+        /// Checks consistency between artifact-minion effect application maps.
+        /// Prints mismatches or confirms consistency.
+        /// </summary>
+        public static void CheckArtifactMinionConsistency()
+        {
+            // Access the artifactMinionMap from ArtifactEffectTracker via reflection since it's private
+            var trackerType = typeof(ArtifactEffectTracker);
+            var mapField = trackerType.GetField("artifactMinionMap", BindingFlags.NonPublic | BindingFlags.Static);
+            if (mapField == null)
+            {
+                Debug.Log("[ArtifactsPlus] Could not find artifactMinionMap field.");
+                return;
+            }
+            var artifactMinionMap = mapField.GetValue(null) as Dictionary<GameObject, HashSet<GameObject>>;
+            if (artifactMinionMap == null)
+            {
+                Debug.Log("[ArtifactsPlus] artifactMinionMap is null.");
+                return;
+            }
+
+            bool consistent = true;
+            var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Minion"))
+                .Select(kp => kp.gameObject)
+                .ToList();
+
+            // Check: For each minion, is there an artifact entry that contains it?
+            foreach (var minion in allMinions)
+            {
+                bool found = false;
+                foreach (var kvp in artifactMinionMap)
+                {
+                    if (kvp.Value != null && kvp.Value.Contains(minion))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    Debug.Log($"[ArtifactsPlus][Consistency] Minion '{minion.name}' is not present in any artifact's minion set.");
+                    consistent = false;
+                }
+            }
+
+            // Check: For each artifact, do all minions in its set exist in the scene?
+            foreach (var kvp in artifactMinionMap)
+            {
+                var artifact = kvp.Key;
+                var minionSet = kvp.Value;
+                foreach (var minion in minionSet)
+                {
+                    if (!allMinions.Contains(minion))
+                    {
+                        Debug.Log($"[ArtifactsPlus][Consistency] Artifact '{artifact?.name ?? "null"}' has a minion '{minion?.name ?? "null"}' that does not exist in the scene.");
+                        consistent = false;
+                    }
+                }
+            }
+
+            if (consistent)
+            {
+                Debug.Log("[ArtifactsPlus][Consistency] Artifact-minion mapping is consistent.");
             }
         }
     }

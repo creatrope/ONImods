@@ -3,13 +3,15 @@ using ArtifactsPlus; // Add this using directive
 using System.Linq;   // For LINQ usage
 using System.Collections.Generic; // Add this using directive
 using Klei.AI; // Add this using directive for AttributeModifier
+using System.Reflection; // For reflection
 
 namespace ArtifactsPlus
 {
     public class ArtifactHotkeyListener : MonoBehaviour
     {
-        void Start()
+        void Start()    
         {
+            Debug.Log("[ArtifactsPlus] Custom log location: " + CustomLogger.LogPath); // Use LogPath instead of GetLogFilePath()
             CustomLogger.Log("[HOTKEY] ArtifactHotkeyListener attached and Start() called.");
         }
 
@@ -20,10 +22,10 @@ namespace ArtifactsPlus
             {
                 foreach (var minion in GetAllMinions()) // Use the local GetAllMinions method
                 {
-                    string summary = ArtifactEffectTracker.GetActiveArtifactEffectsSummary(minion);
+                    string summary = ArtifactEffectTracker.GetMinionArtifactInfusions(minion); // Use GetMinionArtifactInfusions instead
                     CustomLogger.Log($"[HOTKEY][{minion.name}] {summary}");
                 }
-                Debug.Log("[ArtifactsPlus] F9 pressed: Logged artifact effects summary for all minions.");
+                CustomLogger.Log("[ArtifactsPlus] F9 pressed: Logged artifact effects summary for all minions.");
             }
             // F10: Print all active artifacts
             else if (UnityEngine.Input.GetKeyDown(KeyCode.F10))
@@ -34,7 +36,12 @@ namespace ArtifactsPlus
             else if (UnityEngine.Input.GetKeyDown(KeyCode.F11))
             {
                 StripAllArtifactEffectsFromAllMinions();
-                Debug.Log("[ArtifactsPlus] F11 pressed: Stripped all artifact modifiers and status effects from all minions.");
+                CustomLogger.Log("[ArtifactsPlus] F11 pressed: Stripped all artifact modifiers and status effects from all minions.");
+            }
+            // F5: Consistency check for artifacts and minions
+            else if (UnityEngine.Input.GetKeyDown(KeyCode.F5))
+            {
+                ArtifactMinionConsistencyHelper.CheckArtifactMinionConsistency();
             }
         }
 
@@ -52,7 +59,19 @@ namespace ArtifactsPlus
             {
                 if (artifact == null) continue;
                 string name = artifact.GetComponent<KSelectable>()?.GetProperName() ?? artifact.name;
+                string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
+                var config = ArtifactsPlus.ArtifactStateTracker.GetArtifactConfig(internalName);
+
+                var criteria = ArtifactsPlus.ArtifactStateTracker.EvaluateArtifactCriteria(artifact, config);
+
+                // Only print if the artifact meets all criteria
+                if (!criteria.MeetsAll)
+                    continue;
+
                 CustomLogger.Log($"[HOTKEY] Active Artifact: {name} (ID={artifact.GetInstanceID()})");
+                CustomLogger.Log($"    Room Size: {criteria.ActualRoomSize} (Required: {config.RoomSizeMin}-{config.RoomSizeMax}) => {(criteria.MeetsRoomSize ? "OK" : "FAIL")}");
+                CustomLogger.Log($"    Decor: {criteria.ActualDecor} (Required: {config.DecorMinimum}) => {(criteria.MeetsDecor ? "OK" : "FAIL")}");
+                CustomLogger.Log($"    Filter: {criteria.Filter}");
             }
         }
 
@@ -108,13 +127,14 @@ namespace ArtifactsPlus
             {
                 CustomLogger.Log($"Effect: {effect.Id} - {effect.Name} (Duration: {effect.duration})");
             }
-            Debug.Log("[ArtifactsPlus] Dumped all effects to log.");
         }
 
         private void StripAllArtifactEffectsFromAllMinions()
         {
             var allArtifacts = ArtifactsPlus.ArtifactStateTracker.ArtifactsOnPedestals;
-            foreach (var minion in GetAllMinions())
+            var allMinions = GetAllMinions();
+
+            foreach (var minion in allMinions)
             {
                 foreach (var artifact in allArtifacts)
                 {
@@ -125,6 +145,9 @@ namespace ArtifactsPlus
                 }
                 CustomLogger.Log($"[HOTKEY] Stripped all artifact effects from minion '{minion.name}'");
             }
+
+            // Call consistency check after all effects are stripped
+            ArtifactMinionConsistencyHelper.CheckArtifactMinionConsistency();
         }
     }
 }

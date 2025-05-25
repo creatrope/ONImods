@@ -3,57 +3,68 @@
     {
       "Id": "Construction",
       "Name": "Construction",
-      "Description": "Affects duplicants' building speed and efficiency."
+      "Description": "Affects duplicants' building speed and efficiency.",
+      "Primary": true
     },
     {
       "Id": "Digging",
       "Name": "Digging",
-      "Description": "Affects duplicants' ability to dig and excavate tiles."
+      "Description": "Affects duplicants' ability to dig and excavate tiles.",
+      "Primary": true
     },
     {
       "Id": "Machinery",
       "Name": "Machinery",
-      "Description": "Affects duplicants' ability to operate complex machines."
+      "Description": "Affects duplicants' ability to operate complex machines.",
+      "Primary": true
     },
     {
       "Id": "Athletics",
       "Name": "Athletics",
-      "Description": "Affects duplicants' movement speed."
+      "Description": "Affects duplicants' movement speed.",
+      "Primary": true
     },
     {
       "Id": "Learning",
       "Name": "Learning",
-      "Description": "Affects how quickly duplicants gain new skills."
+      "Description": "Affects how quickly duplicants gain new skills.",
+      "Primary": true
     },
     {
       "Id": "Cooking",
       "Name": "Cooking",
-      "Description": "Affects duplicants' ability to cook food."
+      "Description": "Affects duplicants' ability to cook food.",
+      "Primary": true
     },
     {
       "Id": "Caring",
       "Name": "Caring",
-      "Description": "Affects duplicants' ability to care for others and perform medical tasks."
+      "Description": "Affects duplicants' ability to care for others and perform medical tasks.",
+      "Primary": true
     },
     {
       "Id": "Strength",
       "Name": "Strength",
-      "Description": "Affects duplicants' carrying capacity."
+      "Description": "Affects duplicants' carrying capacity.",
+      "Primary": true
     },
     {
       "Id": "Art",
       "Name": "Art",
-      "Description": "Affects duplicants' ability to create art."
+      "Description": "Affects duplicants' ability to create art.",
+      "Primary": true
     },
     {
       "Id": "Botanist",
       "Name": "Botanist",
-      "Description": "Affects duplicants' plant tending and farming skills."
+      "Description": "Affects duplicants' plant tending and farming skills.",
+      "Primary": true
     },
     {
       "Id": "Ranching",
       "Name": "Ranching",
-      "Description": "Affects duplicants' ability to care for critters."
+      "Description": "Affects duplicants' ability to care for critters.",
+      "Primary": true
     },
     {
       "Id": "LifeSupport",

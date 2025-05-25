@@ -79,7 +79,7 @@ namespace ArtifactsPlus
                 if (artifactHistoryMap.TryGetValue(artifact, out var minionSet))
                 {
                     CustomLogger.Log($"[DEBUG] Removing effects from {minionSet.Count} minions for artifact {artifact.name}");
-                    foreach (var minion in minionSet)
+                    foreach (var minion in minionSet.ToList()) // Use ToList() to avoid modifying the collection during iteration
                     {
                         ApplyOrRemoveArtifactModifiersToMinion(minion, artifactId, false);
                         ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifactId, false);
@@ -225,6 +225,18 @@ namespace ArtifactsPlus
             {
                 CustomLogger.Log($"[DEBUG] No artifact modifiers found for artifactId={artifactId}");
             }
+
+            // After removing modifiers, update artifactHistoryMap
+            if (!apply)
+            {
+                foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals)
+                {
+                    if (artifactHistoryMap.TryGetValue(artifact, out var historySet))
+                    {
+                        historySet.Remove(minion);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -280,6 +292,18 @@ namespace ArtifactsPlus
                     }
                 }
             }
+
+            // After removing effects, update artifactHistoryMap
+            if (!apply)
+            {
+                foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals)
+                {
+                    if (artifactHistoryMap.TryGetValue(artifact, out var historySet))
+                    {
+                        historySet.Remove(minion);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -287,7 +311,7 @@ namespace ArtifactsPlus
         /// </summary>
         /// <param name="minion">The minion GameObject.</param>
         /// <returns>A string summary of active artifact effects and modifiers.</returns>
-        public static string GetActiveArtifactEffectsSummary(GameObject minion)
+        public static string GetMinionArtifactInfusions(GameObject minion)
         {
             var summary = new System.Text.StringBuilder();
             summary.AppendLine("Active Artifact Effects:");
@@ -296,43 +320,58 @@ namespace ArtifactsPlus
             var listedEffects = new HashSet<string>();
             var listedModifiers = new HashSet<string>();
 
-            // List all artifact status effects
+            // Check all effects currently on the minion and map them to artifacts
             var effects = minion.GetComponent<Effects>();
             if (effects != null)
             {
-                foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals)
+                foreach (var effect in effects.GetAllEffectsForSerialization())
                 {
-                    string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                    var config = ArtifactStateTracker.GetArtifactConfig(artifactId);
-                    if (config?.Effects != null)
+                    string effectId = effect.id;
+                    foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals)
                     {
-                        foreach (var effectId in config.Effects)
+                        if (artifact == null) continue;
+                        string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
+                        string artifactDisplayName = artifact.GetComponent<KSelectable>()?.GetProperName()
+                            ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
+                            ?? artifact.name;
+                        if (TryGetArtifactStatuses(artifactId, out var statuses) && statuses.Contains(effectId))
                         {
-                            // Only list each effect once
-                            if (effects.HasEffect(effectId) && listedEffects.Add(effectId))
-                                summary.AppendLine($"- {effectId} (from {artifactId})");
+                            if (listedEffects.Add(effectId))
+                                summary.AppendLine($"- {effectId} (from {artifactDisplayName})");
+                            break;
                         }
                     }
                 }
             }
 
-            // List all artifact attribute modifiers
+            // Check all attribute modifiers currently on the minion and map them to artifacts
             var minionModifiers = minion.GetComponent<MinionModifiers>();
             if (minionModifiers != null)
             {
-                foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals)
+                foreach (var attrInstance in minionModifiers.attributes)
                 {
-                    string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                    if (TryGetArtifactModifiers(artifactId, out var modifierDict))
+                    for (int i = 0; i < attrInstance.Modifiers.size; i++)
                     {
-                        foreach (var kvp in modifierDict)
+                        var mod = attrInstance.Modifiers[i];
+                        // Only consider modifiers that are from artifacts
+                        if (mod.Description != null && mod.Description.StartsWith("Artifact Modifier: "))
                         {
-                            var attr = kvp.Key;
-                            var val = kvp.Value;
-                            // Only list each attribute modifier once
-                            string modKey = $"{attr}:{val}";
-                            if (listedModifiers.Add(modKey))
-                                summary.AppendLine($"- {attr} {(val >= 0 ? "+" : "")}{val} (from {artifactId})");
+                            string artifactId = mod.Description.Substring("Artifact Modifier: ".Length);
+                            foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals)
+                            {
+                                if (artifact == null) continue;
+                                string thisArtifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
+                                string artifactDisplayName = artifact.GetComponent<KSelectable>()?.GetProperName()
+                                    ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
+                                    ?? artifact.name;
+                                if (string.Equals(thisArtifactId, artifactId, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string modKey = $"{mod.AttributeId}:{mod.Value}:{artifactId}";
+                                    if (listedModifiers.Add(modKey))
+                                        summary.AppendLine($"- {mod.AttributeId} {(mod.Value >= 0 ? "+" : "")}{mod.Value} (from {artifactDisplayName})");
+                                    break;
+                                }
+                            }
                         }
                     }
                 }

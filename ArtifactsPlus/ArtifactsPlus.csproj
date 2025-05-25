@@ -79,9 +79,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ArtifactConsistencyChecker.cs" />
     <Compile Include="ArtifactEffectTracker.cs" />
     <Compile Include="ArtifactHotkeyListener.cs" />
     <Compile Include="CustomLogger.cs" />
+    <Compile Include="MinionArtifactSummary.cs" />
+    <Compile Include="MinionEffectHelper.cs" />
+    <Compile Include="MinionPersonalityPanelPatch.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
