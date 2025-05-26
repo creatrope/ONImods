@@ -4,6 +4,8 @@ using System.Linq;   // For LINQ usage
 using System.Collections.Generic; // Add this using directive
 using Klei.AI; // Add this using directive for AttributeModifier
 using System.Reflection; // For reflection
+using System; // Add this using directive for Exception handling
+using System.IO; // Add this using directive for file operations
 
 namespace ArtifactsPlus
 {
@@ -42,6 +44,16 @@ namespace ArtifactsPlus
             else if (UnityEngine.Input.GetKeyDown(KeyCode.F5))
             {
                 ArtifactMinionConsistencyHelper.CheckArtifactMinionConsistency();
+            }
+            // Print all effects: Ctrl+Alt+E
+            else if (UnityEngine.Input.GetKey(KeyCode.LeftControl) && UnityEngine.Input.GetKey(KeyCode.LeftAlt) && UnityEngine.Input.GetKeyDown(KeyCode.E))
+            {
+                PrintAllEffects();
+            }
+            // Print all attributes: Ctrl+Alt+A
+            else if (UnityEngine.Input.GetKey(KeyCode.LeftControl) && UnityEngine.Input.GetKey(KeyCode.LeftAlt) && UnityEngine.Input.GetKeyDown(KeyCode.A))
+            {
+                PrintAllAttributes();
             }
         }
 
@@ -148,6 +160,48 @@ namespace ArtifactsPlus
 
             // Call consistency check after all effects are stripped
             ArtifactMinionConsistencyHelper.CheckArtifactMinionConsistency();
+        }
+
+        private void PrintAllEffects()
+        {
+            try
+            {
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ArtifactsPlus", "Effects.json");
+                if (File.Exists(path))
+                {
+                    string json = File.ReadAllText(path);
+                    Debug.Log("[ArtifactsPlus] All Effects:\n" + json);
+                }
+                else
+                {
+                    Debug.LogWarning("[ArtifactsPlus] Effects.json not found at: " + path);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[ArtifactsPlus] Error printing effects: " + ex);
+            }
+        }
+
+        private void PrintAllAttributes()
+        {
+            try
+            {
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ArtifactsPlus", "Attributes.json");
+                if (File.Exists(path))
+                {
+                    string json = File.ReadAllText(path);
+                    Debug.Log("[ArtifactsPlus] All Attributes:\n" + json);
+                }
+                else
+                {
+                    Debug.LogWarning("[ArtifactsPlus] Attributes.json not found at: " + path);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[ArtifactsPlus] Error printing attributes: " + ex);
+            }
         }
     }
 }

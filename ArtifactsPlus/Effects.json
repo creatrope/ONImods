@@ -36,7 +36,7 @@
     "Name": "New Friend"
   },
   {
-    "Id": "UnderWater",     
+    "Id": "UnderWater",
     "Name": "Underwater"
   },
   {
@@ -145,6 +145,7 @@
     "Id": "GoodEats",
     "Name": "Soul Food"
   },
-  {
-    "Id": "HotStuff",
+  }
+]
+
    

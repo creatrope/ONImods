@@ -69,167 +69,200 @@
     {
       "Id": "LifeSupport",
       "Name": "Life Support",
-      "Description": "Affects duplicants' ability to maintain life support systems."
+      "Description": "Affects duplicants' ability to maintain life support systems.",
+      "Primary": true
     },
     {
       "Id": "Toggle",
       "Name": "Toggle",
-      "Description": "Affects duplicants' ability to toggle switches and controls."
+        "Description": "Affects duplicants' ability to toggle switches and controls.",
+      "Primary": true
     },
     {
       "Id": "PowerTinker",
       "Name": "Power Tinker",
-      "Description": "Affects duplicants' ability to tune power systems."
+      "Description": "Affects duplicants' ability to tune power systems.",
+      "Primary": true
     },
     {
       "Id": "FarmTinker",
       "Name": "Farm Tinker",
-      "Description": "Affects duplicants' ability to tune farm buildings."
+      "Description": "Affects duplicants' ability to tune farm buildings.",
+      "Primary": true
     },
     {
       "Id": "SpaceNavigation",
       "Name": "Space Navigation",
-      "Description": "Affects duplicants' ability to navigate in space."
+      "Description": "Affects duplicants' ability to navigate in space.",
+      "Primary": true
     },
     {
       "Id": "Immunity",
       "Name": "Immunity",
-      "Description": "Affects duplicants' resistance to disease."
+      "Description": "Affects duplicants' resistance to disease.",
+      "Primary": true
     },
     {
       "Id": "GermResistance",
       "Name": "Germ Resistance",
-      "Description": "Affects duplicants' resistance to germs."
+      "Description": "Affects duplicants' resistance to germs.",
+      "Primary": true
     },
     {
       "Id": "BionicBoosterSlots",
       "Name": "Bionic Booster Slots",
-      "Description": "Affects the number of bionic booster slots available."
+      "Description": "Affects the number of bionic booster slots available.",
+      "Primary": true
     },
     {
       "Id": "BionicBatteryCountCapacity",
       "Name": "Bionic Battery Count Capacity",
-      "Description": "Affects the capacity for bionic batteries."
+      "Description": "Affects the capacity for bionic batteries.",
+      "Primary": true
     },
     {
       "Id": "Insulation",
       "Name": "Insulation",
-      "Description": "Affects duplicants' resistance to temperature changes."
+      "Description": "Affects duplicants' resistance to temperature changes.",
+      "Primary": true
     },
     {
       "Id": "Luminescence",
       "Name": "Luminescence",
-      "Description": "Affects duplicants' ability to emit light."
+      "Description": "Affects duplicants' ability to emit light.",
+      "Primary": true
     },
     {
       "Id": "ThermalConductivityBarrier",
       "Name": "Thermal Conductivity Barrier",
-      "Description": "Affects duplicants' thermal insulation."
+      "Description": "Affects duplicants' thermal insulation.",
+      "Primary": true
     },
     {
       "Id": "Decor",
       "Name": "Decor",
-      "Description": "Affects duplicants' perception of decor."
+      "Description": "Affects duplicants' perception of decor.",
+      "Primary": true
     },
     {
       "Id": "FoodQuality",
       "Name": "Food Quality",
-      "Description": "Affects duplicants' expectations for food quality."
+      "Description": "Affects duplicants' expectations for food quality.",
+      "Primary": true
     },
     {
       "Id": "ScaldingThreshold",
       "Name": "Scalding Threshold",
-      "Description": "Affects the temperature at which duplicants begin to scald."
+      "Description": "Affects the temperature at which duplicants begin to scald.",
+      "Primary": true
     },
     {
       "Id": "ScoldingThreshold",
       "Name": "Scolding Threshold",
-      "Description": "Affects the temperature at which duplicants begin to overheat."
+      "Description": "Affects the temperature at which duplicants begin to overheat.",
+      "Primary": true
     },
     {
       "Id": "GeneratorOutput",
       "Name": "Generator Output",
-      "Description": "Affects the output of generators operated by duplicants."
+      "Description": "Affects the output of generators operated by duplicants.",
+      "Primary": true
     },
     {
       "Id": "MachinerySpeed",
       "Name": "Machinery Speed",
-      "Description": "Affects the speed at which duplicants operate machinery."
+      "Description": "Affects the speed at which duplicants operate machinery.",
+      "Primary": true
     },
     {
       "Id": "RadiationResistance",
       "Name": "Radiation Resistance",
-      "Description": "Affects duplicants' resistance to radiation."
+      "Description": "Affects duplicants' resistance to radiation.",
+      "Primary": true
     },
     {
       "Id": "RadiationRecovery",
       "Name": "Radiation Recovery",
-      "Description": "Affects duplicants' recovery from radiation exposure."
+      "Description": "Affects duplicants' recovery from radiation exposure.",
+      "Primary": true
     },
     {
       "Id": "DecorExpectation",
       "Name": "Decor Expectation",
-      "Description": "Affects duplicants' decor expectations."
+      "Description": "Affects duplicants' decor expectations.",
+      "Primary": true
     },
     {
       "Id": "FoodExpectation",
       "Name": "Food Expectation",
-      "Description": "Affects duplicants' food quality expectations."
+      "Description": "Affects duplicants' food quality expectations.",
+      "Primary": true
     },
     {
       "Id": "RoomTemperaturePreference",
       "Name": "Room Temperature Preference",
-      "Description": "Affects duplicants' preferred room temperature."
+      "Description": "Affects duplicants' preferred room temperature.",
+      "Primary": true
     },
     {
       "Id": "QualityOfLifeExpectation",
       "Name": "Quality of Life Expectation",
-      "Description": "Affects duplicants' quality of life expectations."
+      "Description": "Affects duplicants' quality of life expectations.",
+      "Primary": true
     },
     {
       "Id": "AirConsumptionRate",
       "Name": "Air Consumption Rate",
-      "Description": "Affects the rate at which duplicants consume air."
+      "Description": "Affects the rate at which duplicants consume air.",
+      "Primary": true
     },
     {
       "Id": "MaxUnderwaterTravelCost",
       "Name": "Max Underwater Travel Cost",
-      "Description": "Affects duplicants' ability to travel underwater."
+      "Description": "Affects duplicants' ability to travel underwater.",
+      "Primary": true
     },
     {
       "Id": "ToiletEfficiency",
       "Name": "Toilet Efficiency",
-      "Description": "Affects duplicants' efficiency when using toilets."
+      "Description": "Affects duplicants' efficiency when using toilets.",
+      "Primary": true
     },
     {
       "Id": "Sneezyness",
       "Name": "Sneezyness",
-      "Description": "Affects how often duplicants sneeze."
+      "Description": "Affects how often duplicants sneeze.",
+      "Primary": true
     },
     {
       "Id": "TransitTubeTravelSpeed",
       "Name": "Transit Tube Travel Speed",
-      "Description": "Affects duplicants' speed in transit tubes."
+      "Description": "Affects duplicants' speed in transit tubes.",
+      "Primary": true
     },
     {
       "Id": "DiseaseCureSpeed",
       "Name": "Disease Cure Speed",
-      "Description": "Affects how quickly duplicants recover from diseases."
+      "Description": "Affects how quickly duplicants recover from diseases.",
+      "Primary": true
     },
     {
       "Id": "DoctoredLevel",
       "Name": "Doctored Level",
-      "Description": "Affects the level of medical care received."
+      "Description": "Affects the level of medical care received.",
+      "Primary": true
     },
     {
       "Id": "CarryAmount",
       "Name": "Carry Amount",
-      "Description": "Affects how much duplicants can carry."
+      "Description": "Affects how much duplicants can carry.",
+      "Primary": true
     },
     {
       "Id": "QualityOfLife",
       "Name": "Quality of Life",
-      "Description": "Affects duplicants' overall morale and happiness."
+      "Description": "Affects duplicants' overall morale and happiness.",
+      "Primary": true
     }
   ],
   "Traits": [

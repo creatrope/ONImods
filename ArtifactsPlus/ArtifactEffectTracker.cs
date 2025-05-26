@@ -314,7 +314,6 @@ namespace ArtifactsPlus
         public static string GetMinionArtifactInfusions(GameObject minion)
         {
             var summary = new System.Text.StringBuilder();
-            summary.AppendLine("Active Artifact Effects:");
 
             // Track already listed effects and modifiers
             var listedEffects = new HashSet<string>();
@@ -337,7 +336,7 @@ namespace ArtifactsPlus
                         if (TryGetArtifactStatuses(artifactId, out var statuses) && statuses.Contains(effectId))
                         {
                             if (listedEffects.Add(effectId))
-                                summary.AppendLine($"- {effectId} (from {artifactDisplayName})");
+                                summary.AppendLine($"{effectId} (from {artifactDisplayName})");
                             break;
                         }
                     }
@@ -368,7 +367,7 @@ namespace ArtifactsPlus
                                 {
                                     string modKey = $"{mod.AttributeId}:{mod.Value}:{artifactId}";
                                     if (listedModifiers.Add(modKey))
-                                        summary.AppendLine($"- {mod.AttributeId} {(mod.Value >= 0 ? "+" : "")}{mod.Value} (from {artifactDisplayName})");
+                                        summary.AppendLine($"{mod.AttributeId} {(mod.Value >= 0 ? "+" : "")}{mod.Value} (from {artifactDisplayName})");
                                     break;
                                 }
                             }
