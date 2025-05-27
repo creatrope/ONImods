@@ -3,6 +3,7 @@
   "GlobalRoomSizeMaximum": 96,
   "DecorMinimum": 128,
   "Filter": "InWorld",
+  "Neighbors" : 1,
   "Artifacts": [
     {
       "ArtifactId": "artifact_sink",

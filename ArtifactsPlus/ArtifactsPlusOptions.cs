@@ -37,21 +37,13 @@ namespace ArtifactsPlus
         [JsonProperty]
         public int ConfigVersion { get; set; } = CURRENT_CONFIG_VERSION;
 
-        [Option("Enable Feature X", "Enable or disable Feature X for the mod.")]
-        [JsonProperty]
-        public bool EnableFeatureX { get; set; } = true;
-
-        [Option("Artifact Glow Intensity", "Set the intensity of the artifact glow effect.")]
-        [JsonProperty]
-        public float GlowIntensity { get; set; } = 1.0f;
-
-        [Option("Room Size Threshold", "Set the minimum room size for artifact activation.")]
-        [JsonProperty]
-        public int RoomSizeThreshold { get; set; } = 6;
-
         [Option("Artifact Config File", "Select which artifact config JSON file to use.")]
         [JsonProperty]
         public string ArtifactConfigFile { get; set; } = "ArtifactsConfig.json";
+
+        [Option("Verbose Logging", "Enable detailed logging for debugging purposes.")]
+        [JsonProperty]
+        public bool Verbose { get; set; } = true;
 
         public static IList<string> GetConfigFiles()
         {

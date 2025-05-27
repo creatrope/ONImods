@@ -34,9 +34,13 @@ namespace ArtifactsPlus
 
         public static void OnLoad()
         {
-            Debug.Log("[ArtifactsPlus] OnLoad() was called!");
-            Debug.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
-            CustomLogger.Log("Test message: custom log initialized and working.");
+            //Debug.Log("[ArtifactsPlus] OnLoad() was called!");
+
+            // Only print custom log file location and log to custom log if verbose is enabled
+            if (ArtifactsPlusOptions.Instance.Verbose)
+            {
+                Debug.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
+            }
 
             ArtifactStateTracker.LoadArtifactAttributeMap();
         }
@@ -55,6 +59,7 @@ namespace ArtifactsPlus
         public int RoomSizeMin;
         public int RoomSizeMax;
         public int DecorMinimum;
+        public int Neighbors; // <-- Add this line
         public string Filter;
         public Dictionary<string, float> Attributes;
         /// <summary>
@@ -62,11 +67,12 @@ namespace ArtifactsPlus
         /// </summary>
         public List<string> Effects;
 
-        public ArtifactConfig(int globalMin, int globalMax, int globalDecor, string globalFilter)
+        public ArtifactConfig(int globalMin, int globalMax, int globalDecor, string globalFilter, int globalNeighbors = 1)
         {
             RoomSizeMin = globalMin;
             RoomSizeMax = globalMax;
             DecorMinimum = globalDecor;
+            Neighbors = globalNeighbors; // <-- Add this line
             Filter = globalFilter;
             Attributes = new Dictionary<string, float>();
             Effects = new List<string>();
@@ -92,46 +98,110 @@ namespace ArtifactsPlus
             public float ActualDecor;
             public bool MeetsDecor;
             public string Filter;
-            public bool MeetsAll; // Add this field
+            public int ArtifactCountInRoom; // Add this field
+            public bool NeighborsOk;        // Add this field
+            public bool MeetsAll;
+            public bool ShortCircuited; // Add this field
         }
 
-        public static ArtifactCriteriaResult EvaluateArtifactCriteria(GameObject artifact, ArtifactConfig config)
+        public static ArtifactCriteriaResult EvaluateArtifactCriteria(GameObject artifact, ArtifactConfig config, bool shortCircuit = false)
         {
             int actualRoomSize = -1;
             float actualDecor = float.NaN;
             bool meetsRoomSize = false;
             bool meetsDecor = false;
             bool isEntombed = false;
+            int artifactCount = 0;
+            bool neighborsOk = true;
+            bool meetsAll = true;
+            bool wasShortCircuited = false;
 
             int cell = Grid.PosToCell(artifact.transform.position);
-            if (Game.Instance != null && Game.Instance.roomProber != null)
+
+            // 1. Entombed check (cheapest)
+            isEntombed = Grid.Element[cell].id == SimHashes.Unobtanium;
+            if (shortCircuit && isEntombed)
+            {
+                meetsAll = false;
+                wasShortCircuited = true;
+            }
+
+            // 2. Room/cavity lookup
+            if (meetsAll && Game.Instance != null && Game.Instance.roomProber != null)
             {
                 var cavity = Game.Instance.roomProber.GetCavityForCell(cell);
                 var room = cavity?.room;
                 if (room != null && room.cavity != null)
                 {
+                    // 3. Room size check
                     actualRoomSize = room.cavity.numCells;
                     meetsRoomSize = actualRoomSize >= config.RoomSizeMin && actualRoomSize <= config.RoomSizeMax;
-
-                    int decorSum = 0;
-                    int decorCount = 0;
-                    foreach (var building in room.cavity.buildings)
+                    if (shortCircuit && !meetsRoomSize)
                     {
-                        if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
+                        meetsAll = false;
+                        wasShortCircuited = true;
+                    }
+
+                    // 4. Neighbor count
+                    if (meetsAll)
+                    {
+                        artifactCount = CountArtifactsOnPedestalsInRoom(room);
+                        neighborsOk = artifactCount <= config.Neighbors;
+                        if (shortCircuit && !neighborsOk)
                         {
-                            decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
-                            decorCount++;
+                            meetsAll = false;
+                            wasShortCircuited = true;
                         }
                     }
-                    if (decorCount > 0)
-                        actualDecor = (float)decorSum / decorCount;
+
+                    // 5. Decor
+                    if (meetsAll)
+                    {
+                        int decorSum = 0;
+                        int decorCount = 0;
+                        foreach (var building in room.cavity.buildings)
+                        {
+                            if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
+                            {
+                                decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
+                                decorCount++;
+                            }
+                        }
+                        if (decorCount > 0)
+                            actualDecor = (float)decorSum / decorCount;
+                        else
+                            actualDecor = 0f;
+                        meetsDecor = actualDecor >= config.DecorMinimum;
+                        if (shortCircuit && !meetsDecor)
+                        {
+                            meetsAll = false;
+                            wasShortCircuited = true;
+                        }
+                    }
                     else
-                        actualDecor = 0f;
-                    meetsDecor = actualDecor >= config.DecorMinimum;
+                    {
+                        // For debug output, always calculate decor
+                        int decorSum = 0;
+                        int decorCount = 0;
+                        foreach (var building in room.cavity.buildings)
+                        {
+                            if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
+                            {
+                                decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
+                                decorCount++;
+                            }
+                        }
+                        if (decorCount > 0)
+                            actualDecor = (float)decorSum / decorCount;
+                        else
+                            actualDecor = 0f;
+                        meetsDecor = actualDecor >= config.DecorMinimum;
+                    }
                 }
             }
 
-            isEntombed = Grid.Element[cell].id == SimHashes.Unobtanium;
+            if (!shortCircuit)
+                meetsAll = meetsRoomSize && meetsDecor && !isEntombed && neighborsOk;
 
             return new ArtifactCriteriaResult
             {
@@ -140,7 +210,10 @@ namespace ArtifactsPlus
                 ActualDecor = actualDecor,
                 MeetsDecor = meetsDecor,
                 Filter = config.Filter,
-                MeetsAll = meetsRoomSize && meetsDecor && !isEntombed // Set MeetsAll here
+                ArtifactCountInRoom = artifactCount,
+                NeighborsOk = neighborsOk,
+                MeetsAll = meetsAll,
+                ShortCircuited = wasShortCircuited
             };
         }
 
@@ -253,12 +326,13 @@ namespace ArtifactsPlus
                 int worldId = Grid.WorldIdx[cell];
                 string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
-
-                // Combine details into one log line
+                string shortCircuitText = criteria.ShortCircuited ? " SHORTCIRCUIT" : "";
                 CustomLogger.Log(
-                    $"[ArtifactState] {internalName} on {worldName} is {stateText}: " +
-                    $"Pedestal(OK) RoomSize({state.MeetsRoomSize.ToString().ToUpper()}, min={config.RoomSizeMin}, max={config.RoomSizeMax}, actual={criteria.ActualRoomSize}) " +
-                    $"Decor({criteria.MeetsDecor.ToString().ToUpper()}, min={config.DecorMinimum}, actual={criteria.ActualDecor})"
+                    $"[ArtifactState]{shortCircuitText} {internalName} {stateText} " +
+                    $"Pedestal(OK) " +
+                    $"RoomSize: {config.RoomSizeMin}<=({criteria.ActualRoomSize})<={config.RoomSizeMax} ({criteria.MeetsRoomSize}) " +
+                    $"Decor: {config.DecorMinimum}<={criteria.ActualDecor} ({criteria.MeetsDecor}) " +
+                    $"Neighbors: {criteria.ArtifactCountInRoom}<={config.Neighbors} ({criteria.NeighborsOk})"
                 );
 
                 PopFXManager.Instance.SpawnFX(
@@ -346,6 +420,7 @@ namespace ArtifactsPlus
                 int globalRoomSizeMin = (int)(configJson["GlobalRoomSizeMinimum"] ?? 6);
                 int globalRoomSizeMax = (int)(configJson["GlobalRoomSizeMaximum"] ?? 32);
                 int globalDecorMinimum = (int)(configJson["DecorMinimum"] ?? 0);
+                int globalNeighbors = (int)(configJson["Neighbors"] ?? 1); // <-- Add this line
                 string globalFilter = (string)(configJson["Filter"] ?? "All");
 
                 if (!(configJson["Artifacts"] is JArray arr))
@@ -360,12 +435,13 @@ namespace ArtifactsPlus
                     if (artifactId == null) continue;
 
                     // Inherit global config
-                    var artifactConfig = new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, globalDecorMinimum, globalFilter);
+                    var artifactConfig = new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, globalDecorMinimum, globalFilter, globalNeighbors);
 
                     // Local overrides
                     if (obj["RoomSizeMin"] != null) artifactConfig.RoomSizeMin = (int)obj["RoomSizeMin"];
                     if (obj["RoomSizeMax"] != null) artifactConfig.RoomSizeMax = (int)obj["RoomSizeMax"];
                     if (obj["DecorMinimum"] != null) artifactConfig.DecorMinimum = (int)obj["DecorMinimum"];
+                    if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"]; // <-- Add this line
                     if (obj["Filter"] != null) artifactConfig.Filter = (string)obj["Filter"];
 
                     if (obj["Attributes"] is JObject attributes)
@@ -435,9 +511,64 @@ namespace ArtifactsPlus
                 if (ArtifactStates.TryGetValue(id, out var state))
                     wasActive = state.IsActive;
 
-                // Only update state, do not log here
                 UpdateArtifactState(artifact, true, meetsAll);
             }
+        }
+
+        private static int CountArtifactsOnPedestalsInRoom(Room room)
+        {
+            int count = 0;
+            if (room != null && room.cavity != null)
+            {
+                //CustomLogger.Log($"[DEBUG] Counting pedestals in room: {room.GetHashCode()}, buildings: {room.cavity.buildings.Count}");
+                foreach (var building in room.cavity.buildings)
+                {
+                    if (building == null)
+                    {
+                        //CustomLogger.Log("[DEBUG] Skipping null building.");
+                        continue;
+                    }
+
+                    var pedestal = building.GetComponent<ItemPedestal>();
+                    if (pedestal == null)
+                    {
+                        // CustomLogger.Log($"[DEBUG] Building {building.name} is not an ItemPedestal.");
+                        continue;
+                    }
+
+                    var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
+                    var receptacle = receptacleField?.GetValue(pedestal) as SingleEntityReceptacle;
+                    var occupant = receptacle?.Occupant;
+                    if (occupant == null)
+                    {
+                        //CustomLogger.Log($"[DEBUG] Pedestal {building.name} has no occupant.");
+                        continue;
+                    }
+
+                    var prefabId = occupant.GetComponent<KPrefabID>();
+                    if (prefabId == null)
+                    {
+                        //CustomLogger.Log($"[DEBUG] Occupant on pedestal {building.name} has no KPrefabID.");
+                        continue;
+                    }
+
+                    if (artifactConfigMap != null && artifactConfigMap.ContainsKey(prefabId.PrefabTag.Name))
+                    {
+                        count++;
+                        //CustomLogger.Log($"[DEBUG] Counted artifact '{prefabId.PrefabTag.Name}' on pedestal {building.name}.");
+                    }
+                    else
+                    {
+                        //CustomLogger.Log($"[DEBUG] Occupant '{prefabId.PrefabTag.Name}' on pedestal {building.name} is not in artifactConfigMap.");
+                    }
+                }
+            }
+            else
+            {
+                //CustomLogger.Log("[DEBUG] Room or room.cavity is null in CountArtifactsOnPedestalsInRoom.");
+            }
+            //CustomLogger.Log($"[DEBUG] Final artifact count in room: {count}");
+            return count;
         }
     }
 
@@ -466,11 +597,11 @@ namespace ArtifactsPlus
         {
             base.OnLoad(harmony);
 
-            Debug.Log("[ArtifactsPlus] Attempting to register mod options screen...");
+            //Debug.Log("[ArtifactsPlus] Attempting to register mod options screen...");
             try
             {
                 new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions));
-                Debug.Log("[ArtifactsPlus] RegisterOptions call succeeded.");
+                //Debug.Log("[ArtifactsPlus] RegisterOptions call succeeded.");
             }
             catch (Exception ex)
             {

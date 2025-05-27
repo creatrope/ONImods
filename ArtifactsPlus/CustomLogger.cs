@@ -40,14 +40,4 @@ namespace ArtifactsPlus
             }
         }
     }
-
-    public static class DebugLogger
-    {
-        public static void LogDebugMessages()
-        {
-            CustomLogger.Log("[DEBUG] Top-level operation");
-            CustomLogger.Log("[DEBUG] Nested operation");
-            CustomLogger.Log("[DEBUG] Deeper nested operation");
-        }
-    }
 }

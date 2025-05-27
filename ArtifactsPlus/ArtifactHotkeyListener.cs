@@ -34,9 +34,8 @@ namespace ArtifactsPlus
 
         void Start()
         {
-            Debug.Log("[ArtifactsPlus] Custom log location: " + CustomLogger.LogPath);
-            CustomLogger.Log("[HOTKEY] ArtifactHotkeyListener attached and Start() called.");
-            Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener instance count: " + FindObjectsOfType<ArtifactHotkeyListener>().Length);
+            //CustomLogger.Log("[HOTKEY] ArtifactHotkeyListener attached and Start() called.");
+            //Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener instance count: " + FindObjectsOfType<ArtifactHotkeyListener>().Length);
         }
 
         void Update()
