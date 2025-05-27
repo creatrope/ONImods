@@ -24,7 +24,6 @@ namespace ArtifactsPlus
         {
             if (registered) return;
             registered = true;
-            CustomLogger.Log("[ArtifactPedestalSimpleLabelScreen] Registering sidescreen via PUIUtils.AddSideScreenContent.");
             PUIUtils.AddSideScreenContent<ArtifactPedestalSimpleLabelScreen>();
         }
     }
@@ -51,7 +50,6 @@ namespace ArtifactsPlus
 
                 if (ArtifactEffectTracker.TryGetArtifactModifiers(artifactId, out var modifiers) && modifiers.Count > 0)
                 {
-                    lines.Add("Modifiers:");
                     lines.AddRange(modifiers.Select(kv =>
                     {
                         string sign = kv.Value > 0 ? "+" : (kv.Value < 0 ? "-" : "");
@@ -62,7 +60,6 @@ namespace ArtifactsPlus
                 var config = ArtifactStateTracker.GetArtifactConfig(artifactId);
                 if (config != null && config.Effects != null && config.Effects.Count > 0)
                 {
-                    lines.Add("Status Effects:");
                     lines.AddRange(config.Effects);
                 }
 
@@ -79,16 +76,11 @@ namespace ArtifactsPlus
         public override bool IsValidForTarget(GameObject target)
         {
             bool valid = target != null && target.GetComponent<ItemPedestal>() != null;
-            string componentList = target != null
-                ? string.Join(", ", target.GetComponents<Component>().Select(c => c.GetType().Name))
-                : "null";
-            CustomLogger.Log($"[ArtifactPedestalSimpleLabelScreen] IsValidForTarget called. Target: {target?.name ?? "null"}, HasItemPedestal: {target?.GetComponent<ItemPedestal>() != null}, Result: {valid}, Components: [{componentList}]");
             return valid;
         }
 
         public override void SetTarget(GameObject target)
         {
-            CustomLogger.Log($"[ArtifactPedestalSimpleLabelScreen] SetTarget ENTRY. Target: {target?.name ?? "null"}");
             lastTarget = target;
             // Update label text when the target changes
             if (labelLocText != null)
@@ -97,7 +89,6 @@ namespace ArtifactsPlus
 
         protected override void OnPrefabInit()
         {
-            CustomLogger.Log("[ArtifactPedestalSimpleLabelScreen] OnPrefabInit ENTRY");
             if (root == null)
             {
                 var layout = new PPanel("ArtifactPanel")
@@ -118,7 +109,6 @@ namespace ArtifactsPlus
                 }.AddOnRealize(go =>
                 {
                     labelLocText = go.GetComponent<LocText>() ?? go.GetComponentInChildren<LocText>(true);
-                    CustomLogger.Log($"[ArtifactPedestalSimpleLabelScreen] OnRealize: labelLocText assigned? {labelLocText != null}");
                     if (labelLocText != null)
                         labelLocText.text = ArtifactInfo(lastTarget);
                 });
@@ -128,24 +118,12 @@ namespace ArtifactsPlus
                 if (base.ContentContainer != null)
                 {
                     root = layout.AddTo(base.ContentContainer, -1);
-                    CustomLogger.Log("[ArtifactPedestalSimpleLabelScreen] Added layout as child to ContentContainer");
                 }
                 else
                 {
                     root = layout.AddTo(gameObject, -1);
-                    CustomLogger.Log("[ArtifactPedestalSimpleLabelScreen] Added layout as child to gameObject");
                 }
             }
-            CustomLogger.Log("[ArtifactPedestalSimpleLabelScreen] OnPrefabInit EXIT");
-        }
-
-        private static string GetRandomTestMessage()
-        {
-            string[] lines = new string[10];
-            var rnd = new System.Random();
-            for (int i = 0; i < 10; i++)
-                lines[i] = $"Test Line {i + 1}: {rnd.Next(100000, 999999)}";
-            return string.Join("\n", lines);
         }
 
         public override string GetTitle() => "Artifact Effects";

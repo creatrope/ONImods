@@ -1,206 +1,127 @@
 using UnityEngine;
-using ArtifactsPlus; // Add this using directive
-using System.Linq;   // For LINQ usage
-using System.Collections.Generic; // Add this using directive
-using Klei.AI; // Add this using directive for AttributeModifier
-using System.Reflection; // For reflection
-using System; // Add this using directive for Exception handling
-using System.IO; // Add this using directive for file operations
+using ArtifactsPlus;
+using System.Linq;
+using System.Collections.Generic;
+using Klei.AI;
+using System.Reflection;
+using System;
+using System.IO;
 
 namespace ArtifactsPlus
 {
     public class ArtifactHotkeyListener : MonoBehaviour
     {
-        void Start()    
+        // Track which hotkeys are currently pressed to debounce
+        private readonly Dictionary<KeyCode, bool> hotkeyDown = new Dictionary<KeyCode, bool>
         {
-            Debug.Log("[ArtifactsPlus] Custom log location: " + CustomLogger.LogPath); // Use LogPath instead of GetLogFilePath()
+            { KeyCode.F1, false },
+            { KeyCode.F9, false },
+            { KeyCode.F10, false },
+            { KeyCode.F11, false }
+        };
+
+        private KeyCode? _lastHotkey = null;
+
+        void Awake()
+        {
+            if (FindObjectsOfType<ArtifactHotkeyListener>().Length > 1)
+            {
+                Destroy(this);
+                return;
+            }
+            DontDestroyOnLoad(this.gameObject); // Optional: persist across scenes
+        }
+
+        void Start()
+        {
+            Debug.Log("[ArtifactsPlus] Custom log location: " + CustomLogger.LogPath);
             CustomLogger.Log("[HOTKEY] ArtifactHotkeyListener attached and Start() called.");
+            Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener instance count: " + FindObjectsOfType<ArtifactHotkeyListener>().Length);
         }
 
         void Update()
         {
-            // F9: Print artifact-induced modifiers on all minions
-            if (UnityEngine.Input.GetKeyDown(KeyCode.F9))
+            HandleDebouncedHotkey(KeyCode.F1, () =>
             {
-                foreach (var minion in GetAllMinions()) // Use the local GetAllMinions method
+                CustomLogger.Log("[ArtifactsPlus] F1 pressed: Printing hotkey summary.");
+                PrintHotkeySummary();
+            });
+
+            HandleDebouncedHotkey(KeyCode.F9, () =>
+            {
+                CustomLogger.Log("[ArtifactsPlus] F9 pressed: Printing artifact infusions for all minions.");
+                var minions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                    .Where(kp => kp != null && kp.HasTag("Minion"))
+                    .Select(kp => kp.gameObject)
+                    .ToList();
+                foreach (var minion in minions)
                 {
-                    string summary = ArtifactEffectTracker.GetMinionArtifactInfusions(minion); // Use GetMinionArtifactInfusions instead
-                    CustomLogger.Log($"[HOTKEY][{minion.name}] {summary}");
+                    string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? minion.name;
+                    string infusions = ArtifactEffectTracker.GetMinionArtifactInfusions(minion);
+                    string singleLine = string.IsNullOrWhiteSpace(infusions)
+                        ? "(no artifact infusions)"
+                        : string.Join("; ", infusions
+                            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => s.Trim()));
+                    CustomLogger.Log($"[HOTKEY] {minionName}: {singleLine}");
                 }
-                CustomLogger.Log("[ArtifactsPlus] F9 pressed: Logged artifact effects summary for all minions.");
-            }
-            // F10: Print all active artifacts
-            else if (UnityEngine.Input.GetKeyDown(KeyCode.F10))
+            });
+
+            HandleDebouncedHotkey(KeyCode.F11, () =>
             {
-                PrintAllActiveArtifacts();
-            }
-            // F11: Strip all artifact modifiers and status effects from all minions
-            else if (UnityEngine.Input.GetKeyDown(KeyCode.F11))
-            {
-                StripAllArtifactEffectsFromAllMinions();
-                CustomLogger.Log("[ArtifactsPlus] F11 pressed: Stripped all artifact modifiers and status effects from all minions.");
-            }
-            // F5: Consistency check for artifacts and minions
-            else if (UnityEngine.Input.GetKeyDown(KeyCode.F5))
-            {
-                ArtifactMinionConsistencyHelper.CheckArtifactMinionConsistency();
-            }
-            // Print all effects: Ctrl+Alt+E
-            else if (UnityEngine.Input.GetKey(KeyCode.LeftControl) && UnityEngine.Input.GetKey(KeyCode.LeftAlt) && UnityEngine.Input.GetKeyDown(KeyCode.E))
-            {
-                PrintAllEffects();
-            }
-            // Print all attributes: Ctrl+Alt+A
-            else if (UnityEngine.Input.GetKey(KeyCode.LeftControl) && UnityEngine.Input.GetKey(KeyCode.LeftAlt) && UnityEngine.Input.GetKeyDown(KeyCode.A))
-            {
-                PrintAllAttributes();
-            }
+                CustomLogger.Log("[ArtifactsPlus] F11 pressed: Stripping all artifact modifiers and status effects from all minions.");
+                ArtifactEffectTracker.StripAllArtifactEffectsFromAllMinions();
+            });
         }
 
-        private IEnumerable<GameObject> GetAllMinions()
+        private void HandleDebouncedHotkey(KeyCode key, System.Action action)
         {
-            return UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Minion"))
-                .Select(kp => kp.gameObject);
-        }
-
-        private void PrintAllActiveArtifacts()
-        {
-            CustomLogger.Log("[HOTKEY] Printing all active artifacts:");
-            foreach (var artifact in ArtifactsPlus.ArtifactStateTracker.ArtifactsOnPedestals)
+            if (UnityEngine.Input.GetKeyDown(key))
             {
-                if (artifact == null) continue;
-                string name = artifact.GetComponent<KSelectable>()?.GetProperName() ?? artifact.name;
-                string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                var config = ArtifactsPlus.ArtifactStateTracker.GetArtifactConfig(internalName);
-
-                var criteria = ArtifactsPlus.ArtifactStateTracker.EvaluateArtifactCriteria(artifact, config);
-
-                // Only print if the artifact meets all criteria
-                if (!criteria.MeetsAll)
-                    continue;
-
-                CustomLogger.Log($"[HOTKEY] Active Artifact: {name} (ID={artifact.GetInstanceID()})");
-                CustomLogger.Log($"    Room Size: {criteria.ActualRoomSize} (Required: {config.RoomSizeMin}-{config.RoomSizeMax}) => {(criteria.MeetsRoomSize ? "OK" : "FAIL")}");
-                CustomLogger.Log($"    Decor: {criteria.ActualDecor} (Required: {config.DecorMinimum}) => {(criteria.MeetsDecor ? "OK" : "FAIL")}");
-                CustomLogger.Log($"    Filter: {criteria.Filter}");
-            }
-        }
-
-        private void PrintArtifactModifiersOnAllMinions()
-        {
-            CustomLogger.Log("[HOTKEY] Printing artifact-induced modifiers on all minions:");
-            var minions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Minion"))
-                .Select(kp => kp.gameObject);
-
-            foreach (var minion in minions)
-            {
-                var minionModifiers = minion.GetComponent<MinionModifiers>();
-                if (minionModifiers == null) continue;
-
-                var attribs = minionModifiers.attributes;
-                if (attribs == null) continue;
-
-                bool anyArtifactMods = false;
-                foreach (var attr in attribs)
+                if (_lastHotkey.HasValue && _lastHotkey.Value == key)
                 {
-                    var attrInstance = attr;
-                    var artifactMods = new List<AttributeModifier>();
-                    for (int i = 0; i < attrInstance.Modifiers.Count; i++)
-                    {
-                        var mod = attrInstance.Modifiers[i];
-                        if (mod != null && mod.Description != null && mod.Description.StartsWith("Artifact Effect:"))
-                        {
-                            artifactMods.Add(mod);
-                        }
-                    }
-
-                    if (artifactMods.Count > 0)
-                    {
-                        if (!anyArtifactMods)
-                        {
-                            string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? minion.name;
-                            CustomLogger.Log($"[HOTKEY] Minion: {minionName} (ID={minion.GetInstanceID()})");
-                            anyArtifactMods = true;
-                        }
-                        foreach (var mod in artifactMods)
-                        {
-                            CustomLogger.Log($"    Attribute: {attrInstance.Attribute.Name}, Modifier: {mod.Value} ({mod.Description})");
-                        }
-                    }
+                    // Absorb and ignore if same as last hotkey
+                    return;
                 }
+                _lastHotkey = key;
+                action();
             }
-        }
-
-        private void DumpAllEffects()
-        {
-            foreach (var effect in Db.Get().effects.resources)
+            else if (_lastHotkey.HasValue && _lastHotkey.Value == key && !UnityEngine.Input.GetKey(key))
             {
-                CustomLogger.Log($"Effect: {effect.Id} - {effect.Name} (Duration: {effect.duration})");
+                // Reset when key is released
+                _lastHotkey = null;
             }
         }
 
-        private void StripAllArtifactEffectsFromAllMinions()
+        private void PrintHotkeySummary()
         {
-            var allArtifacts = ArtifactsPlus.ArtifactStateTracker.ArtifactsOnPedestals;
-            var allMinions = GetAllMinions();
-
-            foreach (var minion in allMinions)
-            {
-                foreach (var artifact in allArtifacts)
-                {
-                    if (artifact == null) continue;
-                    string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                    ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minion, artifactId, false);
-                    ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifactId, false);
-                }
-                CustomLogger.Log($"[HOTKEY] Stripped all artifact effects from minion '{minion.name}'");
-            }
-
-            // Call consistency check after all effects are stripped
-            ArtifactMinionConsistencyHelper.CheckArtifactMinionConsistency();
+            string summary =
+                "[ArtifactsPlus] Hotkey Summary:\n" +
+                "F1  - Show this summary of all hotkey functions.\n" +
+                "F9  - Print artifact infusions for all minions.\n" +
+                "F11 - Strip all artifact modifiers and status effects from all minions.";
+            Debug.Log(summary);
+            CustomLogger.Log(summary);
         }
 
-        private void PrintAllEffects()
+        private void PrintFileToDebugLog(string fileName, string label)
         {
             try
             {
-                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ArtifactsPlus", "Effects.json");
+                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ArtifactsPlus", fileName);
                 if (File.Exists(path))
                 {
                     string json = File.ReadAllText(path);
-                    Debug.Log("[ArtifactsPlus] All Effects:\n" + json);
+                    Debug.Log($"[ArtifactsPlus] {label}:\n" + json);
                 }
                 else
                 {
-                    Debug.LogWarning("[ArtifactsPlus] Effects.json not found at: " + path);
+                    Debug.LogWarning($"[ArtifactsPlus] {fileName} not found at: {path}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogError("[ArtifactsPlus] Error printing effects: " + ex);
-            }
-        }
-
-        private void PrintAllAttributes()
-        {
-            try
-            {
-                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ArtifactsPlus", "Attributes.json");
-                if (File.Exists(path))
-                {
-                    string json = File.ReadAllText(path);
-                    Debug.Log("[ArtifactsPlus] All Attributes:\n" + json);
-                }
-                else
-                {
-                    Debug.LogWarning("[ArtifactsPlus] Attributes.json not found at: " + path);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("[ArtifactsPlus] Error printing attributes: " + ex);
+                Debug.LogError($"[ArtifactsPlus] Error printing {label.ToLower()}: " + ex);
             }
         }
     }

@@ -83,8 +83,8 @@
     <Compile Include="ArtifactEffectTracker.cs" />
     <Compile Include="ArtifactHotkeyListener.cs" />
     <Compile Include="ArtifactPedestalPanelPatch.cs" />
+    <Compile Include="ArtifactsPlusOptions.cs" />
     <Compile Include="CustomLogger.cs" />
-    <Compile Include="MinionArtifactSummary.cs" />
     <Compile Include="MinionEffectHelper.cs" />
     <Compile Include="MinionPersonalityPanelPatch.cs" />
     <Compile Include="Patches.cs" />
@@ -92,6 +92,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ArtifactsConfig.json" />
+    <None Include="ArtifactsConfigAlt.json" />
     <None Include="Attributes.json" />
     <None Include="Effects.json" />
     <None Include="mod.yaml">
