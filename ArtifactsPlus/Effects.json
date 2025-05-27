@@ -1,43 +1,53 @@
 [
   {
     "Id": "Sleep",
-    "Name": "Sleeping"
+    "Name": "Sleeping",
+    "Primary": true
   },
   {
     "Id": "FloorSleep",
-    "Name": "Sleeping On Floor"
+    "Name": "Sleeping On Floor",
+    "Primary": true
   },
   {
     "Id": "NarcolepticSleep",
-    "Name": "Narcoleptic Nap"
+    "Name": "Narcoleptic Nap",
+    "Primary": true
   },
   {
     "Id": "RestfulSleep",
-    "Name": "Sleeping Peacefully"
+    "Name": "Sleeping Peacefully",
+    "Primary": true
   },
   {
     "Id": "AnewHope",
-    "Name": "New Hope"
+    "Name": "New Hope",
+    "Primary": true
   },
   {
     "Id": "MegaBrainTankStress",
-    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEGABRAINTANKSTRESS.NAME"
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEGABRAINTANKSTRESS.NAME",
+    "Primary": true
   },
   {
     "Id": "MegaBrainTankRelax",
-    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEGABRAINTANKRELAX.NAME"
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEGABRAINTANKRELAX.NAME",
+    "Primary": true
   },
   {
     "Id": "Mourning",
-    "Name": "Mourning"
+    "Name": "Mourning",
+    "Primary": true
   },
   {
     "Id": "NewCrewArrival",
-    "Name": "New Friend"
+    "Name": "New Friend",
+    "Primary": true
   },
   {
     "Id": "UnderWater",
-    "Name": "Underwater"
+    "Name": "Underwater",
+    "Primary": true
   },
   {
     "Id": "FullBladder",
@@ -46,19 +56,23 @@
   },
   {
     "Id": "StressfulyEmptyingBladder",
-    "Name": "Making a mess"
+    "Name": "Making a mess",
+    "Primary": true
   },
   {
     "Id": "RedAlert",
-    "Name": "Red Alert!"
+    "Name": "Red Alert!",
+    "Primary": true
   },
   {
     "Id": "MentalBreak",
-    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MENTALBREAK.NAME"
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MENTALBREAK.NAME",
+    "Primary": true
   },
   {
     "Id": "SteppedInContaminatedWater",
-    "Name": "Stepped in polluted water"
+    "Name": "Stepped in polluted water",
+    "Primary": true
   },
   {
     "Id": "WellFed",
@@ -67,27 +81,33 @@
   },
   {
     "Id": "StaleFood",
-    "Name": "Bad leftovers"
+    "Name": "Bad leftovers",
+    "Primary": true
   },
   {
     "Id": "AteFrozenFood",
-    "Name": "Ate frozen food"
+    "Name": "Ate frozen food",
+    "Primary": true
   },
   {
     "Id": "SmelledPutridOdour",
-    "Name": "Smelled a putrid odor"
+    "Name": "Smelled a putrid odor",
+    "Primary": true
   },
   {
     "Id": "SmelledStinky",
-    "Name": "Smelled Stinky"
+    "Name": "Smelled Stinky",
+    "Primary": true
   },
   {
     "Id": "Vomiting",
-    "Name": "Vomiting"
+    "Name": "Vomiting",
+    "Primary": true
   },
   {
     "Id": "Showered",
-    "Name": "Showered"
+    "Name": "Showered",
+    "Primary": true
   },
   {
     "Id": "LightWounds",
@@ -106,31 +126,38 @@
   },
   {
     "Id": "LightWoundsCritter",
-    "Name": "Light Wounds"
+    "Name": "Light Wounds",
+    "Primary": true
   },
   {
     "Id": "ModerateWoundsCritter",
-    "Name": "Moderate Wounds"
+    "Name": "Moderate Wounds",
+    "Primary": true
   },
   {
     "Id": "SevereWoundsCritter",
-    "Name": "Severe Wounds"
+    "Name": "Severe Wounds",
+    "Primary": true
   },
   {
     "Id": "WasAttacked",
-    "Name": "Recently assailed"
+    "Name": "Recently assailed",
+    "Primary": true
   },
   {
     "Id": "SoreBack",
-    "Name": "Sore Back"
+    "Name": "Sore Back",
+    "Primary": true
   },
   {
     "Id": "WarmAir",
-    "Name": "Toasty Surroundings"
+    "Name": "Toasty Surroundings",
+    "Primary": true
   },
   {
     "Id": "ColdAir",
-    "Name": "Chilly Surroundings"
+    "Name": "Chilly Surroundings",
+    "Primary": true
   },
   {
     "Id": "Hypothermia",
@@ -139,13 +166,12 @@
   },
   {
     "Id": "Hyperthermia",
-    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.HYPERTHERMIA.NAME"
+    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.HYPERTHERMIA.NAME",
+    "Primary": true
   },
   {
     "Id": "GoodEats",
-    "Name": "Soul Food"
-  },
+    "Name": "Soul Food",
+    "Primary": true
   }
 ]
-
-   

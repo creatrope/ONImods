@@ -100,29 +100,7 @@ namespace ArtifactsPlus
                 "F1  - Show this summary of all hotkey functions.\n" +
                 "F9  - Print artifact infusions for all minions.\n" +
                 "F11 - Strip all artifact modifiers and status effects from all minions.";
-            Debug.Log(summary);
             CustomLogger.Log(summary);
-        }
-
-        private void PrintFileToDebugLog(string fileName, string label)
-        {
-            try
-            {
-                string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ArtifactsPlus", fileName);
-                if (File.Exists(path))
-                {
-                    string json = File.ReadAllText(path);
-                    Debug.Log($"[ArtifactsPlus] {label}:\n" + json);
-                }
-                else
-                {
-                    Debug.LogWarning($"[ArtifactsPlus] {fileName} not found at: {path}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[ArtifactsPlus] Error printing {label.ToLower()}: " + ex);
-            }
         }
     }
 }

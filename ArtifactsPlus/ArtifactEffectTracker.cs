@@ -256,7 +256,11 @@ namespace ArtifactsPlus
                 foreach (var kvp in effectMap)
                 {
                     if (listedEffects.Add(kvp.Key))
-                        summary.AppendLine($"{kvp.Key} ({kvp.Value})");
+                    {
+                        string artifactId = kvp.Value;
+                        string properName = GetArtifactProperName(artifactId);
+                        summary.AppendLine($"{kvp.Key} ({properName})");
+                    }
                 }
             }
 
@@ -269,11 +273,29 @@ namespace ArtifactsPlus
                     float val = kvp.Key.value;
                     string artifactId = kvp.Value;
                     if (listedModifiers.Add((attrName, val, artifactId)))
-                        summary.AppendLine($"{attrName} {(val >= 0 ? "+" : "")}{val} (from {artifactId})");
+                    {
+                        string properName = GetArtifactProperName(artifactId);
+                        summary.AppendLine($"{attrName} {(val >= 0 ? "+" : "")}{val} ({properName})");
+                    }
                 }
             }
 
             return summary.ToString();
+        }
+
+        private static string GetArtifactProperName(string artifactId)
+        {
+            // Try to find the artifact GameObject in the world
+            var artifact = ArtifactsPlus.ArtifactStateTracker.ArtifactsOnPedestals
+                .FirstOrDefault(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactId);
+            if (artifact != null)
+            {
+                var selectable = artifact.GetComponent<KSelectable>();
+                if (selectable != null)
+                    return selectable.GetProperName();
+            }
+            // Fallback to artifactId if not found
+            return artifactId;
         }
     }
 }

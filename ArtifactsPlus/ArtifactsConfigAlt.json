@@ -1,31 +1,41 @@
 {
   "GlobalRoomSizeMinimum": 6,
   "GlobalRoomSizeMaximum": 96,
-  "DecorMinimum": 100,
-  "Filter": "InWorld",
+  "DecorMinimum": 10000,
+  "Filter": "InRoom",
   "Artifacts": [
     {
       "ArtifactId": "artifact_sink",
+      "Filter": "InWorld",
+      "DecorMinimum": 128,
       "Attributes": { "Cooking": 10 },
       "Effects": [ "WellFed" ]
     },
     {
       "ArtifactId": "artifact_rubikscube",
+      "Filter": "InWorld",
+      "DecorMinimum": 128,
       "Attributes": { "Learning": 10 },
       "Effects": [ "PeacefulSleep" ]
     },
     {
       "ArtifactId": "artifact_obelisk",
+      "Filter": "InWorld",
+      "DecorMinimum": 128,
       "Attributes": { "Strength": 10 },
       "Effects": [ "LightWounds" ]
     },
     {
       "ArtifactId": "artifact_blender",
+      "Filter": "InWorld",
+      "DecorMinimum": 128,
       "Attributes": { "Athletics": 10 },
       "Effects": [ "BadSleep" ]
     },
     {
       "ArtifactId": "artifact_reactormodel",
+      "Filter": "InWorld",
+      "DecorMinimum": 128,
       "Attributes": { "Machinery": 10 },
       "Effects": [ "Hypothermia" ]
     },
