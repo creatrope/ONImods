@@ -6,205 +6,167 @@
   "Artifacts": [
     {
       "ArtifactId": "artifact_sink",
-      "Filter": "InWorld",
-      "DecorMinimum": 128,
-      "Attributes": { "Cooking": 10 },
+      "Attributes": { "Cooking": 2 },
       "Effects": [ "WellFed" ]
     },
     {
       "ArtifactId": "artifact_rubikscube",
-      "Filter": "InWorld",
-      "DecorMinimum": 128,
-      "Attributes": { "Learning": 10 },
-      "Effects": [ "PeacefulSleep" ]
+      "Attributes": { "Learning": 3 },
+      "Effects": [ "RestfulSleep" ]
     },
     {
       "ArtifactId": "artifact_obelisk",
-      "Filter": "InWorld",
-      "DecorMinimum": 128,
-      "Attributes": { "Strength": 10 },
+      "Attributes": { "Strength": 4 },
       "Effects": [ "LightWounds" ]
     },
     {
       "ArtifactId": "artifact_blender",
-      "Filter": "InWorld",
-      "DecorMinimum": 128,
-      "Attributes": { "Athletics": 10 },
-      "Effects": [ "BadSleep" ]
+      "Attributes": { "Machinery": 1 },
+      "Effects": [ "AteFrozenFood" ]
     },
     {
       "ArtifactId": "artifact_reactormodel",
-      "Filter": "InWorld",
-      "DecorMinimum": 128,
-      "Attributes": { "Machinery": 10 },
+      "Attributes": { "RadiationResistance": 2 },
       "Effects": [ "Hypothermia" ]
     },
     {
       "ArtifactId": "artifact_sandstone",
-      "DecorMinimum": 10000,
-      "Attributes": { "Digging": 10 },
-      "Effects": [ "WetFeet" ]
+      "Attributes": { "Digging": 3 },
+      "Effects": [ "SteppedInContaminatedWater" ]
     },
     {
       "ArtifactId": "artifact_officemug",
-      "DecorMinimum": 10000,
-      "Attributes": { "Caring": 10 },
-      "Effects": [ "BadSleepAfraidOfDark" ]
+      "Attributes": { "Caring": 1 },
+      "Effects": [ "SoreBack" ]
     },
     {
       "ArtifactId": "artifact_okayxray",
-      "DecorMinimum": 10000,
-      "Attributes": { "Learning": 10 },
-      "Effects": [ "BadSleepMovement" ]
+      "Attributes": { "Immunity": 4 },
+      "Effects": [ "NarcolepticSleep" ]
     },
     {
       "ArtifactId": "artifact_moldavite",
-      "DecorMinimum": 10000,
-      "Attributes": { "Botanist": 10 },
-      "Effects": [ "BadSleepCold" ]
+      "Attributes": { "Botanist": 2 },
+      "Effects": [ "GoodEats" ]
     },
     {
       "ArtifactId": "artifact_vhs",
-      "DecorMinimum": 10000,
-      "Attributes": { "Learning": 10 },
+      "Attributes": { "Art": 1 },
       "Effects": [ "FullBladder" ]
     },
     {
       "ArtifactId": "artifact_saxophone",
-      "DecorMinimum": 10000,
-      "Attributes": { "Art": 10 },
+      "Attributes": { "Athletics": 2 },
       "Effects": [ "HasBalloon" ]
     },
     {
       "ArtifactId": "artifact_modernart",
-      "DecorMinimum": 10000,
-      "Attributes": { "Art": 10 },
-      "Effects": [ "SoakingWet" ]
+      "Attributes": { "Art": 3 },
+      "Effects": [ "RedAlert" ]
     },
     {
       "ArtifactId": "artifact_honeyjar",
-      "DecorMinimum": 10000,
-      "Attributes": { "Ranching": 10 },
-      "Effects": [ "ModerateWounds" ]
+      "Attributes": { "Ranching": 4 },
+      "Effects": [ "Showered" ]
     },
     {
       "ArtifactId": "artifact_ameliaswatch",
-      "DecorMinimum": 10000,
-      "Attributes": { "Athletics": 10 },
-      "Effects": [ "SevereWounds" ]
+      "Attributes": { "AirConsumptionRate": 1 },
+      "Effects": [ "FloorSleep" ]
     },
     {
       "ArtifactId": "artifact_teapot",
-      "DecorMinimum": 10000,
-      "Attributes": { "Caring": 10 },
-      "Effects": [ "WellFed" ]
+      "Attributes": { "Caring": 2 },
+      "Effects": [ "AnewHope" ]
     },
     {
       "ArtifactId": "artifact_brickphone",
-      "DecorMinimum": 10000,
-      "Attributes": { "Machinery": 10 },
-      "Effects": [ "PeacefulSleep" ]
+      "Attributes": { "Machinery": 4 },
+      "Effects": [ "MentalBreak" ]
     },
     {
       "ArtifactId": "artifact_robotarm",
-      "DecorMinimum": 10000,
-      "Attributes": { "Machinery": 10 },
-      "Effects": [ "LightWounds" ]
+      "Attributes": { "Strength": 2, "Machinery":  2 },
+      "Effects": [ "WasAttacked" ]
     },
     {
       "ArtifactId": "artifact_shieldgenerator",
-      "DecorMinimum": 10000,
-      "Attributes": { "Strength": 10 },
-      "Effects": [ "BadSleep" ]
+      "Attributes": { "Insulation": 3 },
+      "Effects": [ "ColdAir" ]
     },
     {
       "ArtifactId": "artifact_bioluminescentrock",
-      "DecorMinimum": 10000,
-      "Attributes": { "Botanist": 10 },
-      "Effects": [ "Hypothermia" ]
+      "Attributes": { "Luminescence": 1 },
+      "Effects": [ "UnderWater" ]
     },
     {
       "ArtifactId": "artifact_grubstatue",
-      "DecorMinimum": 10000,
-      "Attributes": { "Ranching": 10 },
-      "Effects": [ "WetFeet" ]
+      "Attributes": { "Ranching": 1 },
+      "Effects": [ "Mourning" ]
     },
     {
       "ArtifactId": "artifact_stethoscope",
-      "DecorMinimum": 10000,
-      "Attributes": { "Caring": 10 },
-      "Effects": [ "BadSleepAfraidOfDark" ]
+      "Attributes": { "Caring": 3 },
+      "Effects": [ "StressfulyEmptyingBladder" ]
     },
     {
       "ArtifactId": "artifact_eggrock",
-      "DecorMinimum": 10000,
-      "Attributes": { "Ranching": 10 },
-      "Effects": [ "BadSleepMovement" ]
-    },
-    {
-      "ArtifactId": "artifact_hatchfossil",
-      "DecorMinimum": 10000,
-      "Attributes": { "Ranching": 10 },
-      "Effects": [ "BadSleepCold" ]
-    },
-    {
-      "ArtifactId": "artifact_rocktornado",
-      "DecorMinimum": 10000,
-      "Attributes": { "Digging": 10 },
-      "Effects": [ "FullBladder" ]
-    },
-    {
-      "ArtifactId": "artifact_pacupercolator",
-      "DecorMinimum": 10000,
-      "Attributes": { "Cooking": 10 },
-      "Effects": [ "HasBalloon" ]
-    },
-    {
-      "ArtifactId": "artifact_magmalamp",
-      "DecorMinimum": 10000,
-      "Attributes": { "Machinery": 10 },
-      "Effects": [ "SoakingWet" ]
-    },
-    {
-      "ArtifactId": "artifact_oracle",
-      "DecorMinimum": 10000,
-      "Attributes": { "Learning": 10 },
-      "Effects": [ "ModerateWounds" ]
-    },
-    {
-      "ArtifactId": "artifact_dnamodel",
-      "DecorMinimum": 10000,
-      "Attributes": { "Learning": 10 },
-      "Effects": [ "SevereWounds" ]
-    },
-    {
-      "ArtifactId": "artifact_rainboweggrock",
-      "DecorMinimum": 10000,
-      "Attributes": { "Ranching": 10 },
-      "Effects": [ "WellFed" ]
-    },
-    {
-      "ArtifactId": "artifact_plasmalamp",
-      "DecorMinimum": 10000,
-      "Attributes": { "Machinery": 10 },
-      "Effects": [ "PeacefulSleep" ]
-    },
-    {
-      "ArtifactId": "artifact_moodring",
-      "DecorMinimum": 10000,
-      "Attributes": { "Art": 10 },
-      "Effects": [ "LightWounds" ]
-    },
-    {
-      "ArtifactId": "artifact_solarsystem",
-      "DecorMinimum": 10000,
-      "Attributes": { "Learning": 10 },
+      "Attributes": { "Ranching": 2 },
       "Effects": [ "BadSleep" ]
     },
     {
+      "ArtifactId": "artifact_hatchfossil",
+      "Attributes": { "Ranching": 3 },
+      "Effects": [ "LightWoundsCritter" ]
+    },
+    {
+      "ArtifactId": "artifact_rocktornado",
+      "Attributes": { "Digging": 2 },
+      "Effects": [ "WarmAir" ]
+    },
+    {
+      "ArtifactId": "artifact_pacupercolator",
+      "Attributes": { "Cooking": 4 },
+      "Effects": [ "StaleFood" ]
+    },
+    {
+      "ArtifactId": "artifact_magmalamp",
+      "Attributes": { "ThermalConductivityBarrier": 2 },
+      "Effects": [ "Hyperthermia" ]
+    },
+    {
+      "ArtifactId": "artifact_oracle",
+      "Attributes": { "Learning": 2 },
+      "Effects": [ "MegaBrainTankRelax" ]
+    },
+    {
+      "ArtifactId": "artifact_dnamodel",
+      "Attributes": { "Immunity": 2 },
+      "Effects": [ "MegaBrainTankStress" ]
+    },
+    {
+      "ArtifactId": "artifact_rainboweggrock",
+      "Attributes": { "Ranching": 4 },
+      "Effects": [ "NewCrewArrival" ]
+    },
+    {
+      "ArtifactId": "artifact_plasmalamp",
+      "Attributes": { "Luminescence": 2 },
+      "Effects": [ "Sleep" ]
+    },
+    {
+      "ArtifactId": "artifact_moodring",
+      "Attributes": { "QualityOfLife": 3 },
+      "Effects": [ "MoodRing" ]
+    },
+    {
+      "ArtifactId": "artifact_solarsystem",
+      "Attributes": { "SpaceNavigation": 1 },
+      "Effects": [ "RestfulSleep" ]
+    },
+    {
       "ArtifactId": "artifact_moonmoonmoon",
-      "DecorMinimum": 10000,
-      "Attributes": { "Learning": 10 },
+      "Attributes": { "Learning": 4 },
       "Effects": [ "Hypothermia" ]
     }
   ]

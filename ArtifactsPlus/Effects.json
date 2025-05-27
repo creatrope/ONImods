@@ -2,176 +2,111 @@
   {
     "Id": "Sleep",
     "Name": "Sleeping",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Neutral"
   },
   {
     "Id": "FloorSleep",
     "Name": "Sleeping On Floor",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "NarcolepticSleep",
     "Name": "Narcoleptic Nap",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "RestfulSleep",
     "Name": "Sleeping Peacefully",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Positive"
   },
   {
     "Id": "AnewHope",
     "Name": "New Hope",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Positive"
   },
   {
     "Id": "MegaBrainTankStress",
     "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEGABRAINTANKSTRESS.NAME",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "MegaBrainTankRelax",
     "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MEGABRAINTANKRELAX.NAME",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Positive"
   },
   {
     "Id": "Mourning",
     "Name": "Mourning",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "NewCrewArrival",
     "Name": "New Friend",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Positive"
   },
   {
     "Id": "UnderWater",
     "Name": "Underwater",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "FullBladder",
     "Name": "Full Bladder",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "StressfulyEmptyingBladder",
     "Name": "Making a mess",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "RedAlert",
     "Name": "Red Alert!",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "MentalBreak",
     "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.MENTALBREAK.NAME",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "SteppedInContaminatedWater",
     "Name": "Stepped in polluted water",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "WellFed",
     "Name": "Well fed",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Positive"
   },
   {
     "Id": "StaleFood",
     "Name": "Bad leftovers",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "AteFrozenFood",
     "Name": "Ate frozen food",
-    "Primary": true
+    "Primary": true,
+    "Mood": "Negative"
   },
   {
     "Id": "SmelledPutridOdour",
-    "Name": "Smelled a putrid odor",
-    "Primary": true
-  },
-  {
-    "Id": "SmelledStinky",
-    "Name": "Smelled Stinky",
-    "Primary": true
-  },
-  {
-    "Id": "Vomiting",
-    "Name": "Vomiting",
-    "Primary": true
-  },
-  {
-    "Id": "Showered",
-    "Name": "Showered",
-    "Primary": true
-  },
-  {
-    "Id": "LightWounds",
-    "Name": "Light Wounds",
-    "Primary": true
-  },
-  {
-    "Id": "ModerateWounds",
-    "Name": "Moderate Wounds",
-    "Primary": true
-  },
-  {
-    "Id": "SevereWounds",
-    "Name": "Severe Wounds",
-    "Primary": true
-  },
-  {
-    "Id": "LightWoundsCritter",
-    "Name": "Light Wounds",
-    "Primary": true
-  },
-  {
-    "Id": "ModerateWoundsCritter",
-    "Name": "Moderate Wounds",
-    "Primary": true
-  },
-  {
-    "Id": "SevereWoundsCritter",
-    "Name": "Severe Wounds",
-    "Primary": true
-  },
-  {
-    "Id": "WasAttacked",
-    "Name": "Recently assailed",
-    "Primary": true
-  },
-  {
-    "Id": "SoreBack",
-    "Name": "Sore Back",
-    "Primary": true
-  },
-  {
-    "Id": "WarmAir",
-    "Name": "Toasty Surroundings",
-    "Primary": true
-  },
-  {
-    "Id": "ColdAir",
-    "Name": "Chilly Surroundings",
-    "Primary": true
-  },
-  {
-    "Id": "Hypothermia",
-    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.HYPOTHERMIA.NAME",
-    "Primary": true
-  },
-  {
-    "Id": "Hyperthermia",
-    "Name": "MISSING.STRINGS.DUPLICANTS.MODIFIERS.HYPERTHERMIA.NAME",
-    "Primary": true
-  },
-  {
-    "Id": "GoodEats",
-    "Name": "Soul Food",
-    "Primary": true
-  }
-]
+    "Name

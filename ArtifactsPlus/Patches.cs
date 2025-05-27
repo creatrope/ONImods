@@ -5,7 +5,7 @@ using KMod;
 using System.Collections.Generic;
 using System.Linq;
 using System;
-using Klei.AI;
+using Klei.AI; // Add this import for Analyzable
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 using PeterHan.PLib.UI;
@@ -47,6 +47,7 @@ namespace ArtifactsPlus
         public bool OnPedestal;
         public bool MeetsRoomSize;
         public bool IsActive;
+        public bool IsAnalyzed; // Renamed from IsUnanalyzed
     }
 
     public class ArtifactConfig
@@ -100,6 +101,7 @@ namespace ArtifactsPlus
             float actualDecor = float.NaN;
             bool meetsRoomSize = false;
             bool meetsDecor = false;
+            bool isEntombed = false;
 
             int cell = Grid.PosToCell(artifact.transform.position);
             if (Game.Instance != null && Game.Instance.roomProber != null)
@@ -129,6 +131,8 @@ namespace ArtifactsPlus
                 }
             }
 
+            isEntombed = Grid.Element[cell].id == SimHashes.Unobtanium;
+
             return new ArtifactCriteriaResult
             {
                 ActualRoomSize = actualRoomSize,
@@ -136,7 +140,7 @@ namespace ArtifactsPlus
                 ActualDecor = actualDecor,
                 MeetsDecor = meetsDecor,
                 Filter = config.Filter,
-                MeetsAll = meetsRoomSize && meetsDecor // Set MeetsAll here
+                MeetsAll = meetsRoomSize && meetsDecor && !isEntombed // Set MeetsAll here
             };
         }
 
@@ -217,14 +221,9 @@ namespace ArtifactsPlus
             bool wasActive = state.IsActive;
             state.OnPedestal = onPedestal;
             state.MeetsRoomSize = meetsRoomSize;
-            state.IsActive = onPedestal && meetsRoomSize;
-
-            string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-            string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
-                ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
-                ?? internalName;
 
             // Get artifact config
+            string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
             var config = GetArtifactConfig(internalName);
             if (config == null)
             {
@@ -232,14 +231,39 @@ namespace ArtifactsPlus
                 return;
             }
 
+            // Evaluate criteria
+            var criteria = EvaluateArtifactCriteria(artifact, config);
+            bool isAnalyzed = false;
+            var artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name;
+            if (!string.IsNullOrEmpty(artifactId) && ArtifactSelector.Instance != null)
+            {
+                isAnalyzed = ArtifactSelector.Instance.GetAnalyzedArtifactIDs().Contains(artifactId);
+            }
+            state.IsAnalyzed = isAnalyzed;
+
+            state.IsActive = onPedestal && criteria.MeetsAll && isAnalyzed;
+
+            string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
+                ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
+                ?? internalName;
+
             if (wasActive != state.IsActive)
             {
+                int cell = Grid.PosToCell(artifact.transform.position);
+                int worldId = Grid.WorldIdx[cell];
+                string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
-                CustomLogger.Log($"[ArtifactState] Artifact '{internalName}' (ID={artifact.name}) changed state: {stateText}");
+
+                // Combine details into one log line
+                CustomLogger.Log(
+                    $"[ArtifactState] {internalName} on {worldName} is {stateText}: " +
+                    $"Pedestal(OK) RoomSize({state.MeetsRoomSize.ToString().ToUpper()}, min={config.RoomSizeMin}, max={config.RoomSizeMax}, actual={criteria.ActualRoomSize}) " +
+                    $"Decor({criteria.MeetsDecor.ToString().ToUpper()}, min={config.DecorMinimum}, actual={criteria.ActualDecor})"
+                );
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
-                    $"Artifact '{displayName}' is now {stateText}",
+                    $"Artifact '{displayName}' {stateText}",
                     artifact.transform,
                     new Vector3(0, 0, 0),
                     2f,
@@ -411,29 +435,7 @@ namespace ArtifactsPlus
                 if (ArtifactStates.TryGetValue(id, out var state))
                     wasActive = state.IsActive;
 
-                // Only print if state is changing
-                if (!wasActive && meetsAll)
-                {
-                    CustomLogger.Log(
-                        $"[ArtifactState] '{internalName}' became ACTIVE: " +
-                        $"Pedestal(OK) " +
-                        $"RoomSize({criteria.MeetsRoomSize.ToString().ToUpper()}, min={config.RoomSizeMin}, max={config.RoomSizeMax}, actual={criteria.ActualRoomSize}) " +
-                        $"Decor({criteria.MeetsDecor.ToString().ToUpper()}, min={config.DecorMinimum}, actual={criteria.ActualDecor})"
-                    );
-                }
-                else if (wasActive && !meetsAll)
-                {
-                    var reasons = new List<string>();
-                    reasons.Add("Pedestal(OK)");
-                    reasons.Add($"RoomSize({(criteria.MeetsRoomSize ? "OK" : "FAIL")}, min={config.RoomSizeMin}, max={config.RoomSizeMax}, actual={criteria.ActualRoomSize})");
-                    reasons.Add($"Decor({(criteria.MeetsDecor ? "OK" : "FAIL")}, min={config.DecorMinimum}, actual={criteria.ActualDecor})");
-
-                    CustomLogger.Log(
-                        $"[ArtifactState] '{internalName}' became INACTIVE: " +
-                        string.Join(" ", reasons.Where(r => r.Contains("FAIL") || r.StartsWith("Pedestal")))
-                    );
-                }
-
+                // Only update state, do not log here
                 UpdateArtifactState(artifact, true, meetsAll);
             }
         }
