@@ -34,12 +34,10 @@ namespace ArtifactsPlus
 
         public static void OnLoad()
         {
-            //Debug.Log("[ArtifactsPlus] OnLoad() was called!");
-
             // Only print custom log file location and log to custom log if verbose is enabled
             if (ArtifactsPlusOptions.Instance.Verbose)
             {
-                Debug.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
+                CustomLogger.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
             }
 
             ArtifactStateTracker.LoadArtifactAttributeMap();
@@ -597,11 +595,9 @@ namespace ArtifactsPlus
         {
             base.OnLoad(harmony);
 
-            //Debug.Log("[ArtifactsPlus] Attempting to register mod options screen...");
             try
             {
                 new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions));
-                //Debug.Log("[ArtifactsPlus] RegisterOptions call succeeded.");
             }
             catch (Exception ex)
             {
@@ -612,7 +608,7 @@ namespace ArtifactsPlus
             harmony.PatchAll();
             ModInit.OnLoad();
 
-            PUtil.InitLibrary(); // This line now works because of the added import
+            PUtil.InitLibrary();
 
             if (Game.Instance != null)
             {
@@ -739,6 +735,24 @@ namespace ArtifactsPlus
                     MinionMigrationHelper.MinionMigrationState.Remove(minionGo);
                 }
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(SaveLoader), "Save", new Type[] { typeof(string), typeof(bool), typeof(bool) })]
+    public static class SaveLoader_Save_Patch
+    {
+        public static void Postfix(string filename, bool isAutoSave, bool updateSavePointer)
+        {
+            CustomLogger.Log("[ArtifactsPlus] SaveLoader.Save called for file: " + filename);
+        }
+    }
+
+    [HarmonyPatch(typeof(SaveLoader), "Load", new Type[] { typeof(string) })]
+    public static class SaveLoader_Load_Patch
+    {
+        public static void Postfix(string filename)
+        {
+            CustomLogger.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
         }
     }
 }

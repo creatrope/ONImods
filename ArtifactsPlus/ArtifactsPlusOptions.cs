@@ -45,6 +45,10 @@ namespace ArtifactsPlus
         [JsonProperty]
         public bool Verbose { get; set; } = true;
 
+        [Option("Custom Logging", "Enable logging to a custom log file for debugging purposes.")]
+        [JsonProperty]
+        public bool CustomLogging { get; set; } = true;
+
         public static IList<string> GetConfigFiles()
         {
             var dir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
