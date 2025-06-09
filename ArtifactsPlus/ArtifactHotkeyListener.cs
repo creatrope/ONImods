@@ -7,6 +7,7 @@ using System.Reflection;
 using System;
 using System.IO;
 using Newtonsoft.Json;
+using HarmonyLib;
 
 namespace ArtifactsPlus
 {
@@ -18,58 +19,52 @@ namespace ArtifactsPlus
 
         void Awake()
         {
-            Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener Awake called.");
+            // Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener Awake called.");
             if (FindObjectsOfType<ArtifactHotkeyListener>().Length > 1)
             {
-                Debug.Log("[ArtifactsPlus] Duplicate ArtifactHotkeyListener found, destroying.");
+                // Debug.Log("[ArtifactsPlus] Duplicate ArtifactHotkeyListener found, destroying.");
                 Destroy(this);
                 return;
             }
             DontDestroyOnLoad(this.gameObject);
 
-            // Register hotkey actions
-            hotkeyActions[KeyCode.F1] = () =>
-            {
-                Debug.Log("[ArtifactsPlus] F1 detected in Update.");
-                CustomLogger.Log("[ArtifactsPlus] F1 pressed: Printing hotkey summary.");
-                PrintHotkeySummary();
-            };
-            hotkeyActions[KeyCode.F8] = () =>
-            {
-                Debug.Log("[ArtifactsPlus] F8 detected in Update.");
-                DumpAllEffectsToLog();
-            };
             hotkeyActions[KeyCode.F9] = () =>
             {
-                Debug.Log("[ArtifactsPlus] F9 detected in Update.");
-                CustomLogger.Log("[ArtifactsPlus] F9 pressed: Printing artifact infusions for all minions.");
-                var minions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                    .Where(kp => kp != null && kp.HasTag("Minion"))
-                    .Select(kp => kp.gameObject)
-                    .ToList();
-                foreach (var minion in minions)
+                if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
                 {
-                    string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? minion.name;
-                    string infusions = ArtifactEffectTracker.GetMinionArtifactInfusions(minion);
-                    string singleLine = string.IsNullOrWhiteSpace(infusions)
-                        ? "(no artifact infusions)"
-                        : string.Join("; ", infusions
-                            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                            .Select(s => s.Trim()));
-                    CustomLogger.Log($"[HOTKEY] {minionName}: {singleLine}");
+                    // Debug.Log("[ArtifactsPlus] ALT+F9 detected in Update.");
+                    CustomLogger.Log("[ArtifactsPlus] ALT+F9 pressed: Printing artifact infusions for all minions.");
+                    var minions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                        .Where(kp => kp != null && kp.HasTag("Minion"))
+                        .Select(kp => kp.gameObject)
+                        .ToList();
+                    foreach (var minion in minions)
+                    {
+                        string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? minion.name;
+                        string infusions = ArtifactEffectTracker.GetMinionArtifactInfusions(minion);
+                        string singleLine = string.IsNullOrWhiteSpace(infusions)
+                            ? "(no artifact infusions)"
+                            : string.Join("; ", infusions
+                                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                                .Select(s => s.Trim()));
+                        CustomLogger.Log($"[HOTKEY] {minionName}: {singleLine}");
+                    }
                 }
             };
-            hotkeyActions[KeyCode.F11] = () =>
+            hotkeyActions[KeyCode.F10] = () =>
             {
-                Debug.Log("[ArtifactsPlus] F11 detected in Update.");
-                CustomLogger.Log("[ArtifactsPlus] F11 pressed: Stripping all artifact modifiers and status effects from all minions.");
-                ArtifactEffectTracker.StripAllArtifactEffectsFromAllMinions();
+                if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
+                {
+                    // Debug.Log("[ArtifactsPlus] ALT+F11 detected in Update.");
+                    CustomLogger.Log("[ArtifactsPlus] ALT+F11 pressed: Stripping all artifact modifiers and status effects from all minions.");
+                    ArtifactEffectTracker.StripAllArtifactEffectsFromAllMinions();
+                }
             };
         }
 
         void Start()
         {
-            Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener Start called.");
+            // Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener Start called.");
         }
 
         void Update()
@@ -96,48 +91,6 @@ namespace ArtifactsPlus
             {
                 // Reset when key is released
                 _lastHotkey = null;
-            }
-        }
-
-        private void PrintHotkeySummary()
-        {
-            string summary =
-                "[ArtifactsPlus] Hotkey Summary:\n" +
-                "F1  - Show this summary of all hotkey functions.\n" +
-                "F8  - Dump all effects to log as JSON.\n" +
-                "F9  - Print artifact infusions for all minions.\n" +
-                "F11 - Strip all artifact modifiers and status effects from all minions.";
-            CustomLogger.Log(summary);
-        }
-
-        private void DumpAllEffectsToLog()
-        {
-            try
-            {
-                var effectsDb = Db.Get().effects;
-                var effectList = new List<object>();
-
-                foreach (var effect in effectsDb.resources)
-                {
-                    if (effect == null) continue;
-                    effectList.Add(new
-                    {
-                        Id = effect.Id,
-                        Name = effect.Name,
-                        Duration = effect.duration,
-                        Description = effect.description,
-                        SelfModifiers = effect.SelfModifiers != null ? effect.SelfModifiers.Count : 0,
-                        ShowInUI = effect.showInUI,
-                    });
-                }
-
-                string json = JsonConvert.SerializeObject(effectList, Formatting.Indented);
-                CustomLogger.Log("[EFFECTS DUMP]\n" + json);
-                Debug.Log("[ArtifactsPlus] Effects dump written to log.");
-            }
-            catch (Exception ex)
-            {
-                CustomLogger.Log("[ERROR] Failed to dump effects: " + ex);
             }
         }
     }

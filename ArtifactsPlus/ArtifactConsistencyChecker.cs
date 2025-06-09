@@ -38,7 +38,7 @@ namespace ArtifactsPlus
                         var effects = minion.GetComponent<Effects>();
                         if (effects != null)
                         {
-                            foreach (var effectId in config.Effects)
+                            foreach (var effectId in config.Effects.Keys)
                             {
                                 if (effects.HasEffect(effectId))
                                 {
@@ -110,7 +110,7 @@ namespace ArtifactsPlus
                         var effects = minion.GetComponent<Effects>();
                         if (effects != null)
                         {
-                            foreach (var effectId in config.Effects)
+                            foreach (var effectId in config.Effects.Keys)
                             {
                                 if (effects.HasEffect(effectId))
                                 {

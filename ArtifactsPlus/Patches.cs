@@ -57,23 +57,23 @@ namespace ArtifactsPlus
         public int RoomSizeMin;
         public int RoomSizeMax;
         public int DecorMinimum;
-        public int Neighbors; // <-- Add this line
-        public string Filter;
+        public int Neighbors;
+        public string Scope;
         public Dictionary<string, float> Attributes;
         /// <summary>
-        /// List of status effect IDs to apply to minions (called "Effects" in config, but these are statuses).
+        /// Dictionary of status effect IDs and their durations to apply to minions.
         /// </summary>
-        public List<string> Effects;
+        public Dictionary<string, float> Effects;
 
-        public ArtifactConfig(int globalMin, int globalMax, int globalDecor, string globalFilter, int globalNeighbors = 1)
+        public ArtifactConfig(int globalMin, int globalMax, int globalDecor, string globalScope, int globalNeighbors = 1)
         {
             RoomSizeMin = globalMin;
             RoomSizeMax = globalMax;
             DecorMinimum = globalDecor;
-            Neighbors = globalNeighbors; // <-- Add this line
-            Filter = globalFilter;
+            Neighbors = globalNeighbors;
+            Scope = globalScope;
             Attributes = new Dictionary<string, float>();
-            Effects = new List<string>();
+            Effects = new Dictionary<string, float>();
         }
     }
 
@@ -95,11 +95,11 @@ namespace ArtifactsPlus
             public bool MeetsRoomSize;
             public float ActualDecor;
             public bool MeetsDecor;
-            public string Filter;
-            public int ArtifactCountInRoom; // Add this field
-            public bool NeighborsOk;        // Add this field
+            public string Scope;
+            public int ArtifactCountInRoom;
+            public bool NeighborsOk;
             public bool MeetsAll;
-            public bool ShortCircuited; // Add this field
+            public bool ShortCircuited;
         }
 
         public static ArtifactCriteriaResult EvaluateArtifactCriteria(GameObject artifact, ArtifactConfig config, bool shortCircuit = false)
@@ -207,7 +207,7 @@ namespace ArtifactsPlus
                 MeetsRoomSize = meetsRoomSize,
                 ActualDecor = actualDecor,
                 MeetsDecor = meetsDecor,
-                Filter = config.Filter,
+                Scope = config.Scope,
                 ArtifactCountInRoom = artifactCount,
                 NeighborsOk = neighborsOk,
                 MeetsAll = meetsAll,
@@ -343,9 +343,9 @@ namespace ArtifactsPlus
                 );
 
                 List<GameObject> minionList;
-                if (config.Filter == "InRoom")
+                if (config.Scope == "InRoom")
                     minionList = GetMinionsInSameRoom(artifact);
-                else if (config.Filter == "InWorld")
+                else if (config.Scope == "InWorld")
                     minionList = GetMinionsInSameWorld(artifact);
                 else
                     minionList = GetAllMinions();
@@ -369,7 +369,13 @@ namespace ArtifactsPlus
 
         public static bool TryGetArtifactEffects(string artifactId, out Dictionary<string, float> effects)
         {
-            return TryGetArtifactAttributes(artifactId, out effects);
+            if (artifactConfigMap != null && artifactConfigMap.TryGetValue(artifactId, out var config))
+            {
+                effects = config.Effects;
+                return true;
+            }
+            effects = null;
+            return false;
         }
 
         public static void ApplyGlowEffect(GameObject artifact, bool enable)
@@ -415,11 +421,11 @@ namespace ArtifactsPlus
                 var configText = File.ReadAllText(ModInit.ArtifactPowersConfigPath);
                 var configJson = JObject.Parse(configText);
 
-                int globalRoomSizeMin = (int)(configJson["GlobalRoomSizeMinimum"] ?? 6);
-                int globalRoomSizeMax = (int)(configJson["GlobalRoomSizeMaximum"] ?? 32);
+                int globalRoomSizeMin = (int)(configJson["RoomSizeMinimum"] ?? 32);
+                int globalRoomSizeMax = (int)(configJson["RoomSizeMaximum"] ?? 96);
                 int globalDecorMinimum = (int)(configJson["DecorMinimum"] ?? 0);
-                int globalNeighbors = (int)(configJson["Neighbors"] ?? 1); // <-- Add this line
-                string globalFilter = (string)(configJson["Filter"] ?? "All");
+                int globalNeighbors = (int)(configJson["Neighbors"] ?? 1);
+                string globalScope = (string)(configJson["Scope"] ?? "InWorld");
 
                 if (!(configJson["Artifacts"] is JArray arr))
                 {
@@ -433,14 +439,14 @@ namespace ArtifactsPlus
                     if (artifactId == null) continue;
 
                     // Inherit global config
-                    var artifactConfig = new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, globalDecorMinimum, globalFilter, globalNeighbors);
+                    var artifactConfig = new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, globalDecorMinimum, globalScope, globalNeighbors);
 
                     // Local overrides
                     if (obj["RoomSizeMin"] != null) artifactConfig.RoomSizeMin = (int)obj["RoomSizeMin"];
                     if (obj["RoomSizeMax"] != null) artifactConfig.RoomSizeMax = (int)obj["RoomSizeMax"];
                     if (obj["DecorMinimum"] != null) artifactConfig.DecorMinimum = (int)obj["DecorMinimum"];
-                    if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"]; // <-- Add this line
-                    if (obj["Filter"] != null) artifactConfig.Filter = (string)obj["Filter"];
+                    if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
+                    if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
 
                     if (obj["Attributes"] is JObject attributes)
                     {
@@ -452,11 +458,14 @@ namespace ArtifactsPlus
                     }
 
                     // Load Effects (statuses) from config
-                    if (obj["Effects"] is JArray effects)
+                    if (obj["Effects"] is JObject effects)
                     {
-                        foreach (var effect in effects)
+                        foreach (var prop in effects.Properties())
                         {
-                            artifactConfig.Effects.Add((string)effect);
+                            float val = 0f;
+                            if (prop.Value != null && float.TryParse(prop.Value.ToString(), out float parsed))
+                                val = parsed;
+                            artifactConfig.Effects[prop.Name] = val;
                         }
                     }
 
@@ -601,10 +610,11 @@ namespace ArtifactsPlus
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[ArtifactsPlus] RegisterOptions threw exception: {ex}");
+                CustomLogger.Log($"[ArtifactsPlus] RegisterOptions threw exception: {ex}");
             }
 
-            Debug.Log("[ArtifactsPlus] Mod loaded and Harmony patches applied.");
+            // Only this mod load message stays as Debug.Log, but now commented out per your request
+            // Debug.Log("[ArtifactsPlus] Mod loaded and Harmony patches applied.");
             harmony.PatchAll();
             ModInit.OnLoad();
 
@@ -711,7 +721,7 @@ namespace ArtifactsPlus
                         string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
                         var config = ArtifactsPlus.ArtifactStateTracker.GetArtifactConfig(internalName);
 
-                        if (artifactWorldId == state.oldWorldId && config.Filter == "InWorld")
+                        if (artifactWorldId == state.oldWorldId && config.Scope == "InWorld")
                         {
                             ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, internalName, false);
                             ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, internalName, false);
@@ -725,7 +735,7 @@ namespace ArtifactsPlus
                         string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
                         var config = ArtifactsPlus.ArtifactStateTracker.GetArtifactConfig(internalName);
 
-                        if (artifactWorldId == state.newWorldId && config.Filter == "InWorld")
+                        if (artifactWorldId == state.newWorldId && config.Scope == "InWorld")
                         {
                             ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, internalName, true);
                             ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, internalName, true);

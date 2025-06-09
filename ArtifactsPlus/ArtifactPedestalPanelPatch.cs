@@ -60,7 +60,8 @@ namespace ArtifactsPlus
                 var config = ArtifactStateTracker.GetArtifactConfig(artifactId);
                 if (config != null && config.Effects != null && config.Effects.Count > 0)
                 {
-                    lines.AddRange(config.Effects);
+                    // FIX: Use Keys to get IEnumerable<string>
+                    lines.AddRange(config.Effects.Keys);
                 }
 
                 if (lines.Count == 0)

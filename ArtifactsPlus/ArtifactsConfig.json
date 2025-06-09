@@ -1,8 +1,8 @@
 {
-  "GlobalRoomSizeMinimum": 32,
-  "GlobalRoomSizeMaximum": 96,
+  "RoomSizeMinimum": 32,
+  "RoomSizeMaximum": 96,
   "DecorMinimum": 128,
-  "Filter": "InWorld",
+  "Scope": "InWorld",
   "Neighbors": 1,
   "Artifacts": [
     {
@@ -10,180 +10,156 @@
       "Attributes": {
         "Cooking": 2,
         "ToiletEfficiency": 1
-      },
-      "Effects": { "Showered": 30.0 }
+      }
     },
     {
       "ArtifactId": "artifact_rubikscube",
-      "Attributes": { "Learning": 2 },  
-      "Effects": { "FloorSleep": 0.0 }
+      "Attributes": { "Learning": 2 }
     },
     {
       "ArtifactId": "artifact_obelisk",
-      "Attributes": { "Decor": 3 },
-      "Effects": { "AnewHope": 1800.0 }
+      "Attributes": { "Decor": 3 }
     },
     {
       "ArtifactId": "artifact_blender",
-      "Attributes": { "Cooking": 1 },
-      "Effects": { "AteFrozenFood": 600.0 }
+      "Attributes": { "Cooking": 1 }
     },
     {
       "ArtifactId": "artifact_reactormodel",
-      "Attributes": { "RadiationResistance": 2 },
-      "Effects": { "Hypothermia": 0.0 }
+      "Attributes": { "RadiationResistance": 2 }
     },
     {
       "ArtifactId": "artifact_sandstone",
-      "Attributes": { "CarryAmount": 1 },
-      "Effects": { "SteppedInContaminatedWater": 150.0 }
+      "Attributes": { "CarryAmount": 1 }
     },
     {
       "ArtifactId": "artifact_officemug",
-      "Attributes": { "QualityOfLife": 1 },
-      "Effects": { "SoreBack": 300.0 }
+      "Attributes": { "QualityOfLife": 1 }
     },
     {
       "ArtifactId": "artifact_okayxray",
       "Attributes": {
-        "DiseaseCureSpeed": 2, "Luminescence" : 1
-      },
-      "Effects": { "NarcolepticSleep": 0.0 }
+        "DiseaseCureSpeed": 2,
+        "Luminescence": 1
+      }
     },
     {
       "ArtifactId": "artifact_moldavite",
       "Attributes": {
-        "RadiationRecovery": 2, "GermResistance" : 2 },
-      "Effects": { "GoodEats": 1200.0 }
+        "RadiationRecovery": 2,
+        "GermResistance": 2
+      }
     },
     {
       "ArtifactId": "artifact_vhs",
       "Attributes": {
         "QualityOfLifeExpectation": 1,
         "Art": 1
-      },
-      "Effects": { "FullBladder": 0.0 }
+      }
     },
     {
       "ArtifactId": "artifact_saxophone",
-      "Attributes": { "QualityOfLifeExpectation": 1, "Art" : 1 },
-      "Effects": { "AnewHope": 1800.0 }
+      "Attributes": {
+        "QualityOfLifeExpectation": 1,
+        "Art": 1
+      }
     },
     {
       "ArtifactId": "artifact_modernart",
-      "Attributes": { "Art": 2 },
-      "Effects": { "Showered": 540.0 }
+      "Attributes": { "Art": 2 }
     },
     {
       "ArtifactId": "artifact_honeyjar",
-      "Attributes": { "Immunity": 2, "Botanist" : 1 },
-      "Effects": { "WellFed": 600.0 }
+      "Attributes": {
+        "Immunity": 2,
+        "Botanist": 1
+      }
     },
     {
       "ArtifactId": "artifact_ameliaswatch",
-      "Attributes": { "TransitTubeTravelSpeed": 2 },
-      "Effects": { "RestfulSleep": 0.0 }
+      "Attributes": { "TransitTubeTravelSpeed": 2 }
     },
     {
       "ArtifactId": "artifact_teapot",
-      "Attributes": { "Caring": 2 },
-      "Effects": { "AnewHope": 1800.0 }
+      "Attributes": { "Caring": 2 }
     },
     {
       "ArtifactId": "artifact_brickphone",
-      "Attributes": { "LifeSupport": 3 },
-      "Effects": { "MentalBreak": 600.0 }
+      "Attributes": { "LifeSupport": 3 }
     },
     {
       "ArtifactId": "artifact_robotarm",
       "Attributes": {
         "MachinerySpeed": 2,
         "Digging": 2
-      },
-      "Effects": { "LightWounds": 0.0 }
+      }
     },
     {
       "ArtifactId": "artifact_shieldgenerator",
-      "Attributes": { "Strength": 2 },
-      "Effects": { "ColdAir": 0.0 }
+      "Attributes": { "Strength": 2 }
     },
     {
       "ArtifactId": "artifact_bioluminescentrock",
-      "Attributes": { "Botanist": 1 },
-      "Effects": { "UnderWater": 0.0 }
+      "Attributes": { "Botanist": 1 }
     },
     {
       "ArtifactId": "artifact_grubstatue",
-      "Attributes": { "Ranching": 1 },
-      "Effects": { "Mourning": 1800.0 }
+      "Attributes": { "Ranching": 1 }
     },
     {
       "ArtifactId": "artifact_stethoscope",
       "Attributes": {
         "Caring": 2,
-        "DoctoredLevel" : 2
-      },
-      "Effects": { "StressfulyEmptyingBladder": 0.0 }
+        "DoctoredLevel": 2
+      }
     },
     {
       "ArtifactId": "artifact_eggrock",
-      "Attributes": { "Ranching": 2 },
-      "Effects": { "BadSleep": 450.0 }
+      "Attributes": { "Ranching": 2 }
     },
     {
       "ArtifactId": "artifact_hatchfossil",
-      "Attributes": { "Ranching": 1 },
-      "Effects": { "LightWoundsCritter": 0.0 }
+      "Attributes": { "Ranching": 1 }
     },
     {
       "ArtifactId": "artifact_rocktornado",
-      "Attributes": { "Digging": 2 },
-      "Effects": { "WarmAir": 0.0 }
+      "Attributes": { "Digging": 2 }
     },
     {
       "ArtifactId": "artifact_pacupercolator",
-      "Attributes": { "Athletics": 3 },
-      "Effects": { "StaleFood": 300.0 }
+      "Attributes": { "Athletics": 3 }
     },
     {
       "ArtifactId": "artifact_magmalamp",
-      "Attributes": { "Decor": 4 },
-      "Effects": { "Hyperthermia": 0.0 }
+      "Attributes": { "Decor": 4 }
     },
     {
       "ArtifactId": "artifact_oracle",
-      "Attributes": { "Learning": 3 },
-      "Effects": { "MegaBrainTankRelax": 0.0 }
+      "Attributes": { "Learning": 3 }
     },
     {
       "ArtifactId": "artifact_dnamodel",
-      "Attributes": { "Learning": 4 },
-      "Effects": { "MegaBrainTankStress": 0.0 }
+      "Attributes": { "Learning": 4 }
     },
     {
       "ArtifactId": "artifact_rainboweggrock",
-      "Attributes": { "Ranching": 3 },
-      "Effects": { "NewCrewArrival": 1800.0 }
+      "Attributes": { "Ranching": 3 }
     },
     {
       "ArtifactId": "artifact_plasmalamp",
-      "Attributes": { "Machinery": 2 },
-      "Effects": { "Sleep": 0.0 }
+      "Attributes": { "Machinery": 2 }
     },
     {
       "ArtifactId": "artifact_moodring",
-      "Attributes": { "Art": 3 },
-      "Effects": { "MoodRing": null }
+      "Attributes": { "Art": 3 }
     },
     {
       "ArtifactId": "artifact_solarsystem",
-      "Attributes": { "SpaceNavigation": 5 },
-      "Effects": { "Hypothermia": 0.0 }
+      "Attributes": { "SpaceNavigation": 5 }
     },
     {
       "ArtifactId": "artifact_moonmoonmoon",
-      "Attributes": { "SpaceNavigation": 2 },
-      "Effects": { "RestfulSleep": 0.0 }
+      "Attributes": { "SpaceNavigation": 2 }
     }
   ]
 }
