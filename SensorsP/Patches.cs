@@ -109,7 +109,6 @@ namespace SensorsP
 
         private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
         private const float T = 1.0f;
-        private const float H = 1.0f;
 
         static void Postfix(LogicPressureSensor __instance)
         {
@@ -121,21 +120,30 @@ namespace SensorsP
             float value = __instance.CurrentValue;
             float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
 
+            // Get the per-sensor threshold from SensorInputValueComponent
+            float threshold = 1.0f; // fallback default
+            var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
+            if (inputValueComponent != null && float.TryParse(inputValueComponent.inputValue, out float parsed))
+                threshold = parsed;
+
             bool bit0 = __instance.IsSwitchedOn;
-            bool bit1 = firstDerivative > H;
-            bool bit2 = firstDerivative < -H;
+            bool bit1 = firstDerivative > threshold;
+            bool bit2 = firstDerivative < -threshold;
             bool bit3 = false;
 
             int ribbonSignal = (bit0 ? 1 : 0)
                              | (bit1 ? (1 << 1) : 0)
                              | (bit2 ? (1 << 2) : 0);
 
-            //CustomLogger.CustomLogger.Log(
-            //    $"[PATCH DEBUG] Ribbon output: {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})\n" +
-            //    $"  Bit 0 (IsSwitchedOn): {bit0}\n" +
-            //    $"  Bit 1 (dP/dt > +H):   {bit1} (FirstDerivative={firstDerivative:0.###}, H={H})\n" +
-            //    $"  Bit 2 (dP/dt < -H):   {bit2} (FirstDerivative={firstDerivative:0.###}, -H={-H})\n" +
-            //    $"  Bit 3 (always off):   {bit3}");
+            // Debugging message for ribbonSignal calculation
+            CustomLogger.CustomLogger.Log(
+                $"[DEBUG] RibbonSignal calculation for {__instance.name}:\n" +
+                $"  bit0 (IsSwitchedOn): {bit0}\n" +
+                $"  bit1 (dP/dt > +threshold): {bit1} (firstDerivative={firstDerivative:0.###}, threshold={threshold})\n" +
+                $"  bit2 (dP/dt < -threshold): {bit2} (firstDerivative={firstDerivative:0.###}, -threshold={-threshold})\n" +
+                $"  bit3 (always off): {bit3}\n" +
+                $"  ribbonSignal (binary): {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})"
+            );
 
             ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
         }
