@@ -4,7 +4,6 @@ using TMPro;
 
 namespace SensorsP
 { 
-
     public class SensorSimpleInputSideScreen : SideScreenContent
     {
         private PTextField inputField;
@@ -35,20 +34,28 @@ namespace SensorsP
         {
             CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
             base.OnPrefabInit();
+        }
 
-            var panel = new PPanel("Vertical")
-            {
-                Direction = PanelDirection.Vertical,
-                Spacing = 10
+        public override int GetSideScreenSortOrder() => -100;
+
+        protected override void OnSpawn()
+        {
+            base.OnSpawn();
+
+            // Use ContentContainer if available, fallback to gameObject
+            GameObject container = ContentContainer != null ? ContentContainer : gameObject;
+
+            // Create a horizontal panel for label + input
+            var row = new PPanel("ThresholdRow") {
+                Direction = PanelDirection.Horizontal,
+                Spacing = 5,
+                Margin = new RectOffset(0, 0, 0, 10) // <-- Adds 10px space below the row
             };
 
-            var label = new PLabel("TestLabel")
-            {
-                Text = "This is a test label.",
-                ToolTip = "If you see this, the side screen is being built.",
+            var thresholdLabel = new PLabel("ThresholdLabel") {
+                Text = "Threshold",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
             };
-            panel.AddChild(label);
 
             inputField = new PTextField();
             inputField.OnTextChanged += (sender, text) =>
@@ -63,11 +70,15 @@ namespace SensorsP
                     unityInputField.text = state.inputValue ?? "1.0";
             });
 
-            panel.AddChild(inputField);
+            row.AddChild(thresholdLabel);
+            row.AddChild(inputField);
 
-            var root = panel.AddTo(gameObject, 0);
-            ContentContainer = root;
-            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added panel to side screen.");
+            // Build the row and add it as the last child of the container
+            var rowGO = row.Build();
+            rowGO.transform.SetParent(container.transform, false);
+            rowGO.transform.SetAsLastSibling();
+
+            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added Threshold label and input field below default UI (OnSpawn).");
         }
     }
 }
