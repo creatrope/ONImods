@@ -1,11 +1,14 @@
+using Database;
 using HarmonyLib;
+using KMod;
+using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
+using PeterHan.PLib.UI;
 using System;
-using System.Runtime.CompilerServices;
 using System.Collections.Generic; // For List<>
+using System.Runtime.CompilerServices;
 using TUNING; // Or the correct namespace for LogicPressureSensorConfig
 using UnityEngine;
-using Database;
 
 
 namespace SensorsP
@@ -32,7 +35,7 @@ namespace SensorsP
         {
             public static void Prefix()
             {
-                Debug.Log("[SensorsP] execute before Db.Initialize!");
+                Debug.Log("[SensorsP] I execute before Db.Initialize!");
                 CustomLogger.CustomLogger.LogPath = System.IO.Path.Combine(
                   System.IO.Path.GetDirectoryName(CustomLogger.CustomLogger.LogPath),
                 "SensorsP.log"
@@ -49,10 +52,12 @@ namespace SensorsP
         }
     }
 
-    public class ModEntry : KMod.UserMod2
+    public class Mod : UserMod2
     {
         public override void OnLoad(Harmony harmony)
         {
+            base.OnLoad(harmony);
+            PUtil.InitLibrary();
             new POptions().RegisterOptions(this, typeof(ModOptions));
             harmony.PatchAll();
         }
@@ -125,12 +130,12 @@ namespace SensorsP
                              | (bit1 ? (1 << 1) : 0)
                              | (bit2 ? (1 << 2) : 0);
 
-            CustomLogger.CustomLogger.Log(
-                $"[PATCH DEBUG] Ribbon output: {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})\n" +
-                $"  Bit 0 (IsSwitchedOn): {bit0}\n" +
-                $"  Bit 1 (dP/dt > +H):   {bit1} (FirstDerivative={firstDerivative:0.###}, H={H})\n" +
-                $"  Bit 2 (dP/dt < -H):   {bit2} (FirstDerivative={firstDerivative:0.###}, -H={-H})\n" +
-                $"  Bit 3 (always off):   {bit3}");
+            //CustomLogger.CustomLogger.Log(
+            //    $"[PATCH DEBUG] Ribbon output: {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})\n" +
+            //    $"  Bit 0 (IsSwitchedOn): {bit0}\n" +
+            //    $"  Bit 1 (dP/dt > +H):   {bit1} (FirstDerivative={firstDerivative:0.###}, H={H})\n" +
+            //    $"  Bit 2 (dP/dt < -H):   {bit2} (FirstDerivative={firstDerivative:0.###}, -H={-H})\n" +
+            //    $"  Bit 3 (always off):   {bit3}");
 
             ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
         }
@@ -212,4 +217,14 @@ namespace SensorsP
 
     // Optionally, patch the UI to allow switching output type
     // This is more advanced and may require patching side screen or config methods
+
+    [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
+    public static class SensorSimpleInputSideScreenRegister
+    {
+        public static void Postfix()
+        {
+            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
+            PUIUtils.AddSideScreenContent<SensorSimpleInputSideScreen>();
+        }
+    }
 }
