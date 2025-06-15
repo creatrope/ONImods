@@ -1,81 +1,73 @@
 using PeterHan.PLib.UI;
-using TMPro;
 using UnityEngine;
+using TMPro;
 
-public class SensorSimpleInputSideScreen : SideScreenContent
-{
-    private PTextField inputField;
-    private TMP_InputField tmpInputField;
+namespace SensorsP
+{ 
 
-    public override void SetTarget(GameObject target)
+    public class SensorSimpleInputSideScreen : SideScreenContent
     {
-        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] SetTarget called. Target: " + (target != null ? target.name : "null"));
-    }
+        private PTextField inputField;
+        private TMP_InputField unityInputField;
+        private SensorInputValueComponent state;
 
-    public override bool IsValidForTarget(GameObject target)
-    {
-        bool valid = target != null;
-        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] IsValidForTarget called. Target: " + (target != null ? target.name : "null") + " => " + valid);
-        return valid;
-    }
-
-    public override string GetTitle() => "Sensor Simple Input";
-
-    protected override void OnPrefabInit()
-    {
-        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
-        base.OnPrefabInit();
-
-        // Create a vertical panel
-        var panel = new PPanel("Vertical")
+        public override bool IsValidForTarget(GameObject target)
         {
-            Direction = PanelDirection.Vertical,
-            Spacing = 10
-        };
-        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Created PPanel.");
+            bool valid = target != null && target.GetComponent<LogicPressureSensor>() != null;
+            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] IsValidForTarget called. Target: " + (target != null ? target.name : "null") + " => " + valid);
+            return valid;
+        }
 
-        // Add a simple label before the text field
-        var label = new PLabel("TestLabel")
+        public override void SetTarget(GameObject target)
         {
-            Text = "This is a test label.",
-            ToolTip = "If you see this, the side screen is being built.",
-            TextStyle = PUITuning.Fonts.TextDarkStyle
-        };
-        panel.AddChild(label);
-        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added PLabel to panel.");
+            state = target?.GetComponent<SensorInputValueComponent>();
+            string value = state?.inputValue ?? "1.0";
+            if (unityInputField != null)
+                unityInputField.text = value;
+            else if (inputField != null)
+                inputField.Text = value;
+            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] SetTarget called. Target: " + (target != null ? target.name : "null"));
+        }
 
-        // Add a PLib text field, set default to 1.0, and capture the TMP_InputField on realize
-        inputField = new PTextField();
-        inputField.Text = "1.0";
-        inputField.AddOnRealize(go =>
+        public override string GetTitle() => "Sensor Simple Input";
+
+        protected override void OnPrefabInit()
         {
-            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] PTextField realized. GameObject: " + go.name);
-            tmpInputField = go.GetComponent<TMP_InputField>();
-            if (tmpInputField != null)
+            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
+            base.OnPrefabInit();
+
+            var panel = new PPanel("Vertical")
             {
-                CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] TMP_InputField found.");
-                if (tmpInputField.placeholder is TMP_Text placeholder)
-                {
-                    placeholder.text = "Enter value...";
-                    CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Placeholder set.");
-                }
-                else
-                {
-                    CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] TMP_InputField placeholder is not TMP_Text.");
-                }
-            }
-            else
+                Direction = PanelDirection.Vertical,
+                Spacing = 10
+            };
+
+            var label = new PLabel("TestLabel")
             {
-                CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] TMP_InputField NOT found.");
-            }
-        });
+                Text = "This is a test label.",
+                ToolTip = "If you see this, the side screen is being built.",
+                TextStyle = PUITuning.Fonts.TextDarkStyle
+            };
+            panel.AddChild(label);
 
-        panel.AddChild(inputField);
-        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added PTextField to panel.");
+            inputField = new PTextField();
+            inputField.OnTextChanged += (sender, text) =>
+            {
+                if (state != null)
+                    state.inputValue = text;
+            };
+            inputField.AddOnRealize(go =>
+            {
+                unityInputField = go.GetComponent<TMP_InputField>();
+                if (unityInputField != null && state != null)
+                    unityInputField.text = state.inputValue ?? "1.0";
+            });
 
-        // Add the panel to the side screen
-        var root = panel.AddTo(gameObject, 0);
-        ContentContainer = root;
-        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added panel to side screen.");
+            panel.AddChild(inputField);
+
+            var root = panel.AddTo(gameObject, 0);
+            ContentContainer = root;
+            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added panel to side screen.");
+        }
     }
 }

@@ -9,7 +9,7 @@ using System.Collections.Generic; // For List<>
 using System.Runtime.CompilerServices;
 using TUNING; // Or the correct namespace for LogicPressureSensorConfig
 using UnityEngine;
-
+using KSerialization;
 
 namespace SensorsP
 {
@@ -213,6 +213,26 @@ namespace SensorsP
         }
     }
 
+    // Attach to new GAS pressure sensors
+    [HarmonyPatch(typeof(LogicPressureSensorGasConfig), "DoPostConfigureComplete")]
+    public static class AddSensorInputValueComponent_Gas
+    {
+        public static void Postfix(GameObject go)
+        {
+            go.AddOrGet<SensorInputValueComponent>();
+        }
+    }
+
+    // Attach to new LIQUID pressure sensors
+    [HarmonyPatch(typeof(LogicPressureSensorLiquidConfig), "DoPostConfigureComplete")]
+    public static class AddSensorInputValueComponent_Liquid
+    {
+        public static void Postfix(GameObject go)
+        {
+            go.AddOrGet<SensorInputValueComponent>();
+        }
+    }
+
     // Repeat for other sensor types as needed...
 
     // Optionally, patch the UI to allow switching output type
@@ -226,5 +246,12 @@ namespace SensorsP
             CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
             PUIUtils.AddSideScreenContent<SensorSimpleInputSideScreen>();
         }
+    }
+
+    [SerializationConfig(MemberSerialization.OptIn)]
+    public class SensorInputValueComponent : KMonoBehaviour
+    {
+        [Serialize]
+        public string inputValue = "1.0";
     }
 }
