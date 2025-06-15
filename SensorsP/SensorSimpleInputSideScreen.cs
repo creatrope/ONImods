@@ -1,6 +1,7 @@
 using PeterHan.PLib.UI;
 using UnityEngine;
 using TMPro;
+using System.Runtime.CompilerServices;
 
 namespace SensorsP
 { 
@@ -8,27 +9,38 @@ namespace SensorsP
     {
         private PTextField inputField;
         private TMP_InputField unityInputField;
+        private TMP_Text derivativeText;
         private SensorInputValueComponent state;
+        private LogicPressureSensor sensor;
+        private PLabel outputField;
+        private LocText outputLocText;
 
         public override bool IsValidForTarget(GameObject target)
         {
             bool valid = target != null && target.GetComponent<LogicPressureSensor>() != null;
             CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] IsValidForTarget called. Target: " + (target != null ? target.name : "null") + " => " + valid);
+
             return valid;
         }
 
         public override void SetTarget(GameObject target)
         {
+                        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] SetTarget called. Target: " + (target != null ? target.name : "null"));
+
             state = target?.GetComponent<SensorInputValueComponent>();
+            sensor = target?.GetComponent<LogicPressureSensor>();
             string value = state?.inputValue ?? "1.0";
             if (unityInputField != null)
                 unityInputField.text = value;
             else if (inputField != null)
                 inputField.Text = value;
-            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] SetTarget called. Target: " + (target != null ? target.name : "null"));
+
+            UpdateDerivativeLabel();
         }
 
         public override string GetTitle() => "Sensor Simple Input";
+
+        public override int GetSideScreenSortOrder() => -100;
 
         protected override void OnPrefabInit()
         {
@@ -36,28 +48,26 @@ namespace SensorsP
             base.OnPrefabInit();
         }
 
-        public override int GetSideScreenSortOrder() => -100;
-
         protected override void OnSpawn()
         {
             base.OnSpawn();
 
-            // Use ContentContainer if available, fallback to gameObject
             GameObject container = ContentContainer != null ? ContentContainer : gameObject;
 
-            // Create a horizontal panel for label + input
             var row = new PPanel("ThresholdRow") {
                 Direction = PanelDirection.Horizontal,
                 Spacing = 5,
-                Margin = new RectOffset(0, 0, 0, 10) // <-- Adds 10px space below the row
+                Margin = new RectOffset(0, 0, 0, 10)
             };
 
             var thresholdLabel = new PLabel("ThresholdLabel") {
-                Text = "Threshold",
+                Text = "Threshold +/-",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
             };
 
-            inputField = new PTextField();
+            inputField = new PTextField() {
+                MinWidth = 90 // Adjust as needed for your font/UI scale; 90 is a good starting point for 6 digits
+            };
             inputField.OnTextChanged += (sender, text) =>
             {
                 if (state != null)
@@ -70,15 +80,69 @@ namespace SensorsP
                     unityInputField.text = state.inputValue ?? "1.0";
             });
 
+            // Derivative label (right of input)
+            var derivativeLabel = new PLabel("DerivativeLabel")
+            {
+                Text = "0.0",
+                TextStyle = PUITuning.Fonts.TextDarkStyle,
+                ToolTip = "Current first derivative"
+            }.AddOnRealize(go =>
+            {
+                derivativeText = go.transform.Find("Text")?.GetComponent<LocText>();
+                if (derivativeText != null)
+                    derivativeText.alignment = TMPro.TextAlignmentOptions.Left; // Left-justify derivative label
+                UpdateDerivativeLabel();
+            });
+
             row.AddChild(thresholdLabel);
             row.AddChild(inputField);
+            row.AddChild(derivativeLabel);
 
-            // Build the row and add it as the last child of the container
             var rowGO = row.Build();
             rowGO.transform.SetParent(container.transform, false);
             rowGO.transform.SetAsLastSibling();
 
-            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added Threshold label and input field below default UI (OnSpawn).");
+            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added Threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
+        }
+
+        private void UpdateDerivativeLabel()
+        {
+            if (derivativeText != null && sensor != null)
+            {
+                float firstDerivative = 0.0f;
+                if (SensorsP.LogicPressureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(sensor, out var derivativeState))
+                {
+                        int count = derivativeState.Samples.Count;
+                        if (count >= 2)
+                        {
+                            var samples = derivativeState.Samples.ToArray();
+                            var last = samples[count - 1];
+                            var prev = samples[count - 2];
+                            float dt = last.time - prev.time;
+                            float dv = last.value - prev.value;
+                            if (dt != 0)
+                                firstDerivative = dv / dt;
+                        }
+                    }
+                    // Only show the numeric value, left-justified
+                    if (derivativeText is LocText locText)
+                        locText.text = firstDerivative.ToString("0.###");
+                    else
+                        derivativeText.text = firstDerivative.ToString("0.###");
+            }
+            else if (derivativeText != null)
+            {
+                if (derivativeText is LocText locText)
+                    locText.text = "0.0";
+                else
+                    derivativeText.text = "0.0";
+            }
+        }
+
+        // Optionally, update the derivative label every frame if it can change live
+        private void Update()
+        {
+            UpdateDerivativeLabel();
         }
     }
 }

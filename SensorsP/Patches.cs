@@ -104,12 +104,12 @@ namespace SensorsP
     [HarmonyPatch(typeof(LogicPressureSensor), "Sim200ms")]
     public static class LogicPressureSensor_Sim200ms_Patch
     {
+        public static readonly ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>> DerivativeStates =
+            new ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>>();
+
         private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
         private const float T = 1.0f;
         private const float H = 1.0f;
-
-        private static readonly ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>> DerivativeStates =
-            new ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>>();
 
         static void Postfix(LogicPressureSensor __instance)
         {
