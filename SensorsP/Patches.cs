@@ -100,30 +100,67 @@ namespace SensorsP
     public static class LogicPressureSensor_Sim200ms_Patch
     {
         private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
+        private const float T = 1.0f; // seconds
+        private const float H = 1.0f; // threshold
 
-        static void Prefix(LogicPressureSensor __instance, float dt)
+        private class DerivativeState
         {
-            CustomLogger.CustomLogger.Log(
-                $"[PATCH DEBUG] Patched LogicPressureSensor.Sim200ms called. Pressure: {__instance.CurrentValue}, IsSwitchedOn: {__instance.IsSwitchedOn}");
-            // Add your custom logic here
+            public Queue<(float time, float value)> Samples = new Queue<(float, float)>();
         }
+
+        private static readonly ConditionalWeakTable<LogicPressureSensor, DerivativeState> DerivativeStates =
+            new ConditionalWeakTable<LogicPressureSensor, DerivativeState>();
 
         static void Postfix(LogicPressureSensor __instance)
         {
-            // Compose a test ribbon signal: bit 0 = original, bits 1-3 = test pattern
-            int ribbonSignal = (__instance.IsSwitchedOn ? 1 : 0)         // Bit 0: original output
-                            | (1 << 1)                                  // Bit 1: always 1 (test)
-                            | (0 << 2)                                  // Bit 2: always 0 (test)
-                            | (1 << 3);                                 // Bit 3: always 1 (test)
-
-            // Log the ribbon output for debugging
-            CustomLogger.CustomLogger.Log(
-                $"[PATCH DEBUG] Ribbon output: {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})");
-
-            // Send the ribbon signal
             var ports = __instance.GetComponent<LogicPorts>();
-            if (ports != null)
-                ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
+            // Check if the ribbon port is present and connected
+            if (ports == null || ports.outputPortInfo == null ||
+                Array.FindIndex(ports.outputPortInfo, p => p.id == RIBBON_PORT_ID) < 0)
+            {
+                // No ribbon port, suppress calculation and debug output
+                return;
+            }
+
+            var state = DerivativeStates.GetOrCreateValue(__instance);
+
+            float now = Time.time;
+            float value = __instance.CurrentValue;
+
+            state.Samples.Enqueue((now, value));
+
+            while (state.Samples.Count > 0 && now - state.Samples.Peek().time > T)
+                state.Samples.Dequeue();
+
+            float firstDerivative = 0f;
+            if (state.Samples.Count >= 2)
+            {
+                var oldest = state.Samples.Peek();
+                var newest = state.Samples.ToArray()[state.Samples.Count - 1];
+                float dt = newest.time - oldest.time;
+                if (dt > 0.0001f)
+                    firstDerivative = (newest.value - oldest.value) / dt;
+            }
+
+            // Bit logic
+            bool bit0 = __instance.IsSwitchedOn;
+            bool bit1 = firstDerivative > H;
+            bool bit2 = firstDerivative < -H;
+            bool bit3 = false; // Always off
+
+            int ribbonSignal = (bit0 ? 1 : 0)
+                             | (bit1 ? (1 << 1) : 0)
+                             | (bit2 ? (1 << 2) : 0);
+
+            // Detailed debug output
+            CustomLogger.CustomLogger.Log(
+                $"[PATCH DEBUG] Ribbon output: {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})\n" +
+                $"  Bit 0 (IsSwitchedOn): {bit0}\n" +
+                $"  Bit 1 (dP/dt > +H):   {bit1} (FirstDerivative={firstDerivative:0.###}, H={H})\n" +
+                $"  Bit 2 (dP/dt < -H):   {bit2} (FirstDerivative={firstDerivative:0.###}, -H={-H})\n" +
+                $"  Bit 3 (always off):   {bit3}");
+
+            ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
         }
     }
 
