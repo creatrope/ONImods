@@ -100,59 +100,31 @@ namespace SensorsP
     public static class LogicPressureSensor_Sim200ms_Patch
     {
         private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
-        private const float T = 1.0f; // seconds
-        private const float H = 1.0f; // threshold
+        private const float T = 1.0f;
+        private const float H = 1.0f;
 
-        private class DerivativeState
-        {
-            public Queue<(float time, float value)> Samples = new Queue<(float, float)>();
-        }
-
-        private static readonly ConditionalWeakTable<LogicPressureSensor, DerivativeState> DerivativeStates =
-            new ConditionalWeakTable<LogicPressureSensor, DerivativeState>();
+        private static readonly ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>> DerivativeStates =
+            new ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>>();
 
         static void Postfix(LogicPressureSensor __instance)
         {
             var ports = __instance.GetComponent<LogicPorts>();
-            // Check if the ribbon port is present and connected
-            if (ports == null || ports.outputPortInfo == null ||
-                Array.FindIndex(ports.outputPortInfo, p => p.id == RIBBON_PORT_ID) < 0)
-            {
-                // No ribbon port, suppress calculation and debug output
+            if (!SensorMathUtils.HasRibbonPort(ports, RIBBON_PORT_ID))
                 return;
-            }
-
-            var state = DerivativeStates.GetOrCreateValue(__instance);
 
             float now = Time.time;
             float value = __instance.CurrentValue;
+            float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
 
-            state.Samples.Enqueue((now, value));
-
-            while (state.Samples.Count > 0 && now - state.Samples.Peek().time > T)
-                state.Samples.Dequeue();
-
-            float firstDerivative = 0f;
-            if (state.Samples.Count >= 2)
-            {
-                var oldest = state.Samples.Peek();
-                var newest = state.Samples.ToArray()[state.Samples.Count - 1];
-                float dt = newest.time - oldest.time;
-                if (dt > 0.0001f)
-                    firstDerivative = (newest.value - oldest.value) / dt;
-            }
-
-            // Bit logic
             bool bit0 = __instance.IsSwitchedOn;
             bool bit1 = firstDerivative > H;
             bool bit2 = firstDerivative < -H;
-            bool bit3 = false; // Always off
+            bool bit3 = false;
 
             int ribbonSignal = (bit0 ? 1 : 0)
                              | (bit1 ? (1 << 1) : 0)
                              | (bit2 ? (1 << 2) : 0);
 
-            // Detailed debug output
             CustomLogger.CustomLogger.Log(
                 $"[PATCH DEBUG] Ribbon output: {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})\n" +
                 $"  Bit 0 (IsSwitchedOn): {bit0}\n" +
