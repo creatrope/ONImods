@@ -71,7 +71,11 @@ namespace SensorsP
             inputField.OnTextChanged += (sender, text) =>
             {
                 if (state != null)
+                {
                     state.inputValue = text;
+                    if (!float.TryParse(text, out state.parsedValue))
+                        state.parsedValue = 1.0f; // fallback or previous value
+                }
             };
             inputField.AddOnRealize(go =>
             {

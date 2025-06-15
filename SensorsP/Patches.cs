@@ -121,10 +121,8 @@ namespace SensorsP
             float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
 
             // Get the per-sensor threshold from SensorInputValueComponent
-            float threshold = 1.0f; // fallback default
             var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
-            if (inputValueComponent != null && float.TryParse(inputValueComponent.inputValue, out float parsed))
-                threshold = parsed;
+            float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
 
             bool bit0 = __instance.IsSwitchedOn;
             bool bit1 = firstDerivative > threshold;
@@ -261,5 +259,8 @@ namespace SensorsP
     {
         [Serialize]
         public string inputValue = "1.0";
+
+        [NonSerialized]
+        public float parsedValue = 1.0f;
     }
 }
