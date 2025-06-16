@@ -130,7 +130,7 @@ namespace SensorsP
             bool bit0 = __instance.IsSwitchedOn;
             bool bit1 = smoothedDerivative > threshold;
             bool bit2 = smoothedDerivative < -threshold;
-            bool bit3 = false;
+            //bool bit3 = false;
 
             int ribbonSignal = (bit0 ? 1 : 0)
                              | (bit1 ? (1 << 1) : 0)
@@ -238,6 +238,16 @@ namespace SensorsP
         }
     }
 
+    // Attach to new TEMPERATURE sensors
+    [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
+    public static class AddSensorInputValueComponent_Temperature
+    {
+        public static void Postfix(GameObject go)
+        {
+            go.AddOrGet<SensorInputValueComponent>();
+        }
+    }
+
     // Repeat for other sensor types as needed...
 
     // Optionally, patch the UI to allow switching output type
@@ -263,4 +273,75 @@ namespace SensorsP
         public float parsedValue = 1.0f;
     }
 
+    [HarmonyPatch(typeof(LogicTemperatureSensor), "Sim200ms")]
+    public static class LogicTemperatureSensor_Sim200ms_Patch
+    {
+        public static readonly ConditionalWeakTable<LogicTemperatureSensor, SensorMathUtils.DerivativeState<LogicTemperatureSensor>> DerivativeStates =
+            new ConditionalWeakTable<LogicTemperatureSensor, SensorMathUtils.DerivativeState<LogicTemperatureSensor>>();
+
+        private static readonly HashedString RIBBON_PORT_ID = new HashedString("ThermoSensorPlusRibbonOutput");
+        private const float T = 0.2f; // 0.2 second, matches Sim200ms
+
+        static void Postfix(LogicTemperatureSensor __instance)
+        {
+            var ports = __instance.GetComponent<LogicPorts>();
+            if (ports == null)
+                return;
+
+            float now = Time.time;
+            float value = __instance.CurrentValue;
+            float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
+
+            // Use smoothed derivative for ribbon logic
+            float smoothedDerivative = 0.0f;
+            if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
+                smoothedDerivative = derivativeState.GetSmoothedDerivative(3);
+
+            // Optionally, get threshold from a component (for symmetry with pressure)
+            float threshold = 0.1f;
+            var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
+            if (inputValueComponent != null)
+                threshold = inputValueComponent.parsedValue;
+
+            bool bit0 = __instance.IsSwitchedOn;
+            bool bit1 = smoothedDerivative > threshold;
+            bool bit2 = smoothedDerivative < -threshold;
+
+            int ribbonSignal = (bit0 ? 1 : 0)
+                             | (bit1 ? (1 << 1) : 0)
+                             | (bit2 ? (1 << 2) : 0);
+
+            ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
+        }
+    }
+
+    [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
+    public static class ThermoSensorPatchNew
+    {
+        [HarmonyPostfix]
+        public static void Postfix(GameObject go)
+        {
+            // Add ribbon port if needed (implement as in your pressure sensor logic)
+            var logicPorts = go.AddOrGet<LogicPorts>();
+            var portId = new HashedString("ThermoSensorPlusRibbonOutput");
+            var newPort = new LogicPorts.Port(
+                portId,
+                new CellOffset(0, 0),
+                "Ribbon Output (Temp)",
+                "Ribbon Output Active",
+                "Ribbon Output Inactive",
+                true,
+                LogicPortSpriteType.RibbonOutput
+            );
+            if (logicPorts.outputPortInfo == null)
+                logicPorts.outputPortInfo = new[] { newPort };
+            else
+            {
+                var ports = new List<LogicPorts.Port>(logicPorts.outputPortInfo);
+                if (!ports.Exists(p => p.id == portId))
+                    ports.Add(newPort);
+                logicPorts.outputPortInfo = ports.ToArray();
+            }
+        }
+    }
 }
