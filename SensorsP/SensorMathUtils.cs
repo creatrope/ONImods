@@ -5,9 +5,29 @@ using UnityEngine;
 
 public static class SensorMathUtils
 {
+    // Sampling interval in seconds (adjust here)
+    public const float SamplingIntervalSeconds = 1.0f;
+
     public class DerivativeState<T>
     {
         public Queue<(float time, float value)> Samples = new Queue<(float, float)>();
+
+        // Smoothing method
+        public float GetSmoothedDerivative(int window = 3)
+        {
+            if (Samples.Count < 2)
+                return 0f;
+            var arr = Samples.ToArray();
+            int count = Math.Min(window, arr.Length - 1);
+            float sum = 0f;
+            for (int i = arr.Length - count; i < arr.Length; i++)
+            {
+                float dt = arr[i].time - arr[i - 1].time;
+                if (dt != 0)
+                    sum += (arr[i].value - arr[i - 1].value) / dt;
+            }
+            return sum / count;
+        }
     }
 
     public static float UpdateAndGetFirstDerivative<T>(

@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using TUNING; // Or the correct namespace for LogicPressureSensorConfig
 using UnityEngine;
 using KSerialization;
+using static SensorMathUtils;
 
 namespace SensorsP
 {
@@ -23,9 +24,6 @@ namespace SensorsP
         public static void OnLoad()
         {
             var _ = typeof(SensorsP.Patches); // This will trigger the static constructor
-
-            // Demonstrate PLib integration: enable PLib logging
-            CustomLogger.CustomLogger.Log("PLib options enabled.");
             CustomLogger.CustomLogger.ResetLog();
         }
 
@@ -35,7 +33,6 @@ namespace SensorsP
         {
             public static void Prefix()
             {
-                Debug.Log("[SensorsP] I execute before Db.Initialize!");
                 CustomLogger.CustomLogger.LogPath = System.IO.Path.Combine(
                   System.IO.Path.GetDirectoryName(CustomLogger.CustomLogger.LogPath),
                 "SensorsP.log"
@@ -46,7 +43,6 @@ namespace SensorsP
 
             public static void Postfix()
             {
-                Debug.Log("[SensorsP] I execute after Db.Initialize!");
                 CustomLogger.CustomLogger.Log("SensorsP: Postfix.");
             }
         }
@@ -108,7 +104,9 @@ namespace SensorsP
             new ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>>();
 
         private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
-        private const float T = 1.0f;
+
+        // Use the shared sampling interval constant
+        private const float T = SensorMathUtils.SamplingIntervalSeconds;
 
         static void Postfix(LogicPressureSensor __instance)
         {
@@ -120,29 +118,32 @@ namespace SensorsP
             float value = __instance.CurrentValue;
             float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
 
+            // Use smoothed derivative for ribbon logic
+            float smoothedDerivative = 0.0f;
+            if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
+                smoothedDerivative = derivativeState.GetSmoothedDerivative(3); // window size can be adjusted
+
             // Get the per-sensor threshold from SensorInputValueComponent
             var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
             float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
 
             bool bit0 = __instance.IsSwitchedOn;
-            bool bit1 = firstDerivative > threshold;
-            bool bit2 = firstDerivative < -threshold;
+            bool bit1 = smoothedDerivative > threshold;
+            bool bit2 = smoothedDerivative < -threshold;
             bool bit3 = false;
 
             int ribbonSignal = (bit0 ? 1 : 0)
                              | (bit1 ? (1 << 1) : 0)
                              | (bit2 ? (1 << 2) : 0);
 
-            // Debugging message for ribbonSignal calculation
-            CustomLogger.CustomLogger.Log(
-                $"[DEBUG] RibbonSignal calculation for {__instance.name}:\n" +
-                $"  bit0 (IsSwitchedOn): {bit0}\n" +
-                $"  bit1 (dP/dt > +threshold): {bit1} (firstDerivative={firstDerivative:0.###}, threshold={threshold})\n" +
-                $"  bit2 (dP/dt < -threshold): {bit2} (firstDerivative={firstDerivative:0.###}, -threshold={-threshold})\n" +
-                $"  bit3 (always off): {bit3}\n" +
-                $"  ribbonSignal (binary): {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})"
-            );
-
+            //CustomLogger.CustomLogger.Log(
+            //    $"[DEBUG] RibbonSignal calculation for {__instance.name}:\n" +
+            //    $"  bit0 (IsSwitchedOn): {bit0}\n" +
+            //    $"  bit1 (smoothed dP/dt > +threshold): {bit1} (smoothedDerivative={smoothedDerivative:0.###}, threshold={threshold})\n" +
+            //    $"  bit2 (smoothed dP/dt < -threshold): {bit2} (smoothedDerivative={smoothedDerivative:0.###}, -threshold={-threshold})\n" +
+            //    $"  bit3 (always off): {bit3}\n" +
+            //    $"  ribbonSignal (binary): {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})"
+           // );
             ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
         }
     }
@@ -155,7 +156,6 @@ namespace SensorsP
         [HarmonyPostfix]
         public static void Postfix(GameObject go)
         {
-            CustomLogger.CustomLogger.Log("[DEBUG] LogicPressureSensorGasConfig.DoPostConfigureComplete patch executed.");
             if (go == null) return;
 
             var logicPorts = go.AddOrGet<LogicPorts>();
@@ -191,7 +191,6 @@ namespace SensorsP
         [HarmonyPostfix]
         public static void Postfix(GameObject go)
         {
-            CustomLogger.CustomLogger.Log("[DEBUG] LogicPressureSensorLiquidConfig.DoPostConfigureComplete patch executed.");
             if (go == null) return;
 
             var logicPorts = go.AddOrGet<LogicPorts>();
@@ -263,4 +262,5 @@ namespace SensorsP
         [NonSerialized]
         public float parsedValue = 1.0f;
     }
+
 }

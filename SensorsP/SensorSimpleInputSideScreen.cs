@@ -9,11 +9,9 @@ namespace SensorsP
     {
         private PTextField inputField;
         private TMP_InputField unityInputField;
-        private TMP_Text derivativeText;
+        private LocText derivativeText;
         private SensorInputValueComponent state;
         private LogicPressureSensor sensor;
-        private PLabel outputField;
-        private LocText outputLocText;
 
         public override bool IsValidForTarget(GameObject target)
         {
@@ -105,8 +103,6 @@ namespace SensorsP
             var rowGO = row.Build();
             rowGO.transform.SetParent(container.transform, false);
             rowGO.transform.SetAsLastSibling();
-
-            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] Added Threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
         }
 
         private void UpdateDerivativeLabel()
