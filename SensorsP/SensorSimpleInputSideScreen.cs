@@ -2,31 +2,37 @@ using PeterHan.PLib.UI;
 using UnityEngine;
 using TMPro;
 using System.Runtime.CompilerServices;
+using HLib;
 
 namespace SensorsP
-{ 
+{
     public class SensorSimpleInputSideScreen : SideScreenContent
     {
         private PTextField inputField;
         private TMP_InputField unityInputField;
-        private LocText derivativeText;
+        private TMP_Text derivativeText;
         private SensorInputValueComponent state;
-        private LogicPressureSensor sensor;
+        private LogicPressureSensor pressureSensor;
+        private LogicTemperatureSensor temperatureSensor;
 
         public override bool IsValidForTarget(GameObject target)
         {
-            bool valid = target != null && target.GetComponent<LogicPressureSensor>() != null;
-            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] IsValidForTarget called. Target: " + (target != null ? target.name : "null") + " => " + valid);
+            // Accept both pressure and temperature sensors
+            bool valid = target != null &&
+                (target.GetComponent<LogicPressureSensor>() != null ||
+                 target.GetComponent<LogicTemperatureSensor>() != null);
+            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] IsValidForTarget called. Target: " + (target != null ? target.name : "null") + " => " + valid);
 
             return valid;
         }
 
         public override void SetTarget(GameObject target)
         {
-                        CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] SetTarget called. Target: " + (target != null ? target.name : "null"));
+            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] SetTarget called. Target: " + (target != null ? target.name : "null"));
 
             state = target?.GetComponent<SensorInputValueComponent>();
-            sensor = target?.GetComponent<LogicPressureSensor>();
+            pressureSensor = target?.GetComponent<LogicPressureSensor>();
+            temperatureSensor = target?.GetComponent<LogicTemperatureSensor>();
             string value = state?.inputValue ?? "1.0";
             if (unityInputField != null)
                 unityInputField.text = value;
@@ -42,7 +48,7 @@ namespace SensorsP
 
         protected override void OnPrefabInit()
         {
-            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
+            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
             base.OnPrefabInit();
         }
 
@@ -69,11 +75,7 @@ namespace SensorsP
             inputField.OnTextChanged += (sender, text) =>
             {
                 if (state != null)
-                {
                     state.inputValue = text;
-                    if (!float.TryParse(text, out state.parsedValue))
-                        state.parsedValue = 1.0f; // fallback or previous value
-                }
             };
             inputField.AddOnRealize(go =>
             {
@@ -103,39 +105,54 @@ namespace SensorsP
             var rowGO = row.Build();
             rowGO.transform.SetParent(container.transform, false);
             rowGO.transform.SetAsLastSibling();
+
+            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] Added Threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
         }
 
         private void UpdateDerivativeLabel()
         {
-            if (derivativeText != null && sensor != null)
+            float firstDerivative = 0.0f;
+            if (pressureSensor != null)
             {
-                float firstDerivative = 0.0f;
-                if (SensorsP.LogicPressureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(sensor, out var derivativeState))
+                if (SensorsP.LogicPressureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(pressureSensor, out var derivativeState))
                 {
-                        int count = derivativeState.Samples.Count;
-                        if (count >= 2)
-                        {
-                            var samples = derivativeState.Samples.ToArray();
-                            var last = samples[count - 1];
-                            var prev = samples[count - 2];
-                            float dt = last.time - prev.time;
-                            float dv = last.value - prev.value;
-                            if (dt != 0)
-                                firstDerivative = dv / dt;
-                        }
+                    int count = derivativeState.Samples.Count;
+                    if (count >= 2)
+                    {
+                        var samples = derivativeState.Samples.ToArray();
+                        var last = samples[count - 1];
+                        var prev = samples[count - 2];
+                        float dt = last.time - prev.time;
+                        float dv = last.value - prev.value;
+                        if (dt != 0)
+                            firstDerivative = dv / dt;
                     }
-                    // Only show the numeric value, left-justified
-                    if (derivativeText is LocText locText)
-                        locText.text = firstDerivative.ToString("0.###");
-                    else
-                        derivativeText.text = firstDerivative.ToString("0.###");
+                }
             }
-            else if (derivativeText != null)
+            else if (temperatureSensor != null)
+            {
+                if (SensorsP.LogicTemperatureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(temperatureSensor, out var derivativeState))
+                {
+                    int count = derivativeState.Samples.Count;
+                    if (count >= 2)
+                    {
+                        var samples = derivativeState.Samples.ToArray();
+                        var last = samples[count - 1];
+                        var prev = samples[count - 2];
+                        float dt = last.time - prev.time;
+                        float dv = last.value - prev.value;
+                        if (dt != 0)
+                            firstDerivative = dv / dt;
+                    }
+                }
+            }
+
+            if (derivativeText != null)
             {
                 if (derivativeText is LocText locText)
-                    locText.text = "0.0";
+                    locText.text = firstDerivative.ToString("0.###");
                 else
-                    derivativeText.text = "0.0";
+                    derivativeText.text = firstDerivative.ToString("0.###");
             }
         }
 

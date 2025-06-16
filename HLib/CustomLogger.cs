@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace CustomLogger
+namespace HLib
 {
     /// <summary>
     /// A simple, reusable logger for writing text messages to a file.

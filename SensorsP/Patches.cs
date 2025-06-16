@@ -11,20 +11,37 @@ using TUNING; // Or the correct namespace for LogicPressureSensorConfig
 using UnityEngine;
 using KSerialization;
 using static SensorMathUtils;
+using HLib; // <-- Add this using directive
 
 namespace SensorsP
 {
     public class Patches
     {
+        // Change from private to public so HotkeyListenerUpdater can access it
+        public static HLib.HotkeyListener hotkeyListener;
+
         static Patches()
         {
-            CustomLogger.CustomLogger.Log("SensorsP: Patches class loaded.");
+            Debug.Log("SensorsP: Patches class loaded");
+
+            HLib.CustomLogger.Log("SensorsP: Patches class loaded.");
+
+
+            // Initialize and register hotkey
+            hotkeyListener = new HLib.HotkeyListener();
+            hotkeyListener.RegisterHotkey("F8", () =>
+            {
+                HLib.CustomLogger.Log("[HotkeyListener] F8 was pressed in SensorsP.");
+            });
+
+            // Register for Unity update loop
+            HotkeyListenerUpdater.Create();
         }
 
         public static void OnLoad()
         {
-            var _ = typeof(SensorsP.Patches); // This will trigger the static constructor
-            CustomLogger.CustomLogger.ResetLog();
+            HLib.CustomLogger.ResetLog();
+            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(SensorsP.Patches).TypeHandle);
         }
 
         [HarmonyPatch(typeof(Db))]
@@ -33,17 +50,61 @@ namespace SensorsP
         {
             public static void Prefix()
             {
-                CustomLogger.CustomLogger.LogPath = System.IO.Path.Combine(
-                  System.IO.Path.GetDirectoryName(CustomLogger.CustomLogger.LogPath),
+                HLib.CustomLogger.LogPath = System.IO.Path.Combine(
+                  System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
                 "SensorsP.log"
                 );
-                Debug.Log($"[SensorsP] Using log path: {CustomLogger.CustomLogger.LogPath}");
-                CustomLogger.CustomLogger.Log("SensorsP: Prefix.");
+                Debug.Log($"[SensorsP] Using log path: {HLib.CustomLogger.LogPath}");
+                HLib.CustomLogger.Log("SensorsP: Prefix.");
             }
 
             public static void Postfix()
             {
-                CustomLogger.CustomLogger.Log("SensorsP: Postfix.");
+                HLib.CustomLogger.Log("SensorsP: Postfix.");
+            }
+        }
+    }
+
+    // MonoBehaviour to call HotkeyListener.Update every frame
+    public class HotkeyListenerUpdater : KMonoBehaviour
+    {
+        private static HotkeyListenerUpdater _instance;
+
+        public static void Create()
+        {
+            if (_instance == null)
+            {
+                var go = new GameObject("SensorsP_HotkeyListenerUpdater");
+                UnityEngine.Object.DontDestroyOnLoad(go);
+                _instance = go.AddComponent<HotkeyListenerUpdater>();
+            }
+            HLib.CustomLogger.Log("HotkeyListenerUpdater.Create called");
+        }
+
+        void Update()
+        {
+            // Gather pressed keys (example for F8, expand as needed)
+            var pressed = new System.Collections.Generic.List<string>();
+            bool f8Down = Input.GetKey(KeyCode.F8);
+            bool f8JustPressed = Input.GetKeyDown(KeyCode.F8);
+
+            if (f8Down)
+                pressed.Add("F8");
+
+            // Call the static hotkeyListener
+            if (Patches.hotkeyListener != null)
+            {
+                Patches.hotkeyListener.Update(pressed);
+            }
+            else
+            {
+                HLib.CustomLogger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
+            }
+
+            // Only log when F8 is actually pressed
+            if (f8JustPressed)
+            {
+                HLib.CustomLogger.Log("[HotkeyListenerUpdater] F8 pressed (Input.GetKeyDown).");
             }
         }
     }
@@ -52,6 +113,8 @@ namespace SensorsP
     {
         public override void OnLoad(Harmony harmony)
         {
+            Debug.Log("SensorsP: Mod.OnLoad called.");
+            SensorsP.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
             base.OnLoad(harmony);
             PUtil.InitLibrary();
             new POptions().RegisterOptions(this, typeof(ModOptions));
@@ -136,14 +199,13 @@ namespace SensorsP
                              | (bit1 ? (1 << 1) : 0)
                              | (bit2 ? (1 << 2) : 0);
 
-            //CustomLogger.CustomLogger.Log(
+            //HLib.CustomLogger.Log(
             //    $"[DEBUG] RibbonSignal calculation for {__instance.name}:\n" +
             //    $"  bit0 (IsSwitchedOn): {bit0}\n" +
             //    $"  bit1 (smoothed dP/dt > +threshold): {bit1} (smoothedDerivative={smoothedDerivative:0.###}, threshold={threshold})\n" +
             //    $"  bit2 (smoothed dP/dt < -threshold): {bit2} (smoothedDerivative={smoothedDerivative:0.###}, -threshold={-threshold})\n" +
-            //    $"  bit3 (always off): {bit3}\n" +
             //    $"  ribbonSignal (binary): {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})"
-           // );
+            //);
             ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
         }
     }
@@ -258,8 +320,9 @@ namespace SensorsP
     {
         public static void Postfix()
         {
-            CustomLogger.CustomLogger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
+            HLib.CustomLogger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
             PUIUtils.AddSideScreenContent<SensorSimpleInputSideScreen>();
+            // No need to register a separate temperature side screen.
         }
     }
 

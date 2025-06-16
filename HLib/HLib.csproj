@@ -7,8 +7,8 @@
     <ProjectGuid>{F446A1C4-7859-4B1A-A508-32997511C3BF}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CustomLogger</RootNamespace>
-    <AssemblyName>CustomLogger</AssemblyName>
+    <RootNamespace>HLib</RootNamespace>
+    <AssemblyName>HLib</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HotkeyListener.cs" />
     <Compile Include="CustomLogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

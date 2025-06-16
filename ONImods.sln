@@ -21,8 +21,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeleportPlus", "TeleportPlu
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Archive", "Archive", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CustomLogger", "CustomLogger\CustomLogger.csproj", "{F446A1C4-7859-4B1A-A508-32997511C3BF}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Templates", "Templates", "{186AE015-10F6-41DD-8663-E7DB169DA089}"
 	ProjectSection(SolutionItems) = preProject
 		..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\mod.yaml = ..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\mod.yaml
@@ -35,6 +33,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Templates", "Templates", "{
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SensorsP", "SensorsP\SensorsP.csproj", "{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HLib", "HLib\HLib.csproj", "{F446A1C4-7859-4B1A-A508-32997511C3BF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -58,14 +58,14 @@ Global
 		{B66426D4-E12C-42A5-8D0B-DC0C863389EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B66426D4-E12C-42A5-8D0B-DC0C863389EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B66426D4-E12C-42A5-8D0B-DC0C863389EC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F446A1C4-7859-4B1A-A508-32997511C3BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F446A1C4-7859-4B1A-A508-32997511C3BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F446A1C4-7859-4B1A-A508-32997511C3BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F446A1C4-7859-4B1A-A508-32997511C3BF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F446A1C4-7859-4B1A-A508-32997511C3BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F446A1C4-7859-4B1A-A508-32997511C3BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F446A1C4-7859-4B1A-A508-32997511C3BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F446A1C4-7859-4B1A-A508-32997511C3BF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

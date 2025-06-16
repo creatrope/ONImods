@@ -67,6 +67,9 @@
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\lib\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>..\lib\UnityEngine.UI.dll</HintPath>
     </Reference>
@@ -87,14 +90,14 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CustomLogger\CustomLogger.csproj">
+    <ProjectReference Include="..\HLib\HLib.csproj">
       <Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
-      <Name>CustomLogger</Name>
+      <Name>HLib</Name>
     </ProjectReference>
   </ItemGroup>
   <!-- ILRepack and Deploy Targets -->
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(ILRepackExe)&quot; /out:&quot;$(MSBuildProjectDirectory)\bin\Release\SensorsP.dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\SensorsP.dll&quot; &quot;$(SolutionDir)lib\0Harmony.dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\CustomLogger.dll&quot; &quot;$(SolutionDir)lib\PLib.dll&quot;" />
+    <Exec Command="&quot;$(ILRepackExe)&quot; /out:&quot;$(MSBuildProjectDirectory)\bin\Release\SensorsP.dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\SensorsP.dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(SolutionDir)lib\PLib.dll&quot;" />
   </Target>
   <Target Name="RunDeploy" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="&quot;$(MSBuildProjectDirectory)\..\deploy.bat&quot; &quot;$(MSBuildProjectDirectory)&quot;" />
