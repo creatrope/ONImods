@@ -14,6 +14,11 @@ namespace HLib
         public static bool EnableLogging { get; set; } = true;
 
         /// <summary>
+        /// Enable or disable custom logging.
+        /// </summary>
+        public static bool Enabled { get; set; } = true;
+
+        /// <summary>
         /// Path to the log file. Set this before logging if you want a custom location.
         /// </summary>
         public static string LogPath { get; set; } = Path.Combine(
@@ -29,7 +34,7 @@ namespace HLib
         /// <param name="logName">Optional log file name (e.g., "MyLog.log").</param>
         public static void Log(string message, string logName = null)
         {
-            if (!EnableLogging)
+            if (!EnableLogging || !Enabled)
                 return;
 
             try
@@ -68,6 +73,9 @@ namespace HLib
         /// <param name="logName">Optional log file name (e.g., "MyLog.log").</param>
         public static void ResetLog(string logName = null)
         {
+            if (!Enabled)
+                return;
+
             try
             {
                 string logPathToUse = LogPath;
@@ -94,6 +102,9 @@ namespace HLib
         /// </summary>
         public static void Reset()
         {
+            if (!Enabled)
+                return;
+
             try
             {
                 File.WriteAllText(LogPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log reset.\n");

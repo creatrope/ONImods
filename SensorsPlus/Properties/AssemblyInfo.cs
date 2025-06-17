@@ -4,11 +4,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("SensorsPlus")]
+[assembly: AssemblyTitle("SensorsP")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("SensorsPlus")]
+[assembly: AssemblyProduct("SensorsP")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -18,7 +18,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("c991bef3-6fb3-4e6e-88d5-600fb8f9e5fe")]
+[assembly: Guid("ac2fe871-60c8-40da-8614-fb0bc3adf29b")]
 
 // Version information for an assembly consists of the following four values:
 //

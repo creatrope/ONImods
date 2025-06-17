@@ -27,7 +27,7 @@ if not exist "%DEST_DIR%" (
 set "MOVED_FILES="
 
 :: Static files to copy (file or folder)
-set FILE_LIST=preview.png mod.yaml mod_info.yaml anim ArtifactsConfig.json
+set FILE_LIST=preview.png mod.yaml mod_info.yaml anim ArtifactsConfig.json README.md
 
 for %%F in (%FILE_LIST%) do (
     set "SRC_FILE=%PROJECT_DIR%\%%F"
@@ -49,7 +49,6 @@ for %%F in (%FILE_LIST%) do (
     )
 )
 
-:: Copy and rename the merged DLL to the mod folder as SensorsP.dll
 copy "%BUILD_DIR%\%MOD_NAME%.Merged.dll" "%DEST_DIR%\%MOD_NAME%.dll"
 
 :: Summary

@@ -1,3 +1,0 @@
-title: ConveyorLoadGate
-description: "Changes automation input of Conveyor Loader to stop accepting input on red, and flush current contents onto rails"
-staticID: "ConveyorLoadGate" 
