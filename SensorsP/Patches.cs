@@ -1,10 +1,10 @@
+using System;
 using Database;
 using HarmonyLib;
 using KMod;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.UI;
-using System;
 using System.Collections.Generic; // For List<>
 using System.Runtime.CompilerServices;
 using TUNING; // Or the correct namespace for LogicPressureSensorConfig
@@ -23,19 +23,32 @@ namespace SensorsP
         // Add a static flag to control ribbon debug output
         public static bool ribbonDebugEnabled = false;
 
+        // Add a guard to prevent double static initialization
+        private static bool staticInitialized = false;
+
         static Patches()
         {
+            if (staticInitialized)
+                return;
+            staticInitialized = true;
+
+            var uniqueId = Guid.NewGuid();
+            var timestamp = System.DateTime.Now.ToString("O");
+            var domain = AppDomain.CurrentDomain.FriendlyName;
+            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            Debug.Log($"SensorsP: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            HLib.CustomLogger.Log($"SensorsP: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+
             Debug.Log("SensorsP: Patches class loaded");
 
             HLib.CustomLogger.Log("SensorsP: Patches class loaded.");
 
-
             // Initialize and register hotkey
             hotkeyListener = new HLib.HotkeyListener();
-            hotkeyListener.RegisterHotkey("F11", () =>
+            hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
             {
                 ribbonDebugEnabled = !ribbonDebugEnabled;
-                HLib.CustomLogger.Log($"[HotkeyListener] F11 pressed: ribbonDebugEnabled is now {(ribbonDebugEnabled ? "ON" : "OFF")}");
+                HLib.CustomLogger.Log($"[HotkeyListener] Ctrl+F11 pressed: ribbonDebugEnabled is now {(ribbonDebugEnabled ? "ON" : "OFF")}");
             });
 
             // Register for Unity update loop
@@ -44,26 +57,28 @@ namespace SensorsP
 
         public static void OnLoad()
         {
-            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(SensorsP.Patches).TypeHandle);
+            //System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(SensorsP.Patches).TypeHandle);
         }
 
-        [HarmonyPatch(typeof(Db))]
-        [HarmonyPatch("Initialize")]
+        [HarmonyPatch(typeof(Db), "Initialize")]
         public class Db_Initialize_Patch
         {
+            // Static counters for logging
+            private static int prefixCount = 0;
+            private static int postfixCount = 0;
+
             public static void Prefix()
             {
-                HLib.CustomLogger.LogPath = System.IO.Path.Combine(
-                  System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
-                "SensorsP.log"
-                );
-                Debug.Log($"[SensorsP] Using log path: {HLib.CustomLogger.LogPath}");
-                HLib.CustomLogger.Log("SensorsP: Prefix.");
+                prefixCount++;
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+                HLib.CustomLogger.Log($"SensorsP: Prefix {prefixCount} | Assembly: {asm.Location}");
             }
 
             public static void Postfix()
             {
-                HLib.CustomLogger.Log("SensorsP: Postfix.");
+                postfixCount++;
+                var asm = System.Reflection.Assembly.GetExecutingAssembly();
+                HLib.CustomLogger.Log($"SensorsP: Postfix {postfixCount} | Assembly: {asm.Location}");
             }
         }
     }
@@ -86,13 +101,15 @@ namespace SensorsP
 
         void Update()
         {
-            // Gather pressed keys (example for F11, expand as needed)
+            // Gather pressed keys (example for Ctrl+F11, expand as needed)
             var pressed = new System.Collections.Generic.List<string>();
+            bool ctrlDown = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
             bool f11Down = Input.GetKey(KeyCode.F11);
             bool f11JustPressed = Input.GetKeyDown(KeyCode.F11);
 
-            if (f11Down)
-                pressed.Add("F11");
+            // Only add "Ctrl+F11" if Ctrl is held and F11 is pressed
+            if (ctrlDown && f11Down)
+                pressed.Add("Ctrl+F11");
 
             // Call the static hotkeyListener
             if (Patches.hotkeyListener != null)
@@ -104,26 +121,36 @@ namespace SensorsP
                 HLib.CustomLogger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
             }
 
-            // Only log when F11 is actually pressed
-            if (f11JustPressed)
+            // Only log when Ctrl+F11 is actually pressed
+            if (ctrlDown && f11JustPressed)
             {
-                HLib.CustomLogger.Log("[HotkeyListenerUpdater] F11 pressed (Input.GetKeyDown).");
+                HLib.CustomLogger.Log("[HotkeyListenerUpdater] Ctrl+F11 pressed (Input.GetKeyDown).");
             }
         }
     }
 
     public class Mod : UserMod2
     {
+        private static int onLoadCount = 0;
+
         public override void OnLoad(Harmony harmony)
         {
-            Debug.Log("SensorsP: Mod.OnLoad called.");
-
             // Set log path before resetting log, so the correct file is overwritten
             HLib.CustomLogger.LogPath = System.IO.Path.Combine(
                 System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
                 "SensorsP.log"
             );
             HLib.CustomLogger.ResetLog(); // Now this will reset the correct log file
+
+            onLoadCount++;
+            var uniqueId = Guid.NewGuid();
+            var timestamp = System.DateTime.Now.ToString("O");
+            var domain = AppDomain.CurrentDomain.FriendlyName;
+            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            Debug.Log($"SensorsP: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            HLib.CustomLogger.Log($"SensorsP: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+
+            Debug.Log("SensorsP: Mod.OnLoad called.");
 
             SensorsP.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
             base.OnLoad(harmony);
@@ -203,29 +230,13 @@ namespace SensorsP
             if (now > lastSampleTime)
             {
                 float value = __instance.CurrentValue;
-                //HLib.CustomLogger.Log($"[Sim200ms_Patch] Adding sample: time={now}, value={value} for {__instance.name}");
-                float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
+                SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
                 _lastSampleTimes[__instance] = now;
-            }
-            else
-            {
-                //HLib.CustomLogger.Log($"[Sim200ms_Patch] Skipped adding sample for {__instance.name} (duplicate time: {now})");
-            }
-
-            if (DerivativeStates.TryGetValue(__instance, out var state))
-            {
-                var samples = state.Samples.ToArray();
-                //HLib.CustomLogger.Log($"[Sim200ms_Patch] DerivativeStates sample count for {__instance.name}: {samples.Length}");
-                if (samples.Length > 0)
-                {
-                    var last = samples[samples.Length - 1];
-                    //HLib.CustomLogger.Log($"[Sim200ms_Patch] Last sample: time={last.time}, value={last.value}");
-                }
             }
 
             float smoothedDerivative = 0.0f;
-            if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
-                smoothedDerivative = derivativeState.GetSmoothedDerivative(3);
+            if (DerivativeStates.TryGetValue(__instance, out var state))
+                smoothedDerivative = state.GetSmoothedDerivative(3);
 
             var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
             float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
@@ -360,22 +371,16 @@ namespace SensorsP
     [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
     public static class SensorSimpleInputSideScreenRegister
     {
+        private static bool registered = false;
+
         public static void Postfix()
         {
+            if (registered) return;
+            registered = true;
             HLib.CustomLogger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
+            // Register the side screen for both pressure and temperature sensors
             PUIUtils.AddSideScreenContent<SensorSimpleInputSideScreen>();
-            // No need to register a separate temperature side screen.
         }
-    }
-
-    [SerializationConfig(MemberSerialization.OptIn)]
-    public class SensorInputValueComponent : KMonoBehaviour
-    {
-        [Serialize]
-        public string inputValue = "1.0";
-
-        [NonSerialized]
-        public float parsedValue = 1.0f;
     }
 
     [HarmonyPatch(typeof(LogicTemperatureSensor), "Sim200ms")]
@@ -395,17 +400,20 @@ namespace SensorsP
 
             float now = Time.time;
             float value = __instance.CurrentValue;
+
+            // Log instance identity for debugging
+            HLib.CustomLogger.Log($"[TEMP Sim200ms] Patch instance: {__instance} (hash={__instance.GetHashCode()})");
+
             float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
 
-            // Use smoothed derivative for ribbon logic
             float smoothedDerivative = 0.0f;
             if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
             {
                 var samples = derivativeState.Samples.ToArray();
                 smoothedDerivative = derivativeState.GetSmoothedDerivative(3);
+                HLib.CustomLogger.Log($"[TEMP Sim200ms] {__instance.name} sample count: {samples.Length}, smoothed dT/dt: {smoothedDerivative}");
             }
 
-            // Optionally, get threshold from a component (for symmetry with pressure)
             float threshold = 0.1f;
             var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
             if (inputValueComponent != null)

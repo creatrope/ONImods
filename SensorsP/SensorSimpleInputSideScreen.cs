@@ -3,6 +3,7 @@ using UnityEngine;
 using TMPro;
 using System.Runtime.CompilerServices;
 using HLib;
+using SensorsP;
 
 namespace SensorsP
 {
@@ -20,10 +21,11 @@ namespace SensorsP
 
         public override bool IsValidForTarget(GameObject target)
         {
-            // Accept both pressure and temperature sensors
-            bool valid = target != null &&
-                (target.GetComponent<LogicPressureSensor>() != null ||
-                 target.GetComponent<LogicTemperatureSensor>() != null);
+            // Add debug logging to see what is being checked
+            bool hasPressure = target != null && target.GetComponent<LogicPressureSensor>() != null;
+            bool hasTemperature = target != null && target.GetComponent<LogicTemperatureSensor>() != null;
+            bool valid = hasPressure || hasTemperature;
+            HLib.CustomLogger.Log($"[SideScreen] IsValidForTarget: target={target?.name}, hasPressure={hasPressure}, hasTemperature={hasTemperature}, valid={valid}");
             return valid;
         }
 
@@ -33,6 +35,11 @@ namespace SensorsP
             state = target?.GetComponent<SensorInputValueComponent>();
             pressureSensor = target?.GetComponent<LogicPressureSensor>();
             temperatureSensor = target?.GetComponent<LogicTemperatureSensor>();
+
+            // Log instance identity for debugging
+            if (temperatureSensor != null)
+                HLib.CustomLogger.Log($"[SideScreen] SetTarget: temperatureSensor={temperatureSensor} (hash={temperatureSensor.GetHashCode()})");
+
             string value = state?.inputValue ?? "1.0";
             if (unityInputField != null)
                 unityInputField.text = value;
@@ -80,7 +87,13 @@ namespace SensorsP
             inputField.OnTextChanged += (sender, text) =>
             {
                 if (state != null)
+                {
                     state.inputValue = text;
+                    if (float.TryParse(text, out float parsed))
+                        state.parsedValue = parsed;
+                    else
+                        state.parsedValue = 1.0f; // fallback or handle as you wish
+                }
             };
             inputField.AddOnRealize(go =>
             {
@@ -97,9 +110,41 @@ namespace SensorsP
                 ToolTip = "Current first derivative"
             }.AddOnRealize(go =>
             {
-                derivativeText = go.transform.Find("Text")?.GetComponent<LocText>();
-                if (derivativeText != null)
-                    derivativeText.alignment = TMPro.TextAlignmentOptions.Left; // Left-justify derivative label
+                // Check for the child "Text" object
+                var textChild = go.transform.Find("Text");
+                string sensorType = pressureSensor != null ? "Pressure" : (temperatureSensor != null ? "Temperature" : "Unknown");
+
+                if (textChild == null)
+                {
+                    HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child NOT FOUND.");
+                    derivativeText = null;
+                }
+                else
+                {
+                    // Try to get LocText first
+                    derivativeText = textChild.GetComponent<LocText>();
+                    if (derivativeText != null)
+                    {
+                        HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: LocText assigned.");
+                        ((LocText)derivativeText).alignment = TMPro.TextAlignmentOptions.Left;
+                    }
+                    else
+                    {
+                        // Try to get TMP_Text as fallback
+                        var tmpText = textChild.GetComponent<TMP_Text>();
+                        if (tmpText != null)
+                        {
+                            derivativeText = tmpText;
+                            HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: TMP_Text assigned (not LocText).");
+                            tmpText.alignment = TMPro.TextAlignmentOptions.Left;
+                        }
+                        else
+                        {
+                            HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child found, but neither LocText nor TMP_Text present.");
+                            derivativeText = null;
+                        }
+                    }
+                }
                 UpdateDerivativeLabel();
             });
 
@@ -117,48 +162,47 @@ namespace SensorsP
         private void UpdateDerivativeLabel()
         {
             float firstDerivative = 0.0f;
+
             if (pressureSensor != null)
             {
                 if (SensorsP.LogicPressureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(pressureSensor, out var derivativeState))
                 {
-                    var samples = derivativeState.Samples.ToArray();
-                    int count = samples.Length;
-                    if (count >= 2)
-                    {
-                        var last = samples[count - 1];
-                        var prev = samples[count - 2];
-                        float dt = last.time - prev.time;
-                        float dv = last.value - prev.value;
-                        if (dt != 0)
-                            firstDerivative = dv / dt;
-                    }
+                    // Show the moving average of the first derivative
+                    firstDerivative = derivativeState.MovingAverageFirstDerivative;
                 }
             }
             else if (temperatureSensor != null)
             {
+                // Log instance identity for debugging
+                HLib.CustomLogger.Log($"[UI] UpdateDerivativeLabel: temperatureSensor={temperatureSensor} (hash={temperatureSensor.GetHashCode()})");
+
                 if (SensorsP.LogicTemperatureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(temperatureSensor, out var derivativeState))
                 {
-                    var samples = derivativeState.Samples.ToArray();
-                    int count = samples.Length;
-                    if (count >= 2)
-                    {
-                        var last = samples[count - 1];
-                        var prev = samples[count - 2];
-                        float dt = last.time - prev.time;
-                        float dv = last.value - prev.value;
-                        if (dt != 0)
-                            firstDerivative = dv / dt;
-                    }
+                    // Show the moving average of the first derivative
+                    firstDerivative = derivativeState.MovingAverageFirstDerivative;
+                    HLib.CustomLogger.Log($"[UI] TemperatureSensor: {temperatureSensor.name}, dT/dt (avg): {firstDerivative}");
+                }
+                else
+                {
+                    HLib.CustomLogger.Log($"[UI] TemperatureSensor: {temperatureSensor.name}, no derivative state found.");
                 }
             }
 
-            if (derivativeText != null)
+            if (derivativeText == null)
             {
-                if (derivativeText is LocText locText)
-                    locText.text = firstDerivative.ToString("0.###");
-                else
-                    derivativeText.text = firstDerivative.ToString("0.###");
+                string sensorType = pressureSensor != null ? "Pressure" : (temperatureSensor != null ? "Temperature" : "Unknown");
+                HLib.CustomLogger.Log($"[UI] UpdateDerivativeLabel: derivativeText is null for {sensorType} sensor!");
+                return;
             }
+
+            if (!(derivativeText is LocText locText))
+            {
+                string sensorType = pressureSensor != null ? "Pressure" : (temperatureSensor != null ? "Temperature" : "Unknown");
+                HLib.CustomLogger.Log($"[UI] UpdateDerivativeLabel: derivativeText is not LocText (actual type: {derivativeText.GetType().Name}) for {sensorType} sensor!");
+                return;
+            }
+
+            locText.text = firstDerivative.ToString("0.###");
         }
 
         // Optionally, update the derivative label every frame if it can change live

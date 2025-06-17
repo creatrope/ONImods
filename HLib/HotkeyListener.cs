@@ -33,11 +33,14 @@ namespace HLib
         /// <summary>
         /// Call this method from your application's main loop, passing in the currently pressed keys.
         /// </summary>
-        public void Update(IEnumerable<string> currentlyPressedKeys)
+        public void Update(List<string> pressed)
         {
-            foreach (var kvp in hotkeyActions)
+            foreach (var hotkey in hotkeyActions)
             {
-                HandleDebouncedHotkey(kvp.Key, kvp.Value, currentlyPressedKeys);
+                if (pressed.Contains(hotkey.Key))
+                {
+                    hotkey.Value.Invoke();
+                }
             }
         }
 
