@@ -203,23 +203,23 @@ namespace SensorsP
             if (now > lastSampleTime)
             {
                 float value = __instance.CurrentValue;
-                HLib.CustomLogger.Log($"[Sim200ms_Patch] Adding sample: time={now}, value={value} for {__instance.name}");
+                //HLib.CustomLogger.Log($"[Sim200ms_Patch] Adding sample: time={now}, value={value} for {__instance.name}");
                 float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
                 _lastSampleTimes[__instance] = now;
             }
             else
             {
-                HLib.CustomLogger.Log($"[Sim200ms_Patch] Skipped adding sample for {__instance.name} (duplicate time: {now})");
+                //HLib.CustomLogger.Log($"[Sim200ms_Patch] Skipped adding sample for {__instance.name} (duplicate time: {now})");
             }
 
             if (DerivativeStates.TryGetValue(__instance, out var state))
             {
                 var samples = state.Samples.ToArray();
-                HLib.CustomLogger.Log($"[Sim200ms_Patch] DerivativeStates sample count for {__instance.name}: {samples.Length}");
+                //HLib.CustomLogger.Log($"[Sim200ms_Patch] DerivativeStates sample count for {__instance.name}: {samples.Length}");
                 if (samples.Length > 0)
                 {
                     var last = samples[samples.Length - 1];
-                    HLib.CustomLogger.Log($"[Sim200ms_Patch] Last sample: time={last.time}, value={last.value}");
+                    //HLib.CustomLogger.Log($"[Sim200ms_Patch] Last sample: time={last.time}, value={last.value}");
                 }
             }
 
