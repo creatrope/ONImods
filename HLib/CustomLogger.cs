@@ -8,8 +8,6 @@ namespace HLib
     /// </summary>
     public static class CustomLogger
     {
-        private static bool _initialized = false;
-
         /// <summary>
         /// Enable or disable logging globally.
         /// </summary>
@@ -51,17 +49,15 @@ namespace HLib
                 if (!Directory.Exists(logDir))
                     Directory.CreateDirectory(logDir);
 
-                // Only initialize once per log file per process
-                if (!_initialized || (logName != null && !File.Exists(logPathToUse)))
+                using (var fs = new FileStream(logPathToUse, FileMode.Append, FileAccess.Write, FileShare.Read))
+                using (var sw = new StreamWriter(fs))
                 {
-                    File.WriteAllText(logPathToUse, $"[CustomLogger] Log started at {System.DateTime.Now}\n");
-                    _initialized = true;
+                    sw.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
                 }
-                File.AppendAllText(logPathToUse, $"{System.DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
             }
-            catch
+            catch (Exception ex)
             {
-                // Swallow exceptions to avoid recursive logging or crashing.
+                Console.Error.WriteLine($"[CustomLogger] Failed to write log: {ex}");
             }
         }
 
@@ -81,12 +77,15 @@ namespace HLib
                     logPathToUse = Path.Combine(dir, logName);
                 }
 
-                File.WriteAllText(logPathToUse, $"[CustomLogger] Log started at {System.DateTime.Now}\n");
-                _initialized = true;
+                using (var fs = new FileStream(logPathToUse, FileMode.Create, FileAccess.Write, FileShare.Read))
+                using (var sw = new StreamWriter(fs))
+                {
+                    sw.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log reset.");
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Swallow exceptions to avoid recursive logging or crashing.
+                Console.Error.WriteLine($"[CustomLogger] Failed to reset log: {ex}");
             }
         }
     }

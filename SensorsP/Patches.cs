@@ -20,6 +20,9 @@ namespace SensorsP
         // Change from private to public so HotkeyListenerUpdater can access it
         public static HLib.HotkeyListener hotkeyListener;
 
+        // Add a static flag to control ribbon debug output
+        public static bool ribbonDebugEnabled = false;
+
         static Patches()
         {
             Debug.Log("SensorsP: Patches class loaded");
@@ -29,9 +32,10 @@ namespace SensorsP
 
             // Initialize and register hotkey
             hotkeyListener = new HLib.HotkeyListener();
-            hotkeyListener.RegisterHotkey("F8", () =>
+            hotkeyListener.RegisterHotkey("F11", () =>
             {
-                HLib.CustomLogger.Log("[HotkeyListener] F8 was pressed in SensorsP.");
+                ribbonDebugEnabled = !ribbonDebugEnabled;
+                HLib.CustomLogger.Log($"[HotkeyListener] F11 pressed: ribbonDebugEnabled is now {(ribbonDebugEnabled ? "ON" : "OFF")}");
             });
 
             // Register for Unity update loop
@@ -40,7 +44,6 @@ namespace SensorsP
 
         public static void OnLoad()
         {
-            HLib.CustomLogger.ResetLog();
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(SensorsP.Patches).TypeHandle);
         }
 
@@ -83,13 +86,13 @@ namespace SensorsP
 
         void Update()
         {
-            // Gather pressed keys (example for F8, expand as needed)
+            // Gather pressed keys (example for F11, expand as needed)
             var pressed = new System.Collections.Generic.List<string>();
-            bool f8Down = Input.GetKey(KeyCode.F8);
-            bool f8JustPressed = Input.GetKeyDown(KeyCode.F8);
+            bool f11Down = Input.GetKey(KeyCode.F11);
+            bool f11JustPressed = Input.GetKeyDown(KeyCode.F11);
 
-            if (f8Down)
-                pressed.Add("F8");
+            if (f11Down)
+                pressed.Add("F11");
 
             // Call the static hotkeyListener
             if (Patches.hotkeyListener != null)
@@ -101,10 +104,10 @@ namespace SensorsP
                 HLib.CustomLogger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
             }
 
-            // Only log when F8 is actually pressed
-            if (f8JustPressed)
+            // Only log when F11 is actually pressed
+            if (f11JustPressed)
             {
-                HLib.CustomLogger.Log("[HotkeyListenerUpdater] F8 pressed (Input.GetKeyDown).");
+                HLib.CustomLogger.Log("[HotkeyListenerUpdater] F11 pressed (Input.GetKeyDown).");
             }
         }
     }
@@ -114,8 +117,17 @@ namespace SensorsP
         public override void OnLoad(Harmony harmony)
         {
             Debug.Log("SensorsP: Mod.OnLoad called.");
+
+            // Set log path before resetting log, so the correct file is overwritten
+            HLib.CustomLogger.LogPath = System.IO.Path.Combine(
+                System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
+                "SensorsP.log"
+            );
+            HLib.CustomLogger.ResetLog(); // Now this will reset the correct log file
+
             SensorsP.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
             base.OnLoad(harmony);
+
             PUtil.InitLibrary();
             new POptions().RegisterOptions(this, typeof(ModOptions));
             harmony.PatchAll();
@@ -171,41 +183,71 @@ namespace SensorsP
         // Use the shared sampling interval constant
         private const float T = SensorMathUtils.SamplingIntervalSeconds;
 
+        // Add this static field to the LogicPressureSensor_Sim200ms_Patch class
+        private static System.Collections.Generic.Dictionary<LogicPressureSensor, float> _lastSampleTimes;
+
         static void Postfix(LogicPressureSensor __instance)
         {
             var ports = __instance.GetComponent<LogicPorts>();
             if (!SensorMathUtils.HasRibbonPort(ports, RIBBON_PORT_ID))
                 return;
 
+            // Use a static dictionary to track last sample time per sensor to avoid duplicate samples per frame
+            if (_lastSampleTimes == null)
+                _lastSampleTimes = new System.Collections.Generic.Dictionary<LogicPressureSensor, float>();
             float now = Time.time;
-            float value = __instance.CurrentValue;
-            float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
+            float lastSampleTime = -1f;
+            _lastSampleTimes.TryGetValue(__instance, out lastSampleTime);
 
-            // Use smoothed derivative for ribbon logic
+            // Only add a new sample if time has advanced
+            if (now > lastSampleTime)
+            {
+                float value = __instance.CurrentValue;
+                HLib.CustomLogger.Log($"[Sim200ms_Patch] Adding sample: time={now}, value={value} for {__instance.name}");
+                float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
+                _lastSampleTimes[__instance] = now;
+            }
+            else
+            {
+                HLib.CustomLogger.Log($"[Sim200ms_Patch] Skipped adding sample for {__instance.name} (duplicate time: {now})");
+            }
+
+            if (DerivativeStates.TryGetValue(__instance, out var state))
+            {
+                var samples = state.Samples.ToArray();
+                HLib.CustomLogger.Log($"[Sim200ms_Patch] DerivativeStates sample count for {__instance.name}: {samples.Length}");
+                if (samples.Length > 0)
+                {
+                    var last = samples[samples.Length - 1];
+                    HLib.CustomLogger.Log($"[Sim200ms_Patch] Last sample: time={last.time}, value={last.value}");
+                }
+            }
+
             float smoothedDerivative = 0.0f;
             if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
-                smoothedDerivative = derivativeState.GetSmoothedDerivative(3); // window size can be adjusted
+                smoothedDerivative = derivativeState.GetSmoothedDerivative(3);
 
-            // Get the per-sensor threshold from SensorInputValueComponent
             var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
             float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
 
             bool bit0 = __instance.IsSwitchedOn;
             bool bit1 = smoothedDerivative > threshold;
             bool bit2 = smoothedDerivative < -threshold;
-            //bool bit3 = false;
 
             int ribbonSignal = (bit0 ? 1 : 0)
                              | (bit1 ? (1 << 1) : 0)
                              | (bit2 ? (1 << 2) : 0);
 
-            //HLib.CustomLogger.Log(
-            //    $"[DEBUG] RibbonSignal calculation for {__instance.name}:\n" +
-            //    $"  bit0 (IsSwitchedOn): {bit0}\n" +
-            //    $"  bit1 (smoothed dP/dt > +threshold): {bit1} (smoothedDerivative={smoothedDerivative:0.###}, threshold={threshold})\n" +
-            //    $"  bit2 (smoothed dP/dt < -threshold): {bit2} (smoothedDerivative={smoothedDerivative:0.###}, -threshold={-threshold})\n" +
-            //    $"  ribbonSignal (binary): {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})"
-            //);
+            if (Patches.ribbonDebugEnabled)
+            {
+                HLib.CustomLogger.Log(
+                    $"[DEBUG] RibbonSignal calculation for {__instance.name}:\n" +
+                    $"  bit0 (IsSwitchedOn): {bit0}\n" +
+                    $"  bit1 (smoothed dP/dt > +threshold): {bit1} (smoothedDerivative={smoothedDerivative:0.###}, threshold={threshold})\n" +
+                    $"  bit2 (smoothed dP/dt < -threshold): {bit2} (smoothedDerivative={smoothedDerivative:0.###}, -threshold={-threshold})\n" +
+                    $"  ribbonSignal (binary): {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})"
+                );
+            }
             ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
         }
     }
@@ -358,7 +400,10 @@ namespace SensorsP
             // Use smoothed derivative for ribbon logic
             float smoothedDerivative = 0.0f;
             if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
+            {
+                var samples = derivativeState.Samples.ToArray();
                 smoothedDerivative = derivativeState.GetSmoothedDerivative(3);
+            }
 
             // Optionally, get threshold from a component (for symmetry with pressure)
             float threshold = 0.1f;

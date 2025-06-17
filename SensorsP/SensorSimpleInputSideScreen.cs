@@ -15,21 +15,21 @@ namespace SensorsP
         private LogicPressureSensor pressureSensor;
         private LogicTemperatureSensor temperatureSensor;
 
+        // Add a guard to prevent duplicate UI creation
+        private bool uiInitialized = false;
+
         public override bool IsValidForTarget(GameObject target)
         {
             // Accept both pressure and temperature sensors
             bool valid = target != null &&
                 (target.GetComponent<LogicPressureSensor>() != null ||
                  target.GetComponent<LogicTemperatureSensor>() != null);
-            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] IsValidForTarget called. Target: " + (target != null ? target.name : "null") + " => " + valid);
-
             return valid;
         }
 
         public override void SetTarget(GameObject target)
         {
-            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] SetTarget called. Target: " + (target != null ? target.name : "null"));
-
+            // Only update references and values, do not create UI here
             state = target?.GetComponent<SensorInputValueComponent>();
             pressureSensor = target?.GetComponent<LogicPressureSensor>();
             temperatureSensor = target?.GetComponent<LogicTemperatureSensor>();
@@ -55,6 +55,11 @@ namespace SensorsP
         protected override void OnSpawn()
         {
             base.OnSpawn();
+
+            // Prevent duplicate UI creation
+            if (uiInitialized)
+                return;
+            uiInitialized = true;
 
             GameObject container = ContentContainer != null ? ContentContainer : gameObject;
 
@@ -116,10 +121,10 @@ namespace SensorsP
             {
                 if (SensorsP.LogicPressureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(pressureSensor, out var derivativeState))
                 {
-                    int count = derivativeState.Samples.Count;
+                    var samples = derivativeState.Samples.ToArray();
+                    int count = samples.Length;
                     if (count >= 2)
                     {
-                        var samples = derivativeState.Samples.ToArray();
                         var last = samples[count - 1];
                         var prev = samples[count - 2];
                         float dt = last.time - prev.time;
@@ -133,10 +138,10 @@ namespace SensorsP
             {
                 if (SensorsP.LogicTemperatureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(temperatureSensor, out var derivativeState))
                 {
-                    int count = derivativeState.Samples.Count;
+                    var samples = derivativeState.Samples.ToArray();
+                    int count = samples.Length;
                     if (count >= 2)
                     {
-                        var samples = derivativeState.Samples.ToArray();
                         var last = samples[count - 1];
                         var prev = samples[count - 2];
                         float dt = last.time - prev.time;

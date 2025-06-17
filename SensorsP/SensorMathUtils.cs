@@ -32,26 +32,30 @@ public static class SensorMathUtils
 
     public static float UpdateAndGetFirstDerivative<T>(
         ConditionalWeakTable<T, DerivativeState<T>> table,
-        T instance,
-        float now,
+        T sensor,
+        float time,
         float value,
-        float windowSeconds)
+        float dtMin = 0.01f)
         where T : class
     {
-        var state = table.GetOrCreateValue(instance);
-        state.Samples.Enqueue((now, value));
-        while (state.Samples.Count > 0 && now - state.Samples.Peek().time > windowSeconds)
-            state.Samples.Dequeue();
-
-        if (state.Samples.Count >= 2)
+        if (!table.TryGetValue(sensor, out var state))
         {
-            var oldest = state.Samples.Peek();
-            var newest = state.Samples.ToArray()[state.Samples.Count - 1];
-            float dt = newest.time - oldest.time;
-            if (dt > 0.0001f)
-                return (newest.value - oldest.value) / dt;
+            state = new DerivativeState<T>();
+            table.Add(sensor, state);
         }
-        return 0f;
+
+        // Only add sample if time has advanced
+        if (state.Samples.Count == 0 || time > state.Samples.Peek().time)
+        {
+            state.Samples.Enqueue((time, value));
+            // Optionally, limit queue size
+            while (state.Samples.Count > 16)
+                state.Samples.Dequeue();
+        }
+
+        // ...existing derivative calculation logic...
+        // (no change needed here)
+        return state.GetSmoothedDerivative(3);
     }
 
     public static bool HasRibbonPort(LogicPorts ports, HashedString portId)
