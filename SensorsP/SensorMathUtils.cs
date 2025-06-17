@@ -26,22 +26,6 @@ public static class SensorMathUtils
                 Samples.Dequeue();
         }
 
-        public float GetSmoothedDerivative(int window = 3)
-        {
-            if (Samples.Count < 2)
-                return 0f;
-            var arr = Samples.ToArray();
-            int count = Math.Min(window, arr.Length - 1);
-            float sum = 0f;
-            for (int i = arr.Length - count; i < arr.Length; i++)
-            {
-                float dt = arr[i].time - arr[i - 1].time;
-                if (dt != 0)
-                    sum += (arr[i].value - arr[i - 1].value) / dt;
-            }
-            return sum / count;
-        }
-
         public float GetFirstDerivative()
         {
             if (Samples.Count < 2)
@@ -51,14 +35,13 @@ public static class SensorMathUtils
             var prev = arr[arr.Length - 2];
             float dt = last.time - prev.time;
             float dv = last.value - prev.value;
-            HLib.CustomLogger.Log($"[SensorMathUtils] GetFirstDerivative: last=({last.time}, {last.value}), prev=({prev.time}, {prev.value}), dt={dt}, dv={dv}");
             if (dt == 0)
                 return 0f;
             return dv / dt;
         }
 
         // Compute moving average of the first derivative over the last N samples
-        public float ComputeMovingAverageFirstDerivative(int window = 5)
+        public float ComputeMovingAverageFirstDerivative(int window = 3)
         {
             if (Samples.Count < 2)
                 return 0f;
@@ -87,18 +70,12 @@ public static class SensorMathUtils
         float dtExpected)
         where T : class
     {
-        // Debug: Log input to derivative calculation
-        HLib.CustomLogger.Log($"[SensorMathUtils] UpdateAndGetFirstDerivative: instance={instance}, time={time}, value={value}, dtExpected={dtExpected}");
-
         if (!table.TryGetValue(instance, out var state))
         {
             state = new DerivativeState<T>();
             table.Add(instance, state);
         }
         state.AddSample(time, value);
-
-        // Debug: Log sample count after adding
-        HLib.CustomLogger.Log($"[SensorMathUtils] DerivativeState sample count for {instance}: {state.Samples.Count}");
 
         float firstDerivative = state.GetFirstDerivative();
         state.LastFirstDerivative = firstDerivative; // Store for UI

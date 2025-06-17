@@ -25,7 +25,7 @@ namespace SensorsP
             bool hasPressure = target != null && target.GetComponent<LogicPressureSensor>() != null;
             bool hasTemperature = target != null && target.GetComponent<LogicTemperatureSensor>() != null;
             bool valid = hasPressure || hasTemperature;
-            HLib.CustomLogger.Log($"[SideScreen] IsValidForTarget: target={target?.name}, hasPressure={hasPressure}, hasTemperature={hasTemperature}, valid={valid}");
+            //HLib.CustomLogger.Log($"[SideScreen] IsValidForTarget: target={target?.name}, hasPressure={hasPressure}, hasTemperature={hasTemperature}, valid={valid}");
             return valid;
         }
 
@@ -35,10 +35,6 @@ namespace SensorsP
             state = target?.GetComponent<SensorInputValueComponent>();
             pressureSensor = target?.GetComponent<LogicPressureSensor>();
             temperatureSensor = target?.GetComponent<LogicTemperatureSensor>();
-
-            // Log instance identity for debugging
-            if (temperatureSensor != null)
-                HLib.CustomLogger.Log($"[SideScreen] SetTarget: temperatureSensor={temperatureSensor} (hash={temperatureSensor.GetHashCode()})");
 
             string value = state?.inputValue ?? "1.0";
             if (unityInputField != null)
@@ -168,23 +164,15 @@ namespace SensorsP
                 if (SensorsP.LogicPressureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(pressureSensor, out var derivativeState))
                 {
                     // Show the moving average of the first derivative
-                    firstDerivative = derivativeState.MovingAverageFirstDerivative;
+                    firstDerivative = derivativeState.ComputeMovingAverageFirstDerivative(3);
                 }
             }
             else if (temperatureSensor != null)
             {
-                // Log instance identity for debugging
-                HLib.CustomLogger.Log($"[UI] UpdateDerivativeLabel: temperatureSensor={temperatureSensor} (hash={temperatureSensor.GetHashCode()})");
-
                 if (SensorsP.LogicTemperatureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(temperatureSensor, out var derivativeState))
                 {
                     // Show the moving average of the first derivative
-                    firstDerivative = derivativeState.MovingAverageFirstDerivative;
-                    HLib.CustomLogger.Log($"[UI] TemperatureSensor: {temperatureSensor.name}, dT/dt (avg): {firstDerivative}");
-                }
-                else
-                {
-                    HLib.CustomLogger.Log($"[UI] TemperatureSensor: {temperatureSensor.name}, no derivative state found.");
+                    firstDerivative = derivativeState.ComputeMovingAverageFirstDerivative(3);
                 }
             }
 

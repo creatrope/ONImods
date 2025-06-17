@@ -88,5 +88,20 @@ namespace HLib
                 Console.Error.WriteLine($"[CustomLogger] Failed to reset log: {ex}");
             }
         }
+
+        /// <summary>
+        /// Resets the log file by overwriting it with an empty string or a reset message.
+        /// </summary>
+        public static void Reset()
+        {
+            try
+            {
+                File.WriteAllText(LogPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log reset.\n");
+            }
+            catch (Exception)
+            {
+                // Ignore errors on reset
+            }
+        }
     }
 }

@@ -135,6 +135,9 @@ namespace SensorsP
 
         public override void OnLoad(Harmony harmony)
         {
+            // Reset the log at OnLoad for extra safety
+            HLib.CustomLogger.Reset();
+
             // Set log path before resetting log, so the correct file is overwritten
             HLib.CustomLogger.LogPath = System.IO.Path.Combine(
                 System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
@@ -236,7 +239,7 @@ namespace SensorsP
 
             float smoothedDerivative = 0.0f;
             if (DerivativeStates.TryGetValue(__instance, out var state))
-                smoothedDerivative = state.GetSmoothedDerivative(3);
+                smoothedDerivative = state.ComputeMovingAverageFirstDerivative(3);
 
             var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
             float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
@@ -401,17 +404,13 @@ namespace SensorsP
             float now = Time.time;
             float value = __instance.CurrentValue;
 
-            // Log instance identity for debugging
-            HLib.CustomLogger.Log($"[TEMP Sim200ms] Patch instance: {__instance} (hash={__instance.GetHashCode()})");
-
             float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
 
             float smoothedDerivative = 0.0f;
             if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
             {
                 var samples = derivativeState.Samples.ToArray();
-                smoothedDerivative = derivativeState.GetSmoothedDerivative(3);
-                HLib.CustomLogger.Log($"[TEMP Sim200ms] {__instance.name} sample count: {samples.Length}, smoothed dT/dt: {smoothedDerivative}");
+                smoothedDerivative = derivativeState.ComputeMovingAverageFirstDerivative(3);
             }
 
             float threshold = 0.1f;
