@@ -129,6 +129,24 @@ namespace SensorsP
         }
     }
 
+    [ConfigFile("modoptions.yaml", true, true)]
+    public class ModOptions
+    {
+        // Define your options here, e.g.:
+        public bool ExampleOption { get; set; } = true;
+
+        [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
+        public bool EnableCustomLog { get; set; } = true;
+
+        [Option("Moving Average Window", "Number of samples for the moving average of the derivative (minimum 1).")]
+        [Limit(1, 32)]
+        public int MovingAverageWindow { get; set; } = 3;
+
+        [Option("Sampling Interval (seconds)", "How often sensors sample values (in seconds). Default is 1.0.")]
+        [Limit(0.05, 10.0)]
+        public float SamplingIntervalSeconds { get; set; } = 1.0f;
+    }
+
     public class Mod : UserMod2
     {
         private static int onLoadCount = 0;
@@ -138,6 +156,12 @@ namespace SensorsP
             // Load options and set logger enabled flag
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
             HLib.CustomLogger.Enabled = options.EnableCustomLog;
+
+            // Set the moving average window globally
+            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 3;
+
+            // Set the sampling interval globally
+            SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds > 0.01f ? options.SamplingIntervalSeconds : 1.0f;
 
             // Reset the log at OnLoad for extra safety
             if (HLib.CustomLogger.Enabled)
@@ -170,16 +194,6 @@ namespace SensorsP
         }
     }
 
-    [ConfigFile("modoptions.yaml", true, true)]
-    public class ModOptions
-    {
-        // Define your options here, e.g.:
-        public bool ExampleOption { get; set; } = true;
-
-        [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
-        public bool EnableCustomLog { get; set; } = true;
-    }
-
     public class SensorOutputType
     {
         public static readonly SensorOutputType Single = new SensorOutputType("Single");
@@ -202,7 +216,7 @@ namespace SensorsP
             if (OutputTypes.TryGetValue(sensor, out var type))
                 return type;
             return SensorOutputType.Single;
-        }
+        }a
 
         public static void SetOutputType(object sensor, SensorOutputType type)
         {
@@ -212,17 +226,13 @@ namespace SensorsP
     }
 
     [HarmonyPatch(typeof(LogicPressureSensor), "Sim200ms")]
-    public static class LogicPressureSensor_Sim200ms_Patch
+    public static class LogicPressureSensor_Sim200ms_Paatch
     {
         public static readonly ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>> DerivativeStates =
             new ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>>();
 
         private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
 
-        // Use the shared sampling interval constant
-        private const float T = SensorMathUtils.SamplingIntervalSeconds;
-
-        // Add this static field to the LogicPressureSensor_Sim200ms_Patch class
         private static System.Collections.Generic.Dictionary<LogicPressureSensor, float> _lastSampleTimes;
 
         static void Postfix(LogicPressureSensor __instance)
@@ -231,7 +241,6 @@ namespace SensorsP
             if (!SensorMathUtils.HasRibbonPort(ports, RIBBON_PORT_ID))
                 return;
 
-            // Use a static dictionary to track last sample time per sensor to avoid duplicate samples per frame
             if (_lastSampleTimes == null)
                 _lastSampleTimes = new System.Collections.Generic.Dictionary<LogicPressureSensor, float>();
             float now = Time.time;
@@ -242,13 +251,14 @@ namespace SensorsP
             if (now > lastSampleTime)
             {
                 float value = __instance.CurrentValue;
-                SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
+                // Use the dynamic interval
+                SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, SensorMathUtils.SamplingIntervalSeconds);
                 _lastSampleTimes[__instance] = now;
             }
 
             float smoothedDerivative = 0.0f;
             if (DerivativeStates.TryGetValue(__instance, out var state))
-                smoothedDerivative = state.ComputeMovingAverageFirstDerivative(3);
+                smoothedDerivative = state.ComputeMovingAverageFirstDerivative(SensorMathUtils.MovingAverageWindow);
 
             var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
             float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
@@ -402,7 +412,6 @@ namespace SensorsP
             new ConditionalWeakTable<LogicTemperatureSensor, SensorMathUtils.DerivativeState<LogicTemperatureSensor>>();
 
         private static readonly HashedString RIBBON_PORT_ID = new HashedString("ThermoSensorPlusRibbonOutput");
-        private const float T = 0.2f; // 0.2 second, matches Sim200ms
 
         static void Postfix(LogicTemperatureSensor __instance)
         {
@@ -413,13 +422,14 @@ namespace SensorsP
             float now = Time.time;
             float value = __instance.CurrentValue;
 
-            float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, T);
+            // Use the dynamic interval
+            float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, SensorMathUtils.SamplingIntervalSeconds);
 
             float smoothedDerivative = 0.0f;
             if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
             {
                 var samples = derivativeState.Samples.ToArray();
-                smoothedDerivative = derivativeState.ComputeMovingAverageFirstDerivative(3);
+                smoothedDerivative = derivativeState.ComputeMovingAverageFirstDerivative(SensorMathUtils.MovingAverageWindow);
             }
 
             float threshold = 0.1f;

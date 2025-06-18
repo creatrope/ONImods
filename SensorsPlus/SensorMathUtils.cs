@@ -6,7 +6,15 @@ using UnityEngine;
 public static class SensorMathUtils
 {
     // Sampling interval in seconds (adjust here)
-    public const float SamplingIntervalSeconds = 1.0f;
+    public static float SamplingIntervalSeconds { get; set; } = 1.0f;
+
+    // Public static property for the moving average window, default 3, min 1
+    private static int _movingAverageWindow = 3;
+    public static int MovingAverageWindow
+    {
+        get => _movingAverageWindow;
+        set => _movingAverageWindow = value < 1 ? 1 : value;
+    }
 
     public class DerivativeState<T>
     {
@@ -40,13 +48,14 @@ public static class SensorMathUtils
             return dv / dt;
         }
 
-        // Compute moving average of the first derivative over the last N samples
-        public float ComputeMovingAverageFirstDerivative(int window = 3)
+        // Use the global MovingAverageWindow if window <= 0
+        public float ComputeMovingAverageFirstDerivative(int window = -1)
         {
+            int actualWindow = window > 0 ? window : SensorMathUtils.MovingAverageWindow;
             if (Samples.Count < 2)
                 return 0f;
             var arr = Samples.ToArray();
-            int count = Math.Min(window, arr.Length - 1);
+            int count = Math.Min(actualWindow, arr.Length - 1);
             float sum = 0f;
             int actual = 0;
             for (int i = arr.Length - count; i < arr.Length; i++)
@@ -82,8 +91,8 @@ public static class SensorMathUtils
         if (firstDerivative != 0f)
             state.LastNonzeroFirstDerivative = firstDerivative;
 
-        // Update moving average of the first derivative (window size 3)
-        state.MovingAverageFirstDerivative = state.ComputeMovingAverageFirstDerivative(3);
+        // Use the global MovingAverageWindow
+        state.MovingAverageFirstDerivative = state.ComputeMovingAverageFirstDerivative();
 
         return firstDerivative;
     }
