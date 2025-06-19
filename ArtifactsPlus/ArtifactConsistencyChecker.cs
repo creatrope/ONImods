@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Klei.AI;
+using HLib; // Add this line to use CustomLogger
 
 namespace ArtifactsPlus
 {

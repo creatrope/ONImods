@@ -6,6 +6,7 @@ using Klei.AI;
 using System.IO;
 using Newtonsoft.Json;
 using System.Reflection;
+using HLib; // Add this if you want to use 'CustomLogger' directly, or fully qualify as shown below
 
 namespace ArtifactsPlus
 {
@@ -44,7 +45,7 @@ namespace ArtifactsPlus
                 }
             }
 
-            System.IO.File.AppendAllText(CustomLogger.LogPath, "");
+            System.IO.File.AppendAllText(HLib.CustomLogger.LogPath, "");
         }
 
         private static IEnumerable<GameObject> GetAllMinions()

@@ -1,97 +1,89 @@
 using UnityEngine;
-using ArtifactsPlus;
-using System.Linq;
 using System.Collections.Generic;
-using Klei.AI;
-using System.Reflection;
-using System;
-using System.IO;
-using Newtonsoft.Json;
-using HarmonyLib;
+using HLib;
 
 namespace ArtifactsPlus
 {
-    public class ArtifactHotkeyListener : MonoBehaviour
+    /// <summary>
+    /// MonoBehaviour to call HotkeyListener.Update every frame, symmetric with SensorsPlus.
+    /// </summary>
+    public class ArtifactHotkeyListenerUpdater : KMonoBehaviour
     {
-        // List of all supported hotkeys and their actions
-        private readonly Dictionary<KeyCode, System.Action> hotkeyActions = new Dictionary<KeyCode, System.Action>();
-        private KeyCode? _lastHotkey = null;
+        private static ArtifactHotkeyListenerUpdater _instance;
 
-        void Awake()
+        public static void Create()
         {
-            // Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener Awake called.");
-            if (FindObjectsOfType<ArtifactHotkeyListener>().Length > 1)
+            if (_instance == null)
             {
-                // Debug.Log("[ArtifactsPlus] Duplicate ArtifactHotkeyListener found, destroying.");
-                Destroy(this);
-                return;
+                var go = new GameObject("ArtifactsPlus_HotkeyListenerUpdater");
+                UnityEngine.Object.DontDestroyOnLoad(go);
+                _instance = go.AddComponent<ArtifactHotkeyListenerUpdater>();
             }
-            DontDestroyOnLoad(this.gameObject);
-
-            hotkeyActions[KeyCode.F9] = () =>
-            {
-                if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
-                {
-                    // Debug.Log("[ArtifactsPlus] ALT+F9 detected in Update.");
-                    CustomLogger.Log("[ArtifactsPlus] ALT+F9 pressed: Printing artifact infusions for all minions.");
-                    var minions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                        .Where(kp => kp != null && kp.HasTag("Minion"))
-                        .Select(kp => kp.gameObject)
-                        .ToList();
-                    foreach (var minion in minions)
-                    {
-                        string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? minion.name;
-                        string infusions = ArtifactEffectTracker.GetMinionArtifactInfusions(minion);
-                        string singleLine = string.IsNullOrWhiteSpace(infusions)
-                            ? "(no artifact infusions)"
-                            : string.Join("; ", infusions
-                                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                                .Select(s => s.Trim()));
-                        CustomLogger.Log($"[HOTKEY] {minionName}: {singleLine}");
-                    }
-                }
-            };
-            hotkeyActions[KeyCode.F10] = () =>
-            {
-                if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
-                {
-                    // Debug.Log("[ArtifactsPlus] ALT+F11 detected in Update.");
-                    CustomLogger.Log("[ArtifactsPlus] ALT+F11 pressed: Stripping all artifact modifiers and status effects from all minions.");
-                    ArtifactEffectTracker.StripAllArtifactEffectsFromAllMinions();
-                }
-            };
-        }
-
-        void Start()
-        {
-            // Debug.Log("[ArtifactsPlus] ArtifactHotkeyListener Start called.");
+            HLib.CustomLogger.Log("ArtifactHotkeyListenerUpdater.Create called");
         }
 
         void Update()
         {
-            foreach (var kvp in hotkeyActions)
+            // Gather pressed keys for hotkey system
+            var pressed = new List<string>();
+            bool ctrlDown = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            bool f12Down = Input.GetKey(KeyCode.F12);
+            bool f12JustPressed = Input.GetKeyDown(KeyCode.F12);
+
+            // Example: Only add "Ctrl+F12" if Ctrl is held and F12 is pressed
+            if (ctrlDown && f12Down)
+                pressed.Add("Ctrl+F12");
+
+            // Call the static hotkeyListener from ArtifactsPlusHotkeys
+            if (ArtifactsPlusHotkeys.hotkeyListener != null)
             {
-                HandleDebouncedHotkey(kvp.Key, kvp.Value);
+                ArtifactsPlusHotkeys.hotkeyListener.Update(pressed);
+            }
+            else
+            {
+                HLib.CustomLogger.Log("[ArtifactHotkeyListenerUpdater] ArtifactsPlusHotkeys.hotkeyListener is null.");
+            }
+
+            // Only log when Ctrl+F12 is actually pressed
+            if (ctrlDown && f12JustPressed)
+            {
+                HLib.CustomLogger.Log("[ArtifactHotkeyListenerUpdater] Ctrl+F12 pressed (Input.GetKeyDown).");
             }
         }
+    }
 
-        private void HandleDebouncedHotkey(KeyCode key, System.Action action)
+    /// <summary>
+    /// Static hotkey listener and registration, matching SensorsPlus.
+    /// </summary>
+    public static class ArtifactsPlusHotkeys
+    {
+        public static HLib.HotkeyListener hotkeyListener;
+
+        static ArtifactsPlusHotkeys()
         {
-            if (UnityEngine.Input.GetKeyDown(key))
+            HLib.CustomLogger.Log("ArtifactsPlus: ArtifactsPlusHotkeys static ctor loaded.");
+
+            // Initialize and register hotkey(s)
+            hotkeyListener = new HLib.HotkeyListener();
+            hotkeyListener.RegisterHotkey("Ctrl+F12", () =>
             {
-                if (_lastHotkey.HasValue && _lastHotkey.Value == key)
-                {
-                    // Absorb and ignore if same as last hotkey
-                    return;
-                }
-                _lastHotkey = key;
-                action();
-            }
-            else if (_lastHotkey.HasValue && _lastHotkey.Value == key && !UnityEngine.Input.GetKey(key))
-            {
-                // Reset when key is released
-                _lastHotkey = null;
-            }
+                HLib.CustomLogger.Log("[HOTKEY] Ctrl+F12 pressed: Example hotkey log from ArtifactsPlus.");
+            });
+
+            // Register for Unity update loop
+            ArtifactHotkeyListenerUpdater.Create();
+        }
+    }
+
+    /// <summary>
+    /// Static class to ensure initialization.
+    /// </summary>
+    public static class ArtifactHotkeyListener
+    {
+        public static void OnLoad()
+        {
+            // Ensures static constructor runs
+            var _ = typeof(ArtifactsPlusHotkeys);
         }
     }
 }

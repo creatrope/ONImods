@@ -13,12 +13,13 @@ using PeterHan.PLib.Options;
 using PeterHan.PLib.Core; // Add this import for PUtil
 using Object = UnityEngine.Object; // Explicitly alias UnityEngine.Object to avoid ambiguity
 using System.Text; // <-- Add this for StringBuilder
+using HLib; // <-- Add this for CustomLogger
 
 namespace ArtifactsPlus
 {
     public static class ModInit
     {
-        public static string DesktopLogPath => CustomLogger.LogPath;
+        public static string DesktopLogPath => HLib.CustomLogger.LogPath;
 
         public static string ArtifactPowersConfigPath
         {
@@ -37,7 +38,7 @@ namespace ArtifactsPlus
             // Only print custom log file location and log to custom log if verbose is enabled
             if (ArtifactsPlusOptions.Instance.Verbose)
             {
-                CustomLogger.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
+                HLib.CustomLogger.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
             }
 
             ArtifactStateTracker.LoadArtifactAttributeMap();
@@ -298,7 +299,7 @@ namespace ArtifactsPlus
             var config = GetArtifactConfig(internalName);
             if (config == null)
             {
-                CustomLogger.Log($"[WARN] No config found for artifact '{internalName}'");
+                HLib.CustomLogger.Log($"[WARN] No config found for artifact '{internalName}'");
                 return;
             }
 
@@ -325,7 +326,7 @@ namespace ArtifactsPlus
                 string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
                 string shortCircuitText = criteria.ShortCircuited ? " SHORTCIRCUIT" : "";
-                CustomLogger.Log(
+                HLib.CustomLogger.Log(
                     $"[ArtifactState]{shortCircuitText} {internalName} {stateText} " +
                     $"Pedestal(OK) " +
                     $"RoomSize: {config.RoomSizeMin}<=({criteria.ActualRoomSize})<={config.RoomSizeMax} ({criteria.MeetsRoomSize}) " +
@@ -429,7 +430,7 @@ namespace ArtifactsPlus
 
                 if (!(configJson["Artifacts"] is JArray arr))
                 {
-                    CustomLogger.Log("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
+                    HLib.CustomLogger.Log("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
                     return;
                 }
 
@@ -474,7 +475,7 @@ namespace ArtifactsPlus
             }
             catch (Exception ex)
             {
-                CustomLogger.Log($"[ERROR] Failed to load artifact config: {ex}");
+                HLib.CustomLogger.Log($"[ERROR] Failed to load artifact config: {ex}");
             }
         }
 
@@ -600,9 +601,28 @@ namespace ArtifactsPlus
 
     public class Mod : UserMod2
     {
+        private static int onLoadCount = 0;
+
         public override void OnLoad(Harmony harmony)
         {
-            base.OnLoad(harmony);
+            // Set logger enabled flag from options (match SensorsPlus)
+            HLib.CustomLogger.Enabled = ArtifactsPlusOptions.Instance.Verbose;
+
+            // Set log path before resetting log, so the correct file is overwritten
+            HLib.CustomLogger.LogPath = System.IO.Path.Combine(
+                System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
+                "ArtifactsPlus.log"
+            );
+            if (HLib.CustomLogger.Enabled)
+                HLib.CustomLogger.ResetLog();
+
+            onLoadCount++;
+            var uniqueId = Guid.NewGuid();
+            var timestamp = System.DateTime.Now.ToString("O");
+            var domain = AppDomain.CurrentDomain.FriendlyName;
+            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            Debug.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            HLib.CustomLogger.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
             try
             {
@@ -610,26 +630,22 @@ namespace ArtifactsPlus
             }
             catch (Exception ex)
             {
-                CustomLogger.Log($"[ArtifactsPlus] RegisterOptions threw exception: {ex}");
+                HLib.CustomLogger.Log($"[ArtifactsPlus] RegisterOptions threw exception: {ex}");
             }
 
-            // Only this mod load message stays as Debug.Log, but now commented out per your request
-            // Debug.Log("[ArtifactsPlus] Mod loaded and Harmony patches applied.");
             harmony.PatchAll();
             ModInit.OnLoad();
 
             PUtil.InitLibrary();
+
+            // Ensure hotkey system is initialized (static constructor runs)
+            ArtifactHotkeyListener.OnLoad();
 
             if (Game.Instance != null)
             {
                 if (Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
                 {
                     Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
-                }
-
-                if (Game.Instance.gameObject.GetComponent<ArtifactHotkeyListener>() == null)
-                {
-                    Game.Instance.gameObject.AddComponent<ArtifactHotkeyListener>();
                 }
             }
         }
@@ -677,10 +693,6 @@ namespace ArtifactsPlus
             if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
             {
                 Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
-            }
-            if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactHotkeyListener>() == null)
-            {
-                Game.Instance.gameObject.AddComponent<ArtifactHotkeyListener>();
             }
         }
     }
@@ -753,7 +765,7 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename, bool isAutoSave, bool updateSavePointer)
         {
-            CustomLogger.Log("[ArtifactsPlus] SaveLoader.Save called for file: " + filename);
+            HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Save called for file: " + filename);
         }
     }
 
@@ -762,7 +774,7 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename)
         {
-            CustomLogger.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
+            HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
         }
     }
 }
