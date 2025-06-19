@@ -13,7 +13,7 @@ using KSerialization;
 using static SensorMathUtils;
 using HLib; // <-- Add this using directive
 
-namespace SensorsP
+namespace SensorsPlus // CHANGED FROM SensorsP
 {
     public class Patches
     {
@@ -36,12 +36,12 @@ namespace SensorsP
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            Debug.Log($"SensorsP: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-            HLib.CustomLogger.Log($"SensorsP: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            Debug.Log($"SensorsPlus: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            HLib.CustomLogger.Log($"SensorsPlus: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
-            Debug.Log("SensorsP: Patches class loaded");
+            Debug.Log("SensorsPlus: Patches class loaded");
 
-            HLib.CustomLogger.Log("SensorsP: Patches class loaded.");
+            HLib.CustomLogger.Log("SensorsPlus: Patches class loaded.");
 
             // Initialize and register hotkey
             hotkeyListener = new HLib.HotkeyListener();
@@ -57,7 +57,7 @@ namespace SensorsP
 
         public static void OnLoad()
         {
-            //System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(SensorsP.Patches).TypeHandle);
+            //System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(SensorsPlus.Patches).TypeHandle);
         }
 
         [HarmonyPatch(typeof(Db), "Initialize")]
@@ -71,14 +71,14 @@ namespace SensorsP
             {
                 prefixCount++;
                 var asm = System.Reflection.Assembly.GetExecutingAssembly();
-                HLib.CustomLogger.Log($"SensorsP: Prefix {prefixCount} | Assembly: {asm.Location}");
+                HLib.CustomLogger.Log($"SensorsPlus: Prefix {prefixCount} | Assembly: {asm.Location}");
             }
 
             public static void Postfix()
             {
                 postfixCount++;
                 var asm = System.Reflection.Assembly.GetExecutingAssembly();
-                HLib.CustomLogger.Log($"SensorsP: Postfix {postfixCount} | Assembly: {asm.Location}");
+                HLib.CustomLogger.Log($"SensorsPlus: Postfix {postfixCount} | Assembly: {asm.Location}");
             }
         }
     }
@@ -92,7 +92,7 @@ namespace SensorsP
         {
             if (_instance == null)
             {
-                var go = new GameObject("SensorsP_HotkeyListenerUpdater");
+                var go = new GameObject("SensorsPlus_HotkeyListenerUpdater");
                 UnityEngine.Object.DontDestroyOnLoad(go);
                 _instance = go.AddComponent<HotkeyListenerUpdater>();
             }
@@ -170,7 +170,7 @@ namespace SensorsP
             // Set log path before resetting log, so the correct file is overwritten
             HLib.CustomLogger.LogPath = System.IO.Path.Combine(
                 System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
-                "SensorsP.log"
+                "SensorsPlus.log"
             );
             if (HLib.CustomLogger.Enabled)
                 HLib.CustomLogger.ResetLog(); // Now this will reset the correct log file
@@ -180,12 +180,12 @@ namespace SensorsP
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            Debug.Log($"SensorsP: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-            HLib.CustomLogger.Log($"SensorsP: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            Debug.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            HLib.CustomLogger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
-            Debug.Log("SensorsP: Mod.OnLoad called.");
+            Debug.Log("SensorsPlus: Mod.OnLoad called.");
 
-            SensorsP.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
+            SensorsPlus.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
             base.OnLoad(harmony);
 
             PUtil.InitLibrary();
@@ -216,17 +216,17 @@ namespace SensorsP
             if (OutputTypes.TryGetValue(sensor, out var type))
                 return type;
             return SensorOutputType.Single;
-        }a
+        }
 
         public static void SetOutputType(object sensor, SensorOutputType type)
         {
             OutputTypes.Remove(sensor);
             OutputTypes.Add(sensor, type);
         }
-    }
+    }   
 
     [HarmonyPatch(typeof(LogicPressureSensor), "Sim200ms")]
-    public static class LogicPressureSensor_Sim200ms_Paatch
+    public static class LogicPressureSensor_Sim200ms_Patch // <-- Renamed from LogicPressureSensor_Sim200ms_Paatch
     {
         public static readonly ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>> DerivativeStates =
             new ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>>();

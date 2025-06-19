@@ -2,7 +2,7 @@ using System; // Add this for [NonSerialized]
 using KSerialization;
 using UnityEngine;
 
-namespace SensorsP
+namespace SensorsPlus
 {
     [SerializationConfig(MemberSerialization.OptIn)]
     public class SensorInputValueComponent : KMonoBehaviour

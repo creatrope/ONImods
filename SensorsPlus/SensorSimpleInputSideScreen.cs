@@ -3,9 +3,9 @@ using UnityEngine;
 using TMPro;
 using System.Runtime.CompilerServices;
 using HLib;
-using SensorsP;
+using SensorsPlus;
 
-namespace SensorsP
+namespace SensorsPlus
 {
     public class SensorSimpleInputSideScreen : SideScreenContent
     {
@@ -161,7 +161,7 @@ namespace SensorsP
 
             if (pressureSensor != null)
             {
-                if (SensorsP.LogicPressureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(pressureSensor, out var derivativeState))
+                if (SensorsPlus.LogicPressureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(pressureSensor, out var derivativeState))
                 {
                     // Show the moving average of the first derivative
                     firstDerivative = derivativeState.ComputeMovingAverageFirstDerivative(3);
@@ -169,7 +169,7 @@ namespace SensorsP
             }
             else if (temperatureSensor != null)
             {
-                if (SensorsP.LogicTemperatureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(temperatureSensor, out var derivativeState))
+                if (SensorsPlus.LogicTemperatureSensor_Sim200ms_Patch.DerivativeStates.TryGetValue(temperatureSensor, out var derivativeState))
                 {
                     // Show the moving average of the first derivative
                     firstDerivative = derivativeState.ComputeMovingAverageFirstDerivative(3);
