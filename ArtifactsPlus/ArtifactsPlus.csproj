@@ -81,7 +81,6 @@
   <ItemGroup>
     <Compile Include="ArtifactConsistencyChecker.cs" />
     <Compile Include="ArtifactEffectTracker.cs" />
-    <Compile Include="ArtifactHotkeyListener.cs" />
     <Compile Include="ArtifactPedestalPanelPatch.cs" />
     <Compile Include="ArtifactsPlusOptions.cs" />
     <Compile Include="MinionEffectHelper.cs" />

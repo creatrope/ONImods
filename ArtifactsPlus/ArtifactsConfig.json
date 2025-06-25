@@ -1,7 +1,7 @@
 {
   "RoomSizeMinimum": 32,
   "RoomSizeMaximum": 96,
-  "DecorMinimum": 128,
+  "DecorMinimum": 120,
   "Scope": "InWorld",
   "Neighbors": 1,
   "Artifacts": [

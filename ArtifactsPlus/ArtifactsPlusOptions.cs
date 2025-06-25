@@ -27,6 +27,11 @@ namespace ArtifactsPlus
                     {
                         opts = new ArtifactsPlusOptions();
                         POptions.WriteSettings(opts);
+                        HLib.CustomLogger.Log("[ArtifactsPlusOptions] Default configuration created.");
+                    }
+                    else
+                    {
+                        HLib.CustomLogger.Log("[ArtifactsPlusOptions] Configuration loaded successfully.");
                     }
                     instance = opts;
                 }
@@ -52,9 +57,11 @@ namespace ArtifactsPlus
         public static IList<string> GetConfigFiles()
         {
             var dir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            return Directory.GetFiles(dir, "ArtifactsConfig*.json")
+            var files = Directory.GetFiles(dir, "ArtifactsConfig*.json")
                 .Select(Path.GetFileName)
                 .ToList();
+            HLib.CustomLogger.Log($"[ArtifactsPlusOptions] Found {files.Count} configuration files.");
+            return files;
         }
 
         public ArtifactsPlusOptions() { }

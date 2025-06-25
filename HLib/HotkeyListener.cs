@@ -1,75 +1,79 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 
 namespace HLib
 {
     /// <summary>
     /// Standalone, reusable hotkey listener. Allows registration of hotkey actions.
-    /// Platform-agnostic: does not depend on Unity.
     /// </summary>
     public class HotkeyListener
     {
-        // Use string for key representation in a non-Unity context
         private readonly Dictionary<string, Action> hotkeyActions = new Dictionary<string, Action>();
-        private string _lastHotkey = null;
+        private readonly HashSet<string> pressedKeys = new HashSet<string>();
+        private readonly Dictionary<string, float> lastExecutionTimes = new Dictionary<string, float>(); // Track last execution times
+        private const float DebounceInterval = 0.5f; // Debounce interval in seconds
 
         /// <summary>
-        /// Register a hotkey and its associated action.
+        /// Register a hotkey or combo key and its associated action.
         /// </summary>
-        public void RegisterHotkey(string key, Action action)
+        public void RegisterHotkey(string comboKey, Action action)
         {
-            hotkeyActions[key] = action;
+            hotkeyActions[comboKey] = action;
         }
 
         /// <summary>
-        /// Unregister a hotkey.
+        /// Unregister a hotkey or combo key.
         /// </summary>
-        public void UnregisterHotkey(string key)
+        public void UnregisterHotkey(string comboKey)
         {
-            if (hotkeyActions.ContainsKey(key))
-                hotkeyActions.Remove(key);
+            if (hotkeyActions.ContainsKey(comboKey))
+                hotkeyActions.Remove(comboKey);
         }
 
         /// <summary>
-        /// Call this method from your application's main loop, passing in the currently pressed keys.
+        /// Call this method from your application's main loop to detect and invoke hotkey actions.
         /// </summary>
-        public void Update(List<string> pressed)
+        public void Update()
         {
+            // Clear previously tracked pressed keys
+            pressedKeys.Clear();
+
+            // Detect all currently pressed keys
+            foreach (KeyCode keyCode in Enum.GetValues(typeof(KeyCode)))
+            {
+                if (Input.GetKey(keyCode))
+                {
+                    pressedKeys.Add(keyCode.ToString());
+                }
+            }
+
+            // Check registered hotkeys
             foreach (var hotkey in hotkeyActions)
             {
-                if (pressed.Contains(hotkey.Key))
-                {
-                    hotkey.Value.Invoke();
-                }
-            }
-        }
+                var comboKeys = hotkey.Key.Split('+'); // Split combo keys (e.g., "Ctrl+F11")
+                bool ctrlPressed = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                bool altPressed = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+                bool shiftPressed = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
-        private void HandleDebouncedHotkey(string key, Action action, IEnumerable<string> currentlyPressedKeys)
-        {
-            bool isDown = false;
-            foreach (var pressed in currentlyPressedKeys)
-            {
-                if (string.Equals(pressed, key, StringComparison.OrdinalIgnoreCase))
-                {
-                    isDown = true;
-                    break;
-                }
-            }
+                bool allKeysPressed = comboKeys.All(key =>
+                    key.Equals("Ctrl", StringComparison.OrdinalIgnoreCase) && ctrlPressed ||
+                    key.Equals("Alt", StringComparison.OrdinalIgnoreCase) && altPressed ||
+                    key.Equals("Shift", StringComparison.OrdinalIgnoreCase) && shiftPressed ||
+                    pressedKeys.Contains(key)
+                );
 
-            if (isDown)
-            {
-                if (_lastHotkey != null && _lastHotkey == key)
+                if (allKeysPressed)
                 {
-                    // Absorb and ignore if same as last hotkey
-                    return;
+                    // Check debounce
+                    if (!lastExecutionTimes.TryGetValue(hotkey.Key, out float lastExecution) ||
+                        Time.time - lastExecution >= DebounceInterval)
+                    {
+                        hotkey.Value.Invoke();
+                        lastExecutionTimes[hotkey.Key] = Time.time; // Update last execution time
+                    }
                 }
-                _lastHotkey = key;
-                action();
-            }
-            else if (_lastHotkey != null && _lastHotkey == key)
-            {
-                // Reset when key is released
-                _lastHotkey = null;
             }
         }
     }

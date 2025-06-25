@@ -17,9 +17,10 @@ using HLib; // <-- Add this for CustomLogger
 
 namespace ArtifactsPlus
 {
-    public static class ModInit
+    public static class Patches
     {
         public static string DesktopLogPath => HLib.CustomLogger.LogPath;
+        public static HLib.HotkeyListener hotkeyListener;
 
         public static string ArtifactPowersConfigPath
         {
@@ -42,6 +43,13 @@ namespace ArtifactsPlus
             }
 
             ArtifactStateTracker.LoadArtifactAttributeMap();
+
+            // Initialize and register hotkeys
+            hotkeyListener = new HLib.HotkeyListener();
+            hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
+            {
+                HLib.CustomLogger.Log($"[HotkeyListener] CTRL+F11 pressed");
+            });
         }
     }
 
@@ -105,6 +113,28 @@ namespace ArtifactsPlus
 
         public static ArtifactCriteriaResult EvaluateArtifactCriteria(GameObject artifact, ArtifactConfig config, bool shortCircuit = false)
         {
+            if (artifact == null)
+            {
+                // Log a warning and return a default result if artifact is null
+                HLib.CustomLogger.Log("[WARN] Artifact is null in EvaluateArtifactCriteria.");
+                return new ArtifactCriteriaResult
+                {
+                    MeetsAll = false,
+                    ShortCircuited = true
+                };
+            }
+
+            if (artifact.transform == null)
+            {
+                // Log an error and return a default result if artifact's transform is null
+                HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
+                return new ArtifactCriteriaResult
+                {
+                    MeetsAll = false,
+                    ShortCircuited = true
+                };
+            }
+
             int actualRoomSize = -1;
             float actualDecor = float.NaN;
             bool meetsRoomSize = false;
@@ -170,7 +200,19 @@ namespace ArtifactsPlus
                             actualDecor = (float)decorSum / decorCount;
                         else
                             actualDecor = 0f;
-                        meetsDecor = actualDecor >= config.DecorMinimum;
+
+                        // Check if the artifact is already active
+                        bool isActive = false;
+                        int artifactId = artifact.GetInstanceID();
+                        if (ArtifactStates.TryGetValue(artifactId, out var state))
+                        {
+                            isActive = state.IsActive;
+                        }
+
+                        // Apply hysteresis to the decor check
+                        float requiredDecor = isActive ? config.DecorMinimum * 0.9f : config.DecorMinimum;
+                        meetsDecor = actualDecor >= requiredDecor;
+
                         if (shortCircuit && !meetsDecor)
                         {
                             meetsAll = false;
@@ -218,21 +260,46 @@ namespace ArtifactsPlus
 
         public static void RegisterArtifactOnPedestal(GameObject artifact)
         {
-            if (artifact != null)
-                ArtifactsOnPedestals.Add(artifact);
+            if (artifact == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] Attempted to register a null artifact.");
+                return;
+            }
+
+            HLib.CustomLogger.Log($"[DEBUG] Registering artifact: {artifact?.name ?? "null"}");
+
+            var artifactPrefabID = artifact.GetComponent<KPrefabID>();
+            if (artifactPrefabID == null)
+            {
+                HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' does not have a KPrefabID component.");
+                return;
+            }
+
+            if (ArtifactsOnPedestals.Any(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactPrefabID.PrefabTag.Name))
+            {
+                HLib.CustomLogger.Log($"[WARN] Duplicate artifact of type '{artifactPrefabID.PrefabTag.Name}' detected. Ignoring registration.");
+                return;
+            }
+
+            ArtifactsOnPedestals.Add(artifact);
+
+            var artifactType = artifactPrefabID.PrefabTag.Name;
+            var count = ArtifactsOnPedestals.Count(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactType);
+
+            if (count > 1)
+            {
+                HLib.CustomLogger.Log($"[ArtifactsPlus] Registered artifact on pedestal: {artifact.name}");
+                HLib.CustomLogger.Log($"[DEBUG] Artifact type '{artifactType}' has {count} instances registered.");
+            }
         }
 
         public static void UnregisterArtifactOnPedestal(GameObject artifact)
         {
             if (artifact != null)
             {
-                // Take a snapshot of the artifact before modifying the collection
-                var artifactId = artifact.GetInstanceID();
-                // Remove from collections first to avoid modifying during enumeration in callbacks
                 ArtifactsOnPedestals.Remove(artifact);
-                // Trigger state update BEFORE removing from ArtifactStates, so OnArtifactStateChanged is called
                 UpdateArtifactState(artifact, false, false);
-                ArtifactStates.Remove(artifactId);
+                HLib.CustomLogger.Log($"[ArtifactsPlus] Unregistered artifact from pedestal: {artifact.name}");
             }
         }
 
@@ -283,6 +350,12 @@ namespace ArtifactsPlus
 
         public static void UpdateArtifactState(GameObject artifact, bool onPedestal, bool meetsRoomSize)
         {
+            if (artifact == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] UpdateArtifactState called with a null artifact.");
+                return; // Null check for artifact
+            }
+
             int id = artifact.GetInstanceID();
             if (!ArtifactStates.TryGetValue(id, out var state))
             {
@@ -293,6 +366,18 @@ namespace ArtifactsPlus
             bool wasActive = state.IsActive;
             state.OnPedestal = onPedestal;
             state.MeetsRoomSize = meetsRoomSize;
+
+            // Ensure IsActive is turned off if not on a pedestal
+            if (!onPedestal)
+            {
+                state.IsActive = false;
+
+                // Disable the glow effect
+                ApplyGlowEffect(artifact, false);
+
+                HLib.CustomLogger.Log($"[ArtifactsPlus] Artifact '{artifact.name}' deactivated because it is no longer on a pedestal.");
+                return;
+            }
 
             // Get artifact config
             string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
@@ -313,6 +398,7 @@ namespace ArtifactsPlus
             }
             state.IsAnalyzed = isAnalyzed;
 
+            // Artifact is active only if it's on the pedestal, meets all criteria, and is analyzed
             state.IsActive = onPedestal && criteria.MeetsAll && isAnalyzed;
 
             string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
@@ -328,11 +414,13 @@ namespace ArtifactsPlus
                 string shortCircuitText = criteria.ShortCircuited ? " SHORTCIRCUIT" : "";
                 HLib.CustomLogger.Log(
                     $"[ArtifactState]{shortCircuitText} {internalName} {stateText} " +
-                    $"Pedestal(OK) " +
+                    $"Pedestal({onPedestal}) " +
                     $"RoomSize: {config.RoomSizeMin}<=({criteria.ActualRoomSize})<={config.RoomSizeMax} ({criteria.MeetsRoomSize}) " +
                     $"Decor: {config.DecorMinimum}<={criteria.ActualDecor} ({criteria.MeetsDecor}) " +
                     $"Neighbors: {criteria.ArtifactCountInRoom}<={config.Neighbors} ({criteria.NeighborsOk})"
                 );
+
+                HLib.CustomLogger.Log($"[ArtifactsPlus] Artifact '{artifact.name}' state changed to: {(state.IsActive ? "ACTIVE" : "INACTIVE")}");
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
@@ -352,9 +440,8 @@ namespace ArtifactsPlus
                     minionList = GetAllMinions();
 
                 ArtifactEffectTracker.OnArtifactStateChanged(artifact, internalName, state.IsActive, minionList);
+                ApplyGlowEffect(artifact, state.IsActive);
             }
-
-            ApplyGlowEffect(artifact, state.IsActive);
         }
 
         public static bool TryGetArtifactAttributes(string artifactId, out Dictionary<string, float> attributes)
@@ -381,8 +468,33 @@ namespace ArtifactsPlus
 
         public static void ApplyGlowEffect(GameObject artifact, bool enable)
         {
+            if (artifact == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] ApplyGlowEffect called with a null artifact.");
+                return; // Null check for artifact
+            }
+
+            HLib.CustomLogger.Log($"[DEBUG] ApplyGlowEffect called for artifact: {artifact.name}, enable: {enable}");
+
             var parent = artifact.transform;
-            var glowChild = parent.Find(GlowChildName)?.gameObject;
+
+            // Find all children with the GlowChildName
+            var glowChildren = parent.GetComponentsInChildren<Transform>()
+                .Where(child => child.name == GlowChildName)
+                .Select(child => child.gameObject)
+                .ToList();
+
+            // Ensure only one glow effect exists
+            if (glowChildren.Count > 1)
+            {
+                HLib.CustomLogger.Log($"[WARN] Multiple glow effects found for artifact: {artifact.name}. Removing duplicates.");
+                for (int i = 1; i < glowChildren.Count; i++) // Keep the first one, remove the rest
+                {
+                    GameObject.Destroy(glowChildren[i]);
+                }
+            }
+
+            var glowChild = glowChildren.FirstOrDefault();
 
             if (enable)
             {
@@ -399,17 +511,54 @@ namespace ArtifactsPlus
                     light2D.Offset = new Vector2(0, 0.5f);
                     light2D.shape = LightShape.Circle;
                     light2D.drawOverlay = true;
+
+                    HLib.CustomLogger.Log($"[DEBUG] Glow effect created for artifact: {artifact.name}");
                 }
                 else
                 {
                     var light2D = glowChild.GetComponent<Light2D>();
                     if (light2D != null)
+                    {
                         light2D.enabled = true;
+
+                        // Validate Light2D configuration
+                        light2D.Color = Color.yellow;
+                        light2D.Range = 4f;
+                        light2D.Lux = 1800;
+
+                        HLib.CustomLogger.Log($"[DEBUG] Glow effect enabled and validated for artifact: {artifact.name}");
+                    }
+                    else
+                    {
+                        HLib.CustomLogger.Log($"[ERROR] Glow effect missing Light2D component for artifact: {artifact.name}");
+                    }
+                }
+
+                // Debug: Confirm parent-child relationship
+                if (glowChild.transform.parent != parent)
+                {
+                    HLib.CustomLogger.Log($"[ERROR] Glow effect is not correctly parented to artifact: {artifact.name}. Current parent: {glowChild.transform.parent?.name}");
+                }
+
+                // Additional debug to confirm Light2D state
+                var debugLight2D = glowChild.GetComponent<Light2D>();
+                if (debugLight2D != null)
+                {
+                    HLib.CustomLogger.Log($"[DEBUG] Light2D state for artifact '{artifact.name}': Enabled={debugLight2D.enabled}, Color={debugLight2D.Color}, Range={debugLight2D.Range}, Lux={debugLight2D.Lux}");
+                }
+                else
+                {
+                    HLib.CustomLogger.Log($"[ERROR] Light2D component not found on glow child for artifact: {artifact.name}");
                 }
             }
             else if (glowChild != null)
             {
+                HLib.CustomLogger.Log($"[DEBUG] Destroying glow child: {glowChild.name}");
                 GameObject.Destroy(glowChild);
+            }
+            else
+            {
+                HLib.CustomLogger.Log($"[WARN] Glow child not found for artifact: {artifact.name}");
             }
         }
 
@@ -419,7 +568,7 @@ namespace ArtifactsPlus
 
             try
             {
-                var configText = File.ReadAllText(ModInit.ArtifactPowersConfigPath);
+                var configText = File.ReadAllText(Patches.ArtifactPowersConfigPath);
                 var configJson = JObject.Parse(configText);
 
                 int globalRoomSizeMin = (int)(configJson["RoomSizeMinimum"] ?? 32);
@@ -500,12 +649,18 @@ namespace ArtifactsPlus
 
         public static void PollAllArtifacts()
         {
+            // Clean up null artifacts from the collection
+            ArtifactsOnPedestals.RemoveWhere(artifact => artifact == null);
+
             var artifactsSnapshot = ArtifactsOnPedestals.ToArray();
 
             foreach (var artifact in artifactsSnapshot)
             {
-                if (artifact == null)
+                if (artifact.transform == null)
+                {
+                    HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in PollAllArtifacts.");
                     continue;
+                }
 
                 string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
                 var config = GetArtifactConfig(internalName);
@@ -585,7 +740,13 @@ namespace ArtifactsPlus
         private int tickCounter = 0;
         private const int PollInterval = 20;
 
-        public ArtifactStatePoller() { }
+        public HLib.HotkeyListener hotkeyListener { get; set; }
+
+        public ArtifactStatePoller(HLib.HotkeyListener hotkeyListener)
+        {
+            this.hotkeyListener = hotkeyListener;
+        }
+
         void Awake() { }
         void Start() { }
         void Update()
@@ -596,6 +757,8 @@ namespace ArtifactsPlus
                 tickCounter = 0;
                 ArtifactStateTracker.PollAllArtifacts();
             }
+
+            hotkeyListener?.Update();
         }
     }
 
@@ -634,20 +797,13 @@ namespace ArtifactsPlus
             }
 
             harmony.PatchAll();
-            ModInit.OnLoad();
+            Patches.OnLoad();
 
             PUtil.InitLibrary();
 
-            // Ensure hotkey system is initialized (static constructor runs)
-            ArtifactHotkeyListener.OnLoad();
+            HLib.CustomLogger.Log($"[ArtifactsPlus] starting hotkey stuff");
 
-            if (Game.Instance != null)
-            {
-                if (Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
-                {
-                    Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
-                }
-            }
+
         }
     }
 
@@ -662,7 +818,7 @@ namespace ArtifactsPlus
 
             foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals.ToArray())
             {
-                if (artifact == null) continue;
+                if (artifact == null) continue; // Null check for artifact
                 bool stillOnPedestal = false;
                 foreach (var pedestal in GameObject.FindObjectsOfType<ItemPedestal>())
                 {
@@ -682,6 +838,10 @@ namespace ArtifactsPlus
             {
                 ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
             }
+            else
+            {
+                HLib.CustomLogger.Log("[WARN] Occupant is null in ItemPedestal_OnOccupantChanged_Patch.");
+            }
         }
     }
 
@@ -692,7 +852,8 @@ namespace ArtifactsPlus
         {
             if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
             {
-                Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
+                var poller = Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
+                poller.hotkeyListener = Patches.hotkeyListener;
             }
         }
     }
