@@ -381,22 +381,14 @@ namespace ArtifactsPlus
                 return;
             }
 
-            if (ArtifactsOnPedestals.Any(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactPrefabID.PrefabTag.Name))
-            {
-                HLib.CustomLogger.Log($"[WARN] Duplicate artifact of type '{artifactPrefabID.PrefabTag.Name}' detected. Ignoring registration.");
-                return;
-            }
-
+            // Allow multiple artifacts of the same type
             ArtifactsOnPedestals.Add(artifact);
 
             var artifactType = artifactPrefabID.PrefabTag.Name;
             var count = ArtifactsOnPedestals.Count(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactType);
 
-            if (count > 1)
-            {
-                HLib.CustomLogger.Log($"[ArtifactsPlus] Registered artifact on pedestal: {artifact.name}");
-                HLib.CustomLogger.Log($"[DEBUG] Artifact type '{artifactType}' has {count} instances registered.");
-            }
+            HLib.CustomLogger.Log($"[ArtifactsPlus] Registered artifact on pedestal: {artifact.name}");
+            HLib.CustomLogger.Log($"[DEBUG] Artifact type '{artifactType}' has {count} instances registered.");
         }
 
         public static void UnregisterArtifactOnPedestal(GameObject artifact)
@@ -738,54 +730,48 @@ namespace ArtifactsPlus
             int count = 0;
             if (room != null && room.cavity != null)
             {
-                //CustomLogger.Log($"[DEBUG] Counting pedestals in room: {room.GetHashCode()}, buildings: {room.cavity.buildings.Count}");
                 foreach (var building in room.cavity.buildings)
                 {
                     if (building == null)
                     {
-                        //CustomLogger.Log("[DEBUG] Skipping null building.");
+                        HLib.CustomLogger.Log("[DEBUG] Skipping null building.");
                         continue;
                     }
 
                     var pedestal = building.GetComponent<ItemPedestal>();
                     if (pedestal == null)
                     {
-                        // CustomLogger.Log($"[DEBUG] Building {building.name} is not an ItemPedestal.");
                         continue;
                     }
 
                     var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
                     var receptacle = receptacleField?.GetValue(pedestal) as SingleEntityReceptacle;
                     var occupant = receptacle?.Occupant;
+
                     if (occupant == null)
                     {
-                        //CustomLogger.Log($"[DEBUG] Pedestal {building.name} has no occupant.");
+                        HLib.CustomLogger.Log($"[DEBUG] Pedestal {building.name} has no occupant.");
                         continue;
                     }
 
                     var prefabId = occupant.GetComponent<KPrefabID>();
                     if (prefabId == null)
                     {
-                        //CustomLogger.Log($"[DEBUG] Occupant on pedestal {building.name} has no KPrefabID.");
+                        HLib.CustomLogger.Log($"[DEBUG] Occupant on pedestal {building.name} has no KPrefabID.");
                         continue;
                     }
 
-                    if (artifactConfigMap != null && artifactConfigMap.ContainsKey(prefabId.PrefabTag.Name))
-                    {
-                        count++;
-                        //CustomLogger.Log($"[DEBUG] Counted artifact '{prefabId.PrefabTag.Name}' on pedestal {building.name}.");
-                    }
-                    else
-                    {
-                        //CustomLogger.Log($"[DEBUG] Occupant '{prefabId.PrefabTag.Name}' on pedestal {building.name} is not in artifactConfigMap.");
-                    }
+                    // Count the artifact
+                    count++;
+                    HLib.CustomLogger.Log($"[DEBUG] Counted artifact '{prefabId.PrefabTag.Name}' on pedestal {building.name}.");
                 }
             }
             else
             {
-                //CustomLogger.Log("[DEBUG] Room or room.cavity is null in CountArtifactsOnPedestalsInRoom.");
+                HLib.CustomLogger.Log("[DEBUG] Room or room.cavity is null in CountArtifactsOnPedestalsInRoom.");
             }
-            //CustomLogger.Log($"[DEBUG] Final artifact count in room: {count}");
+
+            HLib.CustomLogger.Log($"[DEBUG] Final artifact count in room: {count}");
             return count;
         }
     }
