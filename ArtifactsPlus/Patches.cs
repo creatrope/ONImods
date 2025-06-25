@@ -44,12 +44,120 @@ namespace ArtifactsPlus
 
             ArtifactStateTracker.LoadArtifactAttributeMap();
 
+            CheckCameraSettings();
+
             // Initialize and register hotkeys
             hotkeyListener = new HLib.HotkeyListener();
             hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
             {
-                HLib.CustomLogger.Log($"[HotkeyListener] CTRL+F11 pressed");
+                ToggleGlowEffectForArtifactObelisk();
             });
+        }
+
+        // Add this function to the Patches class
+        public static void ToggleGlowEffectForArtifactObelisk()
+        {
+            var artifactObelisk = GameObject.Find("artifact_obelisk"); // Find the artifact_obelisk by name
+            if (artifactObelisk == null)
+            {
+                HLib.CustomLogger.Log("[Patches] artifact_obelisk not found.");
+                return;
+            }
+
+            // Get the current glow state and toggle it
+            bool isGlowing = artifactObelisk.GetComponentInChildren<Light2D>()?.enabled ?? false;
+            bool newState = !isGlowing;
+            ArtifactStateTracker.ApplyGlowEffect(artifactObelisk, newState);
+
+            HLib.CustomLogger.Log($"[Patches] Toggled glow effect for artifact_obelisk. New state: {newState}");
+
+            if (newState)
+            {
+                VerifyArtifactGlowFXParenting();
+                InspectLight2DProperties();
+                CheckCameraSettings();
+            }
+        }
+
+        public static void VerifyArtifactGlowFXParenting()
+        {
+            var artifactObelisk = GameObject.Find("artifact_obelisk");
+            if (artifactObelisk == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] artifact_obelisk not found in the scene.");
+                return;
+            }
+
+            var glowChild = artifactObelisk.transform.Find("ArtifactGlowFX");
+            if (glowChild == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] ArtifactGlowFX is not parented to artifact_obelisk.");
+                return;
+            }
+
+            // Log the state of ArtifactGlowFX
+            HLib.CustomLogger.Log($"[DEBUG] ArtifactGlowFX found. ActiveSelf: {glowChild.gameObject.activeSelf}, ActiveInHierarchy: {glowChild.gameObject.activeInHierarchy}");
+            HLib.CustomLogger.Log($"[DEBUG] ArtifactGlowFX position: {glowChild.position}, Parent: {glowChild.parent?.name}");
+
+            // Ensure it is active and positioned correctly
+            glowChild.gameObject.SetActive(true);
+            glowChild.position = artifactObelisk.transform.position;
+
+            HLib.CustomLogger.Log("[DEBUG] ArtifactGlowFX visibility and position forced.");
+        }
+
+        public static void InspectLight2DProperties()
+        {
+            var artifactObelisk = GameObject.Find("artifact_obelisk");
+            if (artifactObelisk == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] artifact_obelisk not found in the scene.");
+                return;
+            }
+
+            var light2D = artifactObelisk.GetComponentInChildren<Light2D>();
+            if (light2D == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] Light2D component not found on artifact_obelisk or its children.");
+                return;
+            }
+
+            HLib.CustomLogger.Log($"[DEBUG] Light2D Properties - Enabled: {light2D.enabled}, Color: {light2D.Color}, Range: {light2D.Range}, Lux: {light2D.Lux}");
+            
+            // Validate properties
+            if (light2D.Range != 4f || light2D.Lux != 1800 || light2D.Color != Color.yellow)
+            {
+                HLib.CustomLogger.Log("[WARN] Light2D properties are not set to the expected values. Adjusting...");
+                light2D.Range = 4f;
+                light2D.Lux = 1800;
+                light2D.Color = Color.yellow;
+            }
+        }
+
+        public static void CheckCameraSettings()
+        {
+            var mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] Main camera not found in the scene.");
+                return;
+            }
+
+            var artifactObelisk = GameObject.Find("artifact_obelisk");
+            if (artifactObelisk == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] artifact_obelisk not found in the scene.");
+                return;
+            }
+
+            int artifactLayer = artifactObelisk.layer;
+            if ((mainCamera.cullingMask & (1 << artifactLayer)) == 0)
+            {
+                HLib.CustomLogger.Log("[WARN] Main camera's culling mask does not include the layer of artifact_obelisk. Adjusting...");
+                mainCamera.cullingMask |= (1 << artifactLayer);
+            }
+
+            HLib.CustomLogger.Log($"[DEBUG] Main camera culling mask includes artifact_obelisk layer: {((mainCamera.cullingMask & (1 << artifactLayer)) != 0)}");
         }
     }
 
@@ -266,8 +374,6 @@ namespace ArtifactsPlus
                 return;
             }
 
-            HLib.CustomLogger.Log($"[DEBUG] Registering artifact: {artifact?.name ?? "null"}");
-
             var artifactPrefabID = artifact.GetComponent<KPrefabID>();
             if (artifactPrefabID == null)
             {
@@ -477,24 +583,7 @@ namespace ArtifactsPlus
             HLib.CustomLogger.Log($"[DEBUG] ApplyGlowEffect called for artifact: {artifact.name}, enable: {enable}");
 
             var parent = artifact.transform;
-
-            // Find all children with the GlowChildName
-            var glowChildren = parent.GetComponentsInChildren<Transform>()
-                .Where(child => child.name == GlowChildName)
-                .Select(child => child.gameObject)
-                .ToList();
-
-            // Ensure only one glow effect exists
-            if (glowChildren.Count > 1)
-            {
-                HLib.CustomLogger.Log($"[WARN] Multiple glow effects found for artifact: {artifact.name}. Removing duplicates.");
-                for (int i = 1; i < glowChildren.Count; i++) // Keep the first one, remove the rest
-                {
-                    GameObject.Destroy(glowChildren[i]);
-                }
-            }
-
-            var glowChild = glowChildren.FirstOrDefault();
+            var glowChild = parent.Find(GlowChildName)?.gameObject;
 
             if (enable)
             {
@@ -503,6 +592,7 @@ namespace ArtifactsPlus
                     glowChild = new GameObject(GlowChildName);
                     glowChild.transform.SetParent(parent, false);
 
+                    // Add Light2D component for in-game lighting
                     var light2D = glowChild.AddComponent<Light2D>();
                     light2D.overlayColour = new Color(1f, 1f, 1f, 0.2f);
                     light2D.Color = Color.yellow;
@@ -511,8 +601,6 @@ namespace ArtifactsPlus
                     light2D.Offset = new Vector2(0, 0.5f);
                     light2D.shape = LightShape.Circle;
                     light2D.drawOverlay = true;
-
-                    HLib.CustomLogger.Log($"[DEBUG] Glow effect created for artifact: {artifact.name}");
                 }
                 else
                 {
@@ -520,45 +608,12 @@ namespace ArtifactsPlus
                     if (light2D != null)
                     {
                         light2D.enabled = true;
-
-                        // Validate Light2D configuration
-                        light2D.Color = Color.yellow;
-                        light2D.Range = 4f;
-                        light2D.Lux = 1800;
-
-                        HLib.CustomLogger.Log($"[DEBUG] Glow effect enabled and validated for artifact: {artifact.name}");
                     }
-                    else
-                    {
-                        HLib.CustomLogger.Log($"[ERROR] Glow effect missing Light2D component for artifact: {artifact.name}");
-                    }
-                }
-
-                // Debug: Confirm parent-child relationship
-                if (glowChild.transform.parent != parent)
-                {
-                    HLib.CustomLogger.Log($"[ERROR] Glow effect is not correctly parented to artifact: {artifact.name}. Current parent: {glowChild.transform.parent?.name}");
-                }
-
-                // Additional debug to confirm Light2D state
-                var debugLight2D = glowChild.GetComponent<Light2D>();
-                if (debugLight2D != null)
-                {
-                    HLib.CustomLogger.Log($"[DEBUG] Light2D state for artifact '{artifact.name}': Enabled={debugLight2D.enabled}, Color={debugLight2D.Color}, Range={debugLight2D.Range}, Lux={debugLight2D.Lux}");
-                }
-                else
-                {
-                    HLib.CustomLogger.Log($"[ERROR] Light2D component not found on glow child for artifact: {artifact.name}");
                 }
             }
             else if (glowChild != null)
             {
-                HLib.CustomLogger.Log($"[DEBUG] Destroying glow child: {glowChild.name}");
                 GameObject.Destroy(glowChild);
-            }
-            else
-            {
-                HLib.CustomLogger.Log($"[WARN] Glow child not found for artifact: {artifact.name}");
             }
         }
 
@@ -798,12 +853,7 @@ namespace ArtifactsPlus
 
             harmony.PatchAll();
             Patches.OnLoad();
-
             PUtil.InitLibrary();
-
-            HLib.CustomLogger.Log($"[ArtifactsPlus] starting hotkey stuff");
-
-
         }
     }
 
