@@ -571,7 +571,7 @@ namespace ArtifactsPlus
                 return; // Null check for artifact
             }
 
-            HLib.CustomLogger.Log($"[DEBUG] ApplyGlowEffect called for artifact: {artifact.name}, enable: {enable}");
+            //HLib.CustomLogger.Log($"[DEBUG] ApplyGlowEffect called for artifact: {artifact.name}, enable: {enable}");
 
             var parent = artifact.transform;
             var glowChild = parent.Find(GlowChildName)?.gameObject;
@@ -862,10 +862,6 @@ namespace ArtifactsPlus
             if (occupant != null)
             {
                 ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
-            }
-            else
-            {
-                HLib.CustomLogger.Log("[WARN] Occupant is null in ItemPedestal_OnOccupantChanged_Patch.");
             }
         }
     }

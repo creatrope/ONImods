@@ -120,37 +120,26 @@ namespace ArtifactsPlus
                         var modifierKey = (attrName, modValue);
                         if (apply)
                         {
-                            bool hasModifier = false;
-                            for (int i = 0; i < attrInstance.Modifiers.size; i++)
-                            {
-                                var mod = attrInstance.Modifiers[i];
-                                if (mod.Description != null && mod.Description == $"Artifact Modifier: {artifactId}")
-                                {
-                                    hasModifier = true;
-                                    break;
-                                }
-                            }
-                            if (!hasModifier)
-                            {
-                                var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Modifier: {artifactId}");
-                                attrInstance.Add(modifier);
+                            // Add a new modifier for stacking
+                            var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Modifier: {artifactId}");
+                            attrInstance.Add(modifier);
 
-                                // Track which artifact applied this modifier
-                                if (!minionModifierArtifactMap.TryGetValue(minion, out var modMap))
-                                {
-                                    modMap = new Dictionary<(string attrName, float value), string>();
-                                    minionModifierArtifactMap[minion] = modMap;
-                                }
-                                modMap[modifierKey] = artifactId;
+                            // Track which artifact applied this modifier
+                            if (!minionModifierArtifactMap.TryGetValue(minion, out var modMap))
+                            {
+                                modMap = new Dictionary<(string attrName, float value), string>();
+                                minionModifierArtifactMap[minion] = modMap;
                             }
+                            modMap[modifierKey] = artifactId;
                         }
                         else
                         {
+                            // Remove only the specific modifier applied by this artifact
                             var toRemove = new List<AttributeModifier>();
                             for (int i = 0; i < attrInstance.Modifiers.size; i++)
                             {
                                 var mod = attrInstance.Modifiers[i];
-                                if (mod.Description == $"Artifact Modifier: {artifactId}")
+                                if (mod.Description == $"Artifact Modifier: {artifactId}" && mod.Value == modValue)
                                 {
                                     toRemove.Add(mod);
                                 }
@@ -183,9 +172,35 @@ namespace ArtifactsPlus
                         continue;
 
                     if (apply)
-                        effectsComponent.Add(new HashedString(effectId), true);
+                    {
+                        // Add the effect with stacking logic
+                        if (!effectsComponent.HasEffect(effectId))
+                        {
+                            effectsComponent.Add(new HashedString(effectId), true);
+                        }
+
+                        // Track the effect and artifact
+                        if (!minionEffectArtifactMap.TryGetValue(minion, out var effectMap))
+                        {
+                            effectMap = new Dictionary<string, string>();
+                            minionEffectArtifactMap[minion] = effectMap;
+                        }
+                        effectMap[effectId] = artifactId;
+                    }
                     else
-                        effectsComponent.Remove(new HashedString(effectId));
+                    {
+                        // Remove the effect only if it was applied by this artifact
+                        if (minionEffectArtifactMap.TryGetValue(minion, out var effectMap) && effectMap.TryGetValue(effectId, out var appliedArtifactId))
+                        {
+                            if (appliedArtifactId == artifactId)
+                            {
+                                effectsComponent.Remove(new HashedString(effectId));
+                                effectMap.Remove(effectId);
+                                if (effectMap.Count == 0)
+                                    minionEffectArtifactMap.Remove(minion);
+                            }
+                        }
+                    }
                 }
             }
         }
