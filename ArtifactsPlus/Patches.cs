@@ -352,6 +352,8 @@ namespace ArtifactsPlus
             if (!shortCircuit)
                 meetsAll = meetsRoomSize && meetsDecor && !isEntombed && neighborsOk;
 
+            HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' (ID: {artifact.GetInstanceID()}) evaluation result: MeetsAll={meetsAll}, RoomSize={meetsRoomSize}, Decor={meetsDecor}, NeighborsOk={neighborsOk}");
+
             return new ArtifactCriteriaResult
             {
                 ActualRoomSize = actualRoomSize,
@@ -396,7 +398,7 @@ namespace ArtifactsPlus
             if (artifact != null)
             {
                 ArtifactsOnPedestals.Remove(artifact);
-                UpdateArtifactState(artifact, false, false);
+                UpdateArtifactState(artifact);
                 HLib.CustomLogger.Log($"[ArtifactsPlus] Unregistered artifact from pedestal: {artifact.name}");
             }
         }
@@ -446,7 +448,7 @@ namespace ArtifactsPlus
             return minionsInWorld;
         }
 
-        public static void UpdateArtifactState(GameObject artifact, bool onPedestal, bool meetsRoomSize)
+        public static void UpdateArtifactState(GameObject artifact)
         {
             if (artifact == null)
             {
@@ -462,8 +464,10 @@ namespace ArtifactsPlus
             }
 
             bool wasActive = state.IsActive;
+
+            // Check if the artifact is on a pedestal
+            bool onPedestal = ArtifactsOnPedestals.Contains(artifact);
             state.OnPedestal = onPedestal;
-            state.MeetsRoomSize = meetsRoomSize;
 
             // Ensure IsActive is turned off if not on a pedestal
             if (!onPedestal)
@@ -696,6 +700,8 @@ namespace ArtifactsPlus
 
         public static void PollAllArtifacts()
         {
+            HLib.CustomLogger.Log($"\nPollAllArtifacts");
+            
             // Clean up null artifacts from the collection
             ArtifactsOnPedestals.RemoveWhere(artifact => artifact == null);
 
@@ -708,20 +714,7 @@ namespace ArtifactsPlus
                     HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in PollAllArtifacts.");
                     continue;
                 }
-
-                string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                var config = GetArtifactConfig(internalName);
-
-                // Use the shared criteria evaluation
-                var criteria = EvaluateArtifactCriteria(artifact, config);
-
-                bool meetsAll = criteria.MeetsAll;
-                int id = artifact.GetInstanceID();
-                bool wasActive = false;
-                if (ArtifactStates.TryGetValue(id, out var state))
-                    wasActive = state.IsActive;
-
-                UpdateArtifactState(artifact, true, meetsAll);
+                UpdateArtifactState(artifact);
             }
         }
 
@@ -750,7 +743,6 @@ namespace ArtifactsPlus
 
                     if (occupant == null)
                     {
-                        HLib.CustomLogger.Log($"[DEBUG] Pedestal {building.name} has no occupant.");
                         continue;
                     }
 
@@ -763,7 +755,7 @@ namespace ArtifactsPlus
 
                     // Count the artifact
                     count++;
-                    HLib.CustomLogger.Log($"[DEBUG] Counted artifact '{prefabId.PrefabTag.Name}' on pedestal {building.name}.");
+                    // HLib.CustomLogger.Log($"[DEBUG] Counted artifact '{prefabId.PrefabTag.Name}' on pedestal {building.name}.");
                 }
             }
             else
@@ -771,7 +763,7 @@ namespace ArtifactsPlus
                 HLib.CustomLogger.Log("[DEBUG] Room or room.cavity is null in CountArtifactsOnPedestalsInRoom.");
             }
 
-            HLib.CustomLogger.Log($"[DEBUG] Final artifact count in room: {count}");
+            // HLib.CustomLogger.Log($"[DEBUG] Final artifact count in room: {count}");
             return count;
         }
     }
