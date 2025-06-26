@@ -424,7 +424,7 @@ namespace ArtifactsPlus
             {
                 ArtifactsOnPedestals.Remove(artifact);
                 UpdateArtifactState(artifact);
-                HLib.CustomLogger.Log($"[ArtifactsPlus] Unregistered artifact from pedestal: {artifact.name}");
+                //HLib.CustomLogger.Log($"[ArtifactsPlus] Unregistered artifact from pedestal: {artifact.name}");
             }
         }
 
@@ -917,8 +917,8 @@ namespace ArtifactsPlus
 
                         if (artifactWorldId == state.oldWorldId && config.Scope == "InWorld")
                         {
-                            ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, internalName, false);
-                            ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, internalName, false);
+                            ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, artifact, false);
+                            ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, artifact, false);
                         }
                     }
 
@@ -931,8 +931,8 @@ namespace ArtifactsPlus
 
                         if (artifactWorldId == state.newWorldId && config.Scope == "InWorld")
                         {
-                            ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, internalName, true);
-                            ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, internalName, true);
+                            ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, artifact, true);
+                            ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, artifact, true);
                         }
                     }
 
