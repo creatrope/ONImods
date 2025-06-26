@@ -254,7 +254,7 @@ namespace ArtifactsPlus
                 {
                     if (listedEffects.Add(kvp.Key))
                     {
-                        string properName = GetArtifactProperName(kvp.Value.ToString());
+                        string properName = GetArtifactProperName(kvp.Value);
                         summary.AppendLine($"{kvp.Key} ({properName})");
                     }
                 }
@@ -270,7 +270,7 @@ namespace ArtifactsPlus
                     int artifactInstanceId = kvp.Key.artifactInstanceId;
                     if (listedModifiers.Add((attrName, val, artifactInstanceId)))
                     {
-                        string properName = GetArtifactProperName(artifactInstanceId.ToString());
+                        string properName = GetArtifactProperName(artifactInstanceId);
                         summary.AppendLine($"{attrName} {(val >= 0 ? "+" : "")}{val} ({properName})");
                     }
                 }
@@ -279,19 +279,19 @@ namespace ArtifactsPlus
             return summary.ToString();
         }
 
-        private static string GetArtifactProperName(string artifactId)
+        private static string GetArtifactProperName(int artifactInstanceId)
         {
-            // Try to find the artifact GameObject in the world
+            // Try to find the artifact GameObject in the world using the instance ID
             var artifact = ArtifactsPlus.ArtifactStateTracker.ArtifactsOnPedestals
-                .FirstOrDefault(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactId);
+                .FirstOrDefault(a => a != null && a.GetInstanceID() == artifactInstanceId);
             if (artifact != null)
             {
                 var selectable = artifact.GetComponent<KSelectable>();
                 if (selectable != null)
                     return selectable.GetProperName();
             }
-            // Fallback to artifactId if not found
-            return artifactId;
+            // Fallback to instance ID as a string if not found
+            return artifactInstanceId.ToString();
         }
     }
 }
