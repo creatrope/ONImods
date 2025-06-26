@@ -763,6 +763,32 @@ namespace ArtifactsPlus
             // HLib.CustomLogger.Log($"[DEBUG] Final artifact count in room: {count}");
             return count;
         }
+
+        public static void HandleMinionMigration(GameObject minion, int oldWorldId, int newWorldId)
+        {
+            foreach (var artifact in ArtifactsOnPedestals)
+            {
+                if (artifact == null) continue;
+
+                int artifactWorldId = Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)];
+                string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
+                var config = GetArtifactConfig(internalName);
+
+                // Remove effects from the old world
+                if (artifactWorldId == oldWorldId && config.Scope == "InWorld")
+                {
+                    ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minion, artifact, false);
+                    ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifact, false);
+                }
+
+                // Apply effects in the new world
+                if (artifactWorldId == newWorldId && config.Scope == "InWorld")
+                {
+                    ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minion, artifact, true);
+                    ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifact, true);
+                }
+            }
+        }
     }
 
     public class ArtifactStatePoller : MonoBehaviour
@@ -879,12 +905,6 @@ namespace ArtifactsPlus
         }
     }
 
-    internal static class MinionMigrationHelper
-    {
-        public static readonly Dictionary<GameObject, (int oldWorldId, int newWorldId, bool removed, bool added)>
-            MinionMigrationState = new Dictionary<GameObject, (int, int, bool, bool)>();
-    }
-
     [HarmonyPatch(typeof(AssignmentManager), "MinionMigration")]
     public static class AssignmentManager_MinionMigration_Patch
     {
@@ -894,50 +914,12 @@ namespace ArtifactsPlus
             if (migrationEventArgs != null)
             {
                 var minionGo = migrationEventArgs.minionId?.gameObject;
-                if (minionGo == null)
-                {
-                    return;
-                }
+                if (minionGo == null) return;
 
                 int oldWorldId = migrationEventArgs.prevWorldId;
                 int newWorldId = migrationEventArgs.targetWorldId;
 
-                if (!MinionMigrationHelper.MinionMigrationState.TryGetValue(minionGo, out var state))
-                {
-                    MinionMigrationHelper.MinionMigrationState[minionGo] = (oldWorldId, newWorldId, false, false);
-                }
-                else
-                {
-                    foreach (var artifact in ArtifactsPlus.ArtifactStateTracker.ArtifactsOnPedestals)
-                    {
-                        if (artifact == null) continue;
-                        int artifactWorldId = Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)];
-                        string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                        var config = ArtifactsPlus.ArtifactStateTracker.GetArtifactConfig(internalName);
-
-                        if (artifactWorldId == state.oldWorldId && config.Scope == "InWorld")
-                        {
-                            ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, artifact, false);
-                            ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, artifact, false);
-                        }
-                    }
-
-                    foreach (var artifact in ArtifactsPlus.ArtifactStateTracker.ArtifactsOnPedestals)
-                    {
-                        if (artifact == null) continue;
-                        int artifactWorldId = Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)];
-                        string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                        var config = ArtifactsPlus.ArtifactStateTracker.GetArtifactConfig(internalName);
-
-                        if (artifactWorldId == state.newWorldId && config.Scope == "InWorld")
-                        {
-                            ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minionGo, artifact, true);
-                            ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minionGo, artifact, true);
-                        }
-                    }
-
-                    MinionMigrationHelper.MinionMigrationState.Remove(minionGo);
-                }
+                ArtifactStateTracker.HandleMinionMigration(minionGo, oldWorldId, newWorldId);
             }
         }
     }
