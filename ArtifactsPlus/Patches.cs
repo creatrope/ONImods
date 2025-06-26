@@ -219,11 +219,10 @@ namespace ArtifactsPlus
             public bool ShortCircuited;
         }
 
-        public static ArtifactCriteriaResult EvaluateArtifactCriteria(GameObject artifact, ArtifactConfig config, bool shortCircuit = false)
+        public static ArtifactCriteriaResult EvaluateArtifactCriteria(GameObject artifact, ArtifactConfig config)
         {
             if (artifact == null)
             {
-                // Log a warning and return a default result if artifact is null
                 HLib.CustomLogger.Log("[WARN] Artifact is null in EvaluateArtifactCriteria.");
                 return new ArtifactCriteriaResult
                 {
@@ -234,7 +233,6 @@ namespace ArtifactsPlus
 
             if (artifact.transform == null)
             {
-                // Log an error and return a default result if artifact's transform is null
                 HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
                 return new ArtifactCriteriaResult
                 {
@@ -243,129 +241,156 @@ namespace ArtifactsPlus
                 };
             }
 
-            int actualRoomSize = -1;
-            float actualDecor = float.NaN;
-            bool meetsRoomSize = false;
-            bool meetsDecor = false;
-            bool isEntombed = false;
-            int artifactCount = 0;
-            bool neighborsOk = true;
-            bool meetsAll = true;
-            bool wasShortCircuited = false;
-
-            int cell = Grid.PosToCell(artifact.transform.position);
-
-            // 1. Entombed check (cheapest)
-            isEntombed = Grid.Element[cell].id == SimHashes.Unobtanium;
-            if (shortCircuit && isEntombed)
+            var result = new ArtifactCriteriaResult
             {
-                meetsAll = false;
-                wasShortCircuited = true;
+                Scope = config.Scope
+            };
+
+            // 1. Check if the artifact is on a pedestal
+            if (!CheckOnPedestal(artifact, ref result)) return result;
+
+            // 2. Check if the artifact is analyzed
+            if (!CheckAnalyzed(artifact, ref result)) return result;
+
+            // 3. Check if the artifact is entombed
+            if (!CheckEntombed(artifact, ref result)) return result;
+
+            // 4. Check room size
+            if (!CheckRoomSize(artifact, config, ref result)) return result;
+
+            // 5. Check neighbor count
+            if (!CheckNeighbors(artifact, config, ref result)) return result;
+
+            // 6. Check decor
+            if (!CheckDecor(artifact, config, ref result)) return result;
+
+            return result;
+        }
+
+        private static bool CheckOnPedestal(GameObject artifact, ref ArtifactCriteriaResult result)
+        {
+            result.MeetsAll = ArtifactsOnPedestals.Contains(artifact);
+            if (!result.MeetsAll)
+            {
+                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' is not on a pedestal.");
+                result.ShortCircuited = true;
+            }
+            return result.MeetsAll;
+        }
+
+        private static bool CheckAnalyzed(GameObject artifact, ref ArtifactCriteriaResult result)
+        {
+            var artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name;
+            result.MeetsAll = !string.IsNullOrEmpty(artifactId) && ArtifactSelector.Instance?.GetAnalyzedArtifactIDs().Contains(artifactId) == true;
+            if (!result.MeetsAll)
+            {
+                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' is not analyzed.");
+                result.ShortCircuited = true;
+            }
+            return result.MeetsAll;
+        }
+
+        private static bool CheckEntombed(GameObject artifact, ref ArtifactCriteriaResult result)
+        {
+            int cell = Grid.PosToCell(artifact.transform.position);
+            result.MeetsAll = Grid.Element[cell].id != SimHashes.Unobtanium;
+            if (!result.MeetsAll)
+            {
+                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' is entombed.");
+                result.ShortCircuited = true;
+            }
+            return result.MeetsAll;
+        }
+
+        private static bool CheckRoomSize(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
+        {
+            int cell = Grid.PosToCell(artifact.transform.position);
+            var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
+            var room = cavity?.room;
+
+            if (room != null && room.cavity != null)
+            {
+                result.ActualRoomSize = room.cavity.numCells;
+                result.MeetsRoomSize = result.ActualRoomSize >= config.RoomSizeMin && result.ActualRoomSize <= config.RoomSizeMax;
+                result.MeetsAll = result.MeetsRoomSize;
+            }
+            else
+            {
+                result.MeetsRoomSize = false;
+                result.MeetsAll = false;
             }
 
-            // 2. Room/cavity lookup
-            if (meetsAll && Game.Instance != null && Game.Instance.roomProber != null)
+            if (!result.MeetsAll)
             {
-                var cavity = Game.Instance.roomProber.GetCavityForCell(cell);
-                var room = cavity?.room;
-                if (room != null && room.cavity != null)
+                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' does not meet room size requirements.");
+                result.ShortCircuited = true;
+            }
+            return result.MeetsAll;
+        }
+
+        private static bool CheckNeighbors(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
+        {
+            int cell = Grid.PosToCell(artifact.transform.position);
+            var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
+            var room = cavity?.room;
+
+            if (room != null && room.cavity != null)
+            {
+                result.ArtifactCountInRoom = CountArtifactsOnPedestalsInRoom(room);
+                result.NeighborsOk = result.ArtifactCountInRoom <= config.Neighbors;
+                result.MeetsAll = result.NeighborsOk;
+            }
+            else
+            {
+                result.NeighborsOk = false;
+                result.MeetsAll = false;
+            }
+
+            if (!result.MeetsAll)
+            {
+                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' does not meet neighbor count requirements.");
+                result.ShortCircuited = true;
+            }
+            return result.MeetsAll;
+        }
+
+        private static bool CheckDecor(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
+        {
+            int cell = Grid.PosToCell(artifact.transform.position);
+            var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
+            var room = cavity?.room;
+
+            if (room != null && room.cavity != null)
+            {
+                int decorSum = 0;
+                int decorCount = 0;
+                foreach (var building in room.cavity.buildings)
                 {
-                    // 3. Room size check
-                    actualRoomSize = room.cavity.numCells;
-                    meetsRoomSize = actualRoomSize >= config.RoomSizeMin && actualRoomSize <= config.RoomSizeMax;
-                    if (shortCircuit && !meetsRoomSize)
+                    if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
                     {
-                        meetsAll = false;
-                        wasShortCircuited = true;
-                    }
-
-                    // 4. Neighbor count
-                    if (meetsAll)
-                    {
-                        artifactCount = CountArtifactsOnPedestalsInRoom(room);
-                        neighborsOk = artifactCount <= config.Neighbors;
-                        if (shortCircuit && !neighborsOk)
-                        {
-                            meetsAll = false;
-                            wasShortCircuited = true;
-                        }
-                    }
-
-                    // 5. Decor
-                    if (meetsAll)
-                    {
-                        int decorSum = 0;
-                        int decorCount = 0;
-                        foreach (var building in room.cavity.buildings)
-                        {
-                            if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
-                            {
-                                decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
-                                decorCount++;
-                            }
-                        }
-                        if (decorCount > 0)
-                            actualDecor = (float)decorSum / decorCount;
-                        else
-                            actualDecor = 0f;
-
-                        // Check if the artifact is already active
-                        bool isActive = false;
-                        int artifactId = artifact.GetInstanceID();
-                        if (ArtifactStates.TryGetValue(artifactId, out var state))
-                        {
-                            isActive = state.IsActive;
-                        }
-
-                        // Apply hysteresis to the decor check
-                        float requiredDecor = isActive ? config.DecorMinimum * 0.9f : config.DecorMinimum;
-                        meetsDecor = actualDecor >= requiredDecor;
-
-                        if (shortCircuit && !meetsDecor)
-                        {
-                            meetsAll = false;
-                            wasShortCircuited = true;
-                        }
-                    }
-                    else
-                    {
-                        // For debug output, always calculate decor
-                        int decorSum = 0;
-                        int decorCount = 0;
-                        foreach (var building in room.cavity.buildings)
-                        {
-                            if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
-                            {
-                                decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
-                                decorCount++;
-                            }
-                        }
-                        if (decorCount > 0)
-                            actualDecor = (float)decorSum / decorCount;
-                        else
-                            actualDecor = 0f;
-                        meetsDecor = actualDecor >= config.DecorMinimum;
+                        decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
+                        decorCount++;
                     }
                 }
+                result.ActualDecor = decorCount > 0 ? (float)decorSum / decorCount : 0f;
+
+                bool isActive = ArtifactStateTracker.ArtifactStates.TryGetValue(artifact.GetInstanceID(), out var state) && state.IsActive;
+                float requiredDecor = isActive ? config.DecorMinimum * 0.9f : config.DecorMinimum;
+                result.MeetsDecor = result.ActualDecor >= requiredDecor;
+                result.MeetsAll = result.MeetsDecor;
+            }
+            else
+            {
+                result.MeetsDecor = false;
+                result.MeetsAll = false;
             }
 
-            if (!shortCircuit)
-                meetsAll = meetsRoomSize && meetsDecor && !isEntombed && neighborsOk;
-
-            HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' (ID: {artifact.GetInstanceID()}) evaluation result: MeetsAll={meetsAll}, RoomSize={meetsRoomSize}, Decor={meetsDecor}, NeighborsOk={neighborsOk}");
-
-            return new ArtifactCriteriaResult
+            if (!result.MeetsAll)
             {
-                ActualRoomSize = actualRoomSize,
-                MeetsRoomSize = meetsRoomSize,
-                ActualDecor = actualDecor,
-                MeetsDecor = meetsDecor,
-                Scope = config.Scope,
-                ArtifactCountInRoom = artifactCount,
-                NeighborsOk = neighborsOk,
-                MeetsAll = meetsAll,
-                ShortCircuited = wasShortCircuited
-            };
+                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' does not meet decor requirements.");
+                result.ShortCircuited = true;
+            }
+            return result.MeetsAll;
         }
 
         public static void RegisterArtifactOnPedestal(GameObject artifact)
@@ -463,23 +488,7 @@ namespace ArtifactsPlus
                 ArtifactStates[id] = state;
             }
 
-            bool wasActive = state.IsActive;
-
-            // Check if the artifact is on a pedestal
-            bool onPedestal = ArtifactsOnPedestals.Contains(artifact);
-            state.OnPedestal = onPedestal;
-
-            // Ensure IsActive is turned off if not on a pedestal
-            if (!onPedestal)
-            {
-                state.IsActive = false;
-
-                // Disable the glow effect
-                ApplyGlowEffect(artifact, false);
-
-                HLib.CustomLogger.Log($"[ArtifactsPlus] Artifact '{artifact.name}' deactivated because it is no longer on a pedestal.");
-                return;
-            }
+            bool wasActive = state.IsActive; // save the current state (which will shortly become the previous state)
 
             // Get artifact config
             string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
@@ -492,36 +501,22 @@ namespace ArtifactsPlus
 
             // Evaluate criteria
             var criteria = EvaluateArtifactCriteria(artifact, config);
-            bool isAnalyzed = false;
-            var artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name;
-            if (!string.IsNullOrEmpty(artifactId) && ArtifactSelector.Instance != null)
-            {
-                isAnalyzed = ArtifactSelector.Instance.GetAnalyzedArtifactIDs().Contains(artifactId);
-            }
-            state.IsAnalyzed = isAnalyzed;
 
             // Artifact is active only if it's on the pedestal, meets all criteria, and is analyzed
-            state.IsActive = onPedestal && criteria.MeetsAll && isAnalyzed;
+            state.IsActive = criteria.MeetsAll;
 
             string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
                 ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
                 ?? internalName;
 
-            if (wasActive != state.IsActive)
+
+            if (wasActive != state.IsActive) // state has changed
             {
                 int cell = Grid.PosToCell(artifact.transform.position);
                 int worldId = Grid.WorldIdx[cell];
                 string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
                 string shortCircuitText = criteria.ShortCircuited ? " SHORTCIRCUIT" : "";
-                HLib.CustomLogger.Log(
-                    $"[ArtifactState]{shortCircuitText} {internalName} {stateText} " +
-                    $"Pedestal({onPedestal}) " +
-                    $"RoomSize: {config.RoomSizeMin}<=({criteria.ActualRoomSize})<={config.RoomSizeMax} ({criteria.MeetsRoomSize}) " +
-                    $"Decor: {config.DecorMinimum}<={criteria.ActualDecor} ({criteria.MeetsDecor}) " +
-                    $"Neighbors: {criteria.ArtifactCountInRoom}<={config.Neighbors} ({criteria.NeighborsOk})"
-                );
-
                 HLib.CustomLogger.Log($"[ArtifactsPlus] Artifact '{artifact.name}' state changed to: {(state.IsActive ? "ACTIVE" : "INACTIVE")}");
 
                 PopFXManager.Instance.SpawnFX(
@@ -700,14 +695,16 @@ namespace ArtifactsPlus
 
         public static void PollAllArtifacts()
         {
-            HLib.CustomLogger.Log($"\nPollAllArtifacts");
-            
             // Clean up null artifacts from the collection
             ArtifactsOnPedestals.RemoveWhere(artifact => artifact == null);
 
-            var artifactsSnapshot = ArtifactsOnPedestals.ToArray();
+            // Find all artifacts in the scene
+            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Artifact"))
+                .Select(kp => kp.gameObject)
+                .ToArray();
 
-            foreach (var artifact in artifactsSnapshot)
+            foreach (var artifact in allArtifacts)
             {
                 if (artifact.transform == null)
                 {
