@@ -44,8 +44,6 @@ namespace ArtifactsPlus
 
             ArtifactStateTracker.LoadArtifactAttributeMap();
 
-            CheckCameraSettings();
-
             // Initialize and register hotkeys
             hotkeyListener = new HLib.HotkeyListener();
             hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
@@ -74,96 +72,9 @@ namespace ArtifactsPlus
             ArtifactStateTracker.ApplyGlowEffect(artifactObelisk, newState);
 
             HLib.CustomLogger.Log($"[Patches] Toggled glow effect for artifact_obelisk. New state: {newState}");
-
-            if (newState)
-            {
-                VerifyArtifactGlowFXParenting();
-                InspectLight2DProperties();
-                CheckCameraSettings();
-            }
         }
 
-        public static void VerifyArtifactGlowFXParenting()
-        {
-            var artifactObelisk = GameObject.Find("artifact_obelisk");
-            if (artifactObelisk == null)
-            {
-                HLib.CustomLogger.Log("[ERROR] artifact_obelisk not found in the scene.");
-                return;
-            }
-
-            var glowChild = artifactObelisk.transform.Find("ArtifactGlowFX");
-            if (glowChild == null)
-            {
-                HLib.CustomLogger.Log("[ERROR] ArtifactGlowFX is not parented to artifact_obelisk.");
-                return;
-            }
-
-            // Log the state of ArtifactGlowFX
-            HLib.CustomLogger.Log($"[DEBUG] ArtifactGlowFX found. ActiveSelf: {glowChild.gameObject.activeSelf}, ActiveInHierarchy: {glowChild.gameObject.activeInHierarchy}");
-            HLib.CustomLogger.Log($"[DEBUG] ArtifactGlowFX position: {glowChild.position}, Parent: {glowChild.parent?.name}");
-
-            // Ensure it is active and positioned correctly
-            glowChild.gameObject.SetActive(true);
-            glowChild.position = artifactObelisk.transform.position;
-
-            HLib.CustomLogger.Log("[DEBUG] ArtifactGlowFX visibility and position forced.");
-        }
-
-        public static void InspectLight2DProperties()
-        {
-            var artifactObelisk = GameObject.Find("artifact_obelisk");
-            if (artifactObelisk == null)
-            {
-                HLib.CustomLogger.Log("[ERROR] artifact_obelisk not found in the scene.");
-                return;
-            }
-
-            var light2D = artifactObelisk.GetComponentInChildren<Light2D>();
-            if (light2D == null)
-            {
-                HLib.CustomLogger.Log("[ERROR] Light2D component not found on artifact_obelisk or its children.");
-                return;
-            }
-
-            HLib.CustomLogger.Log($"[DEBUG] Light2D Properties - Enabled: {light2D.enabled}, Color: {light2D.Color}, Range: {light2D.Range}, Lux: {light2D.Lux}");
-            
-            // Validate properties
-            if (light2D.Range != 4f || light2D.Lux != 1800 || light2D.Color != Color.yellow)
-            {
-                HLib.CustomLogger.Log("[WARN] Light2D properties are not set to the expected values. Adjusting...");
-                light2D.Range = 4f;
-                light2D.Lux = 1800;
-                light2D.Color = Color.yellow;
-            }
-        }
-
-        public static void CheckCameraSettings()
-        {
-            var mainCamera = Camera.main;
-            if (mainCamera == null)
-            {
-                HLib.CustomLogger.Log("[ERROR] Main camera not found in the scene.");
-                return;
-            }
-
-            var artifactObelisk = GameObject.Find("artifact_obelisk");
-            if (artifactObelisk == null)
-            {
-                HLib.CustomLogger.Log("[ERROR] artifact_obelisk not found in the scene.");
-                return;
-            }
-
-            int artifactLayer = artifactObelisk.layer;
-            if ((mainCamera.cullingMask & (1 << artifactLayer)) == 0)
-            {
-                HLib.CustomLogger.Log("[WARN] Main camera's culling mask does not include the layer of artifact_obelisk. Adjusting...");
-                mainCamera.cullingMask |= (1 << artifactLayer);
-            }
-
-            HLib.CustomLogger.Log($"[DEBUG] Main camera culling mask includes artifact_obelisk layer: {((mainCamera.cullingMask & (1 << artifactLayer)) != 0)}");
-        }
-
+  
         public static void PrintActiveArtifactsWithWorlds()
         {
             var activeArtifacts = ArtifactStateTracker.ArtifactsOnPedestals
@@ -187,7 +98,6 @@ namespace ArtifactsPlus
             }
         }
     }
-
     public class ArtifactState
     {
         public bool OnPedestal;
@@ -962,7 +872,7 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename, bool isAutoSave, bool updateSavePointer)
         {
-            HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Save called for file: " + filename);
+            //HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Save called for file: " + filename);
         }
     }
 
@@ -971,7 +881,20 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename)
         {
-            HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
+            //HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
+        }
+    }
+
+    [HarmonyPatch(typeof(MinionConfig), "OnSpawn")]
+    public static class MinionConfig_OnSpawn_Patch
+    {
+        public static void Postfix(GameObject __instance)
+        {
+            if (__instance != null)
+            {
+                string minionName = __instance.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Minion";
+                HLib.CustomLogger.Log($"[DEBUG] New minion spawned: {minionName}");
+            }
         }
     }
 }
