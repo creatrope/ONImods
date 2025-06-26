@@ -48,6 +48,18 @@ namespace ArtifactsPlus
             {
                 var lines = new System.Collections.Generic.List<string>();
 
+                // Check if the artifact is active
+                if (ArtifactStateTracker.ArtifactStates.TryGetValue(receptacle.Occupant.GetInstanceID(), out var state))
+                {
+                    string status = state.IsActive ? "Active" : "Inactive";
+                    lines.Add($"Status: {status}");
+                }
+                else
+                {
+                    lines.Add("Status: Unknown");
+                }
+
+                // Add modifiers
                 if (ArtifactEffectTracker.TryGetArtifactModifiers(artifactId, out var modifiers) && modifiers.Count > 0)
                 {
                     lines.AddRange(modifiers.Select(kv =>
@@ -57,10 +69,10 @@ namespace ArtifactsPlus
                     }));
                 }
 
+                // Add effects
                 var config = ArtifactStateTracker.GetArtifactConfig(artifactId);
                 if (config != null && config.Effects != null && config.Effects.Count > 0)
                 {
-                    // FIX: Use Keys to get IEnumerable<string>
                     lines.AddRange(config.Effects.Keys);
                 }
 

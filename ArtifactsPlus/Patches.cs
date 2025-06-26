@@ -52,9 +52,13 @@ namespace ArtifactsPlus
             {
                 ToggleGlowEffectForArtifactObelisk();
             });
+
+            hotkeyListener.RegisterHotkey("Ctrl+F12", () =>
+            {
+                PrintActiveArtifactsWithWorlds();
+            });
         }
 
-        // Add this function to the Patches class
         public static void ToggleGlowEffectForArtifactObelisk()
         {
             var artifactObelisk = GameObject.Find("artifact_obelisk"); // Find the artifact_obelisk by name
@@ -158,6 +162,29 @@ namespace ArtifactsPlus
             }
 
             HLib.CustomLogger.Log($"[DEBUG] Main camera culling mask includes artifact_obelisk layer: {((mainCamera.cullingMask & (1 << artifactLayer)) != 0)}");
+        }
+
+        public static void PrintActiveArtifactsWithWorlds()
+        {
+            var activeArtifacts = ArtifactStateTracker.ArtifactsOnPedestals
+                .Where(artifact => artifact != null && ArtifactStateTracker.ArtifactStates.TryGetValue(artifact.GetInstanceID(), out var state) && state.IsActive);
+
+            if (!activeArtifacts.Any())
+            {
+                HLib.CustomLogger.Log("[ArtifactsPlus] No active artifacts found.");
+                return;
+            }
+
+            HLib.CustomLogger.Log("[ArtifactsPlus] Active Artifacts and their Worlds:");
+            foreach (var artifact in activeArtifacts)
+            {
+                int cell = Grid.PosToCell(artifact.transform.position);
+                int worldId = Grid.WorldIdx[cell];
+                string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
+                string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
+
+                HLib.CustomLogger.Log($"- {artifactName} in {worldName}");
+            }
         }
     }
 
@@ -769,6 +796,12 @@ namespace ArtifactsPlus
             foreach (var artifact in ArtifactsOnPedestals)
             {
                 if (artifact == null) continue;
+
+                // Check if the artifact is active
+                if (!ArtifactStates.TryGetValue(artifact.GetInstanceID(), out var state) || !state.IsActive)
+                {
+                    continue; // Skip inactive artifacts
+                }
 
                 int artifactWorldId = Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)];
                 string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
