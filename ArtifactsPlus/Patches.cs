@@ -351,8 +351,8 @@ namespace ArtifactsPlus
             var artifactType = artifactPrefabID.PrefabTag.Name;
             var count = ArtifactsOnPedestals.Count(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactType);
 
-            HLib.CustomLogger.Log($"[ArtifactsPlus] Registered artifact on pedestal: {artifact.name}");
-            HLib.CustomLogger.Log($"[DEBUG] Artifact type '{artifactType}' has {count} instances registered.");
+            //HLib.CustomLogger.Log($"[ArtifactsPlus] Registered artifact on pedestal: {artifact.name}");
+            //HLib.CustomLogger.Log($"[DEBUG] Artifact type '{artifactType}' has {count} instances registered.");
         }
 
         public static void UnregisterArtifactOnPedestal(GameObject artifact)
@@ -885,16 +885,16 @@ namespace ArtifactsPlus
         }
     }
 
-    [HarmonyPatch(typeof(MinionConfig), "OnSpawn")]
-    public static class MinionConfig_OnSpawn_Patch
-    {
-        public static void Postfix(GameObject __instance)
-        {
-            if (__instance != null)
-            {
-                string minionName = __instance.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Minion";
-                HLib.CustomLogger.Log($"[DEBUG] New minion spawned: {minionName}");
-            }
-        }
-    }
+    //[HarmonyPatch(typeof(MinionIdentity), "OnSpawn")]
+    //public static class MinionIdentity_OnSpawn_Patch
+    //{
+    //    public static void Postfix(GameObject __instance)
+    //    {
+    //        if (__instance != null)
+    //       {
+     //           string minionName = __instance.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Minion";
+     //           HLib.CustomLogger.Log($"[DEBUG] New minion spawned: {minionName}");
+     //       }
+     //   }
+    //}
 }

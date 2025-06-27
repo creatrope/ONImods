@@ -1,0 +1,40 @@
+  [HarmonyPatch(typeof(MinionConfig), "OnSpawn")]
+    public static class MinionConfig_OnSpawn_Patch
+    {
+        public static void Postfix(GameObject __instance)
+        {
+            HLib.CustomLogger.Log($"[DEBUG] MinionConfig.OnSpawn called.");
+
+            // Step 1: Check if __instance is null
+            if (__instance == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] __instance is null.");
+                return;
+            }
+
+            // Step 2: Log the type of __instance
+            HLib.CustomLogger.Log($"[DEBUG] __instance type: {__instance.GetType()}");
+
+            // Step 3: Check if __instance has the required KPrefabID component
+            var prefabID = __instance.GetComponent<KPrefabID>();
+            if (prefabID == null)
+            {
+                HLib.CustomLogger.Log("[ERROR] __instance does not have a KPrefabID component.");
+                return;
+            }
+
+            // Step 4: Log the tags of the prefab
+            HLib.CustomLogger.Log($"[DEBUG] Tags: {string.Join(", ", prefabID.Tags)}");
+
+            // Optional: Check for specific tags or properties
+            if (!prefabID.HasTag("Minion"))
+            {
+                HLib.CustomLogger.Log("[ERROR] __instance does not have the 'Minion' tag.");
+                return;
+            }
+
+            // Step 5: Add to PendingMinions for delayed processing
+            Patches.PendingMinions.Add(__instance);
+            HLib.CustomLogger.Log($"[DEBUG] Minion '{prefabID.PrefabTag.Name}' added to the pending list. Total pending: {Patches.PendingMinions.Count}");
+        }
+    }
