@@ -39,7 +39,7 @@ namespace ArtifactsPlus
             // Only print custom log file location and log to custom log if verbose is enabled
             if (ArtifactsPlusOptions.Instance.Verbose)
             {
-                HLib.CustomLogger.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
+                Debug.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
             }
 
             ArtifactStateTracker.LoadArtifactAttributeMap();
@@ -51,8 +51,8 @@ namespace ArtifactsPlus
             {
                 PrintActiveArtifactsWithWorlds();
             });
-        }
 
+        }
 
         public static void PrintActiveArtifactsWithWorlds()
         {
@@ -763,7 +763,7 @@ namespace ArtifactsPlus
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             Debug.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-            HLib.CustomLogger.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            //HLib.CustomLogger.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
             try
             {
@@ -861,18 +861,6 @@ namespace ArtifactsPlus
         public static void Postfix(string filename)
         {
             //HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
-        }
-    }
-
-    [HarmonyPatch(typeof(MinionIdentity), "OnSpawn")]
-    public static class MinionIdentity_OnSpawn_Patch
-    {
-        public static void Postfix(GameObject __instance)
-       {
-           if (__instance != null)
-          {
-               HLib.CustomLogger.Log($"[DEBUG] New minion spawned");
-            }
         }
     }
 }
