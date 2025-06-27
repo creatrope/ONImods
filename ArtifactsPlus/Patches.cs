@@ -885,16 +885,15 @@ namespace ArtifactsPlus
         }
     }
 
-    //[HarmonyPatch(typeof(MinionIdentity), "OnSpawn")]
-    //public static class MinionIdentity_OnSpawn_Patch
-    //{
-    //    public static void Postfix(GameObject __instance)
-    //    {
-    //        if (__instance != null)
-    //       {
-     //           string minionName = __instance.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Minion";
-     //           HLib.CustomLogger.Log($"[DEBUG] New minion spawned: {minionName}");
-     //       }
-     //   }
-    //}
+    [HarmonyPatch(typeof(MinionIdentity), "OnSpawn")]
+    public static class MinionIdentity_OnSpawn_Patch
+    {
+        public static void Postfix(GameObject __instance)
+       {
+           if (__instance != null)
+          {
+               HLib.CustomLogger.Log($"[DEBUG] New minion spawned");
+            }
+        }
+    }
 }
