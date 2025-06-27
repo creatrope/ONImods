@@ -46,10 +46,6 @@ namespace ArtifactsPlus
 
             // Initialize and register hotkeys
             hotkeyListener = new HLib.HotkeyListener();
-            hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
-            {
-                ToggleGlowEffectForArtifactObelisk();
-            });
 
             hotkeyListener.RegisterHotkey("Ctrl+F12", () =>
             {
@@ -57,24 +53,7 @@ namespace ArtifactsPlus
             });
         }
 
-        public static void ToggleGlowEffectForArtifactObelisk()
-        {
-            var artifactObelisk = GameObject.Find("artifact_obelisk"); // Find the artifact_obelisk by name
-            if (artifactObelisk == null)
-            {
-                HLib.CustomLogger.Log("[Patches] artifact_obelisk not found.");
-                return;
-            }
 
-            // Get the current glow state and toggle it
-            bool isGlowing = artifactObelisk.GetComponentInChildren<Light2D>()?.enabled ?? false;
-            bool newState = !isGlowing;
-            ArtifactStateTracker.ApplyGlowEffect(artifactObelisk, newState);
-
-            HLib.CustomLogger.Log($"[Patches] Toggled glow effect for artifact_obelisk. New state: {newState}");
-        }
-
-  
         public static void PrintActiveArtifactsWithWorlds()
         {
             var activeArtifacts = ArtifactStateTracker.ArtifactsOnPedestals
