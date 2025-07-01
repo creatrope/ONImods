@@ -66,18 +66,57 @@ namespace SensorsPlus
 
             GameObject container = ContentContainer != null ? ContentContainer : gameObject;
 
-            var row = new PPanel("ThresholdRow") {
+            // Create a panel for the text fields
+            var textFieldsPanel = new PPanel("TextFieldsPanel")
+            {
+                Direction = PanelDirection.Vertical,
+                Spacing = 5,
+                Margin = new RectOffset(0, 0, 10, 10)
+            };
+
+            // Add text fields for sensor output information
+            var bit0Label = new PLabel("Bit0Label")
+            {
+                Text = "bit 0: default sensor output (use above)",
+                TextStyle = PUITuning.Fonts.TextDarkStyle
+            };
+
+            var bit1Label = new PLabel("Bit1Label")
+            {
+                Text = "bit 1: bit 0 exceeds +threshold",
+                TextStyle = PUITuning.Fonts.TextDarkStyle
+            };
+
+            var bit2Label = new PLabel("Bit2Label")
+            {
+                Text = "bit 2: bit 0 exceeds -threshold",
+                TextStyle = PUITuning.Fonts.TextDarkStyle
+            };
+
+            textFieldsPanel.AddChild(bit0Label);
+            textFieldsPanel.AddChild(bit1Label);
+            textFieldsPanel.AddChild(bit2Label);
+
+            var textFieldsGO = textFieldsPanel.Build();
+            textFieldsGO.transform.SetParent(container.transform, false);
+            textFieldsGO.transform.SetAsFirstSibling();
+
+            // Create the row for threshold label, input field, and derivative label
+            var row = new PPanel("ThresholdRow")
+            {
                 Direction = PanelDirection.Horizontal,
                 Spacing = 5,
                 Margin = new RectOffset(0, 0, 0, 10)
             };
 
-            var thresholdLabel = new PLabel("ThresholdLabel") {
+            var thresholdLabel = new PLabel("ThresholdLabel")
+            {
                 Text = "Threshold +/-",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
             };
 
-            inputField = new PTextField() {
+            inputField = new PTextField()
+            {
                 MinWidth = 90 // Adjust as needed for your font/UI scale; 90 is a good starting point for 6 digits
             };
             inputField.OnTextChanged += (sender, text) =>
@@ -106,7 +145,6 @@ namespace SensorsPlus
                 ToolTip = "Current first derivative"
             }.AddOnRealize(go =>
             {
-                // Check for the child "Text" object
                 var textChild = go.transform.Find("Text");
                 string sensorType = pressureSensor != null ? "Pressure" : (temperatureSensor != null ? "Temperature" : "Unknown");
 
@@ -117,28 +155,16 @@ namespace SensorsPlus
                 }
                 else
                 {
-                    // Try to get LocText first
-                    derivativeText = textChild.GetComponent<LocText>();
+                    derivativeText = textChild.GetComponent<TMP_Text>();
                     if (derivativeText != null)
                     {
-                        HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: LocText assigned.");
-                        ((LocText)derivativeText).alignment = TMPro.TextAlignmentOptions.Left;
+                        HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: TMP_Text assigned.");
+                        derivativeText.alignment = TMPro.TextAlignmentOptions.Left;
                     }
                     else
                     {
-                        // Try to get TMP_Text as fallback
-                        var tmpText = textChild.GetComponent<TMP_Text>();
-                        if (tmpText != null)
-                        {
-                            derivativeText = tmpText;
-                            HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: TMP_Text assigned (not LocText).");
-                            tmpText.alignment = TMPro.TextAlignmentOptions.Left;
-                        }
-                        else
-                        {
-                            HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child found, but neither LocText nor TMP_Text present.");
-                            derivativeText = null;
-                        }
+                        HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child found, but TMP_Text not present.");
+                        derivativeText = null;
                     }
                 }
                 UpdateDerivativeLabel();
@@ -152,7 +178,7 @@ namespace SensorsPlus
             rowGO.transform.SetParent(container.transform, false);
             rowGO.transform.SetAsLastSibling();
 
-            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] Added Threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
+            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] Added text fields, threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
         }
 
         private void UpdateDerivativeLabel()

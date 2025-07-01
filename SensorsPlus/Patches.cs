@@ -26,6 +26,8 @@ namespace SensorsPlus // CHANGED FROM SensorsP
         // Add a guard to prevent double static initialization
         private static bool staticInitialized = false;
 
+        public static string DesktopLogPath => HLib.CustomLogger.LogPath;
+
         static Patches()
         {
             if (staticInitialized)
@@ -36,15 +38,14 @@ namespace SensorsPlus // CHANGED FROM SensorsP
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            Debug.Log($"SensorsPlus: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
             HLib.CustomLogger.Log($"SensorsPlus: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
             Debug.Log("SensorsPlus: Patches class loaded");
-
             HLib.CustomLogger.Log("SensorsPlus: Patches class loaded.");
 
-            // Initialize and register hotkey
+            // Initialize and register hotkeys
             hotkeyListener = new HLib.HotkeyListener();
+
             hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
             {
                 ribbonDebugEnabled = !ribbonDebugEnabled;
@@ -57,7 +58,31 @@ namespace SensorsPlus // CHANGED FROM SensorsP
 
         public static void OnLoad()
         {
-            //System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(SensorsPlus.Patches).TypeHandle);
+            // Initialize the custom log path only if EnableCustomLog is true  
+            var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+
+
+            if (options.EnableCustomLog)
+            {
+                HLib.CustomLogger.SetLogPath("SensorsPlus");
+            }
+
+            var uniqueId = Guid.NewGuid();
+            var timestamp = System.DateTime.Now.ToString("O");
+            var domain = AppDomain.CurrentDomain.FriendlyName;
+            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+
+            // Initialize and register hotkeys  
+            hotkeyListener = new HLib.HotkeyListener();
+
+            hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
+            {
+                ribbonDebugEnabled = !ribbonDebugEnabled;
+                HLib.CustomLogger.Log($"[HotkeyListener] Ctrl+F11 pressed: ribbonDebugEnabled is now {(ribbonDebugEnabled ? "ON" : "OFF")}");
+            });
+
+            // Register for Unity update loop  
+            HotkeyListenerUpdater.Create();
         }
 
         [HarmonyPatch(typeof(Db), "Initialize")]
@@ -101,30 +126,13 @@ namespace SensorsPlus // CHANGED FROM SensorsP
 
         void Update()
         {
-            // Gather pressed keys (example for Ctrl+F11, expand as needed)
-            var pressed = new System.Collections.Generic.List<string>();
-            bool ctrlDown = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
-            bool f11Down = Input.GetKey(KeyCode.F11);
-            bool f11JustPressed = Input.GetKeyDown(KeyCode.F11);
-
-            // Only add "Ctrl+F11" if Ctrl is held and F11 is pressed
-            if (ctrlDown && f11Down)
-                pressed.Add("Ctrl+F11");
-
-            // Call the static hotkeyListener
             if (Patches.hotkeyListener != null)
             {
-                Patches.hotkeyListener.Update(pressed);
+                Patches.hotkeyListener.Update();
             }
             else
             {
                 HLib.CustomLogger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
-            }
-
-            // Only log when Ctrl+F11 is actually pressed
-            if (ctrlDown && f11JustPressed)
-            {
-                HLib.CustomLogger.Log("[HotkeyListenerUpdater] Ctrl+F11 pressed (Input.GetKeyDown).");
             }
         }
     }
@@ -132,9 +140,6 @@ namespace SensorsPlus // CHANGED FROM SensorsP
     [ConfigFile("modoptions.yaml", true, true)]
     public class ModOptions
     {
-        // Define your options here, e.g.:
-        public bool ExampleOption { get; set; } = true;
-
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         public bool EnableCustomLog { get; set; } = true;
 
@@ -155,7 +160,6 @@ namespace SensorsPlus // CHANGED FROM SensorsP
         {
             // Load options and set logger enabled flag
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
-            HLib.CustomLogger.Enabled = options.EnableCustomLog;
 
             // Set the moving average window globally
             SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 3;
@@ -163,25 +167,13 @@ namespace SensorsPlus // CHANGED FROM SensorsP
             // Set the sampling interval globally
             SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds > 0.01f ? options.SamplingIntervalSeconds : 1.0f;
 
-            // Reset the log at OnLoad for extra safety
-            if (HLib.CustomLogger.Enabled)
-                HLib.CustomLogger.Reset();
-
-            // Set log path before resetting log, so the correct file is overwritten
-            HLib.CustomLogger.LogPath = System.IO.Path.Combine(
-                System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
-                "SensorsPlus.log"
-            );
-            if (HLib.CustomLogger.Enabled)
-                HLib.CustomLogger.ResetLog(); // Now this will reset the correct log file
-
             onLoadCount++;
             var uniqueId = Guid.NewGuid();
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             Debug.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-            HLib.CustomLogger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            CustomLogger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
             Debug.Log("SensorsPlus: Mod.OnLoad called.");
 
