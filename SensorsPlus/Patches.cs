@@ -66,24 +66,13 @@ namespace SensorsPlus
         [HarmonyPatch(typeof(Db), "Initialize")]
         public class Db_Initialize_Patch
         {
-            // Static counters for logging
-            private static int prefixCount = 0;
-            private static int postfixCount = 0;
-
+            // note: there's evidence that initialize is being called multiple times in some cases, be careful!
             public static void Prefix()
             {
-
-
-                prefixCount++;
-                var asm = System.Reflection.Assembly.GetExecutingAssembly();
-                Patches.Logger.Log($"SensorsPlus: Prefix {prefixCount} | Assembly: {asm.Location}");
             }
 
             public static void Postfix()
             {
-                postfixCount++;
-                var asm = System.Reflection.Assembly.GetExecutingAssembly();
-                Patches.Logger.Log($"SensorsPlus: Postfix {postfixCount} | Assembly: {asm.Location}");
             }
         }
     }
