@@ -1,17 +1,18 @@
-using System;
 using Database;
+using Epic.OnlineServices.Platform;
 using HarmonyLib;
+using HLib;
 using KMod;
+using KSerialization;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.UI;
+using System;
 using System.Collections.Generic; // For List<>
 using System.Runtime.CompilerServices;
 using TUNING; // Or the correct namespace for LogicPressureSensorConfig
 using UnityEngine;
-using KSerialization;
 using static SensorMathUtils;
-using HLib; // <-- Add this using directive
 
 namespace SensorsPlus // CHANGED FROM SensorsP
 {
@@ -26,7 +27,8 @@ namespace SensorsPlus // CHANGED FROM SensorsP
         // Add a guard to prevent double static initialization
         private static bool staticInitialized = false;
 
-        public static string DesktopLogPath => HLib.CustomLogger.LogPath;
+        // Change Logger field to public static
+        public static readonly CustomLogger Logger = new CustomLogger("SensorsPlus");
 
         static Patches()
         {
@@ -38,10 +40,6 @@ namespace SensorsPlus // CHANGED FROM SensorsP
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            HLib.CustomLogger.Log($"SensorsPlus: Patches static ctor loaded | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-
-            Debug.Log("SensorsPlus: Patches class loaded");
-            HLib.CustomLogger.Log("SensorsPlus: Patches class loaded.");
 
             // Initialize and register hotkeys
             hotkeyListener = new HLib.HotkeyListener();
@@ -49,7 +47,7 @@ namespace SensorsPlus // CHANGED FROM SensorsP
             hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
             {
                 ribbonDebugEnabled = !ribbonDebugEnabled;
-                HLib.CustomLogger.Log($"[HotkeyListener] Ctrl+F11 pressed: ribbonDebugEnabled is now {(ribbonDebugEnabled ? "ON" : "OFF")}");
+                Patches.Logger.Log($"[SensorsPlus] Ctrl+F11 pressed: ribbonDebugEnabled is now {(ribbonDebugEnabled ? "ON" : "OFF")}");
             });
 
             // Register for Unity update loop
@@ -58,31 +56,9 @@ namespace SensorsPlus // CHANGED FROM SensorsP
 
         public static void OnLoad()
         {
-            // Initialize the custom log path only if EnableCustomLog is true  
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+            Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
 
-
-            if (options.EnableCustomLog)
-            {
-                HLib.CustomLogger.SetLogPath("SensorsPlus");
-            }
-
-            var uniqueId = Guid.NewGuid();
-            var timestamp = System.DateTime.Now.ToString("O");
-            var domain = AppDomain.CurrentDomain.FriendlyName;
-            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-
-            // Initialize and register hotkeys  
-            hotkeyListener = new HLib.HotkeyListener();
-
-            hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
-            {
-                ribbonDebugEnabled = !ribbonDebugEnabled;
-                HLib.CustomLogger.Log($"[HotkeyListener] Ctrl+F11 pressed: ribbonDebugEnabled is now {(ribbonDebugEnabled ? "ON" : "OFF")}");
-            });
-
-            // Register for Unity update loop  
-            HotkeyListenerUpdater.Create();
         }
 
         [HarmonyPatch(typeof(Db), "Initialize")]
@@ -94,16 +70,18 @@ namespace SensorsPlus // CHANGED FROM SensorsP
 
             public static void Prefix()
             {
+
+
                 prefixCount++;
                 var asm = System.Reflection.Assembly.GetExecutingAssembly();
-                HLib.CustomLogger.Log($"SensorsPlus: Prefix {prefixCount} | Assembly: {asm.Location}");
+                Patches.Logger.Log($"SensorsPlus: Prefix {prefixCount} | Assembly: {asm.Location}");
             }
 
             public static void Postfix()
             {
                 postfixCount++;
                 var asm = System.Reflection.Assembly.GetExecutingAssembly();
-                HLib.CustomLogger.Log($"SensorsPlus: Postfix {postfixCount} | Assembly: {asm.Location}");
+                Patches.Logger.Log($"SensorsPlus: Postfix {postfixCount} | Assembly: {asm.Location}");
             }
         }
     }
@@ -121,7 +99,8 @@ namespace SensorsPlus // CHANGED FROM SensorsP
                 UnityEngine.Object.DontDestroyOnLoad(go);
                 _instance = go.AddComponent<HotkeyListenerUpdater>();
             }
-            HLib.CustomLogger.Log("HotkeyListenerUpdater.Create called");
+
+            Patches.Logger.Log("HotkeyListenerUpdater.Create called");
         }
 
         void Update()
@@ -132,7 +111,7 @@ namespace SensorsPlus // CHANGED FROM SensorsP
             }
             else
             {
-                HLib.CustomLogger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
+                Patches.Logger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
             }
         }
     }
@@ -172,10 +151,9 @@ namespace SensorsPlus // CHANGED FROM SensorsP
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            Debug.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-            CustomLogger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            Patches.Logger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
-            Debug.Log("SensorsPlus: Mod.OnLoad called.");
+            Patches.Logger.Log("SensorsPlus: Mod.OnLoad called.");
 
             SensorsPlus.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
             base.OnLoad(harmony);
@@ -265,7 +243,7 @@ namespace SensorsPlus // CHANGED FROM SensorsP
 
             if (Patches.ribbonDebugEnabled)
             {
-                HLib.CustomLogger.Log(
+                Patches.Logger.Log(
                     $"[DEBUG] RibbonSignal calculation for {__instance.name}:\n" +
                     $"  bit0 (IsSwitchedOn): {bit0}\n" +
                     $"  bit1 (smoothed dP/dt > +threshold): {bit1} (smoothedDerivative={smoothedDerivative:0.###}, threshold={threshold})\n" +
@@ -391,7 +369,7 @@ namespace SensorsPlus // CHANGED FROM SensorsP
         {
             if (registered) return;
             registered = true;
-            HLib.CustomLogger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
+            Patches.Logger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
             // Register the side screen for both pressure and temperature sensors
             PUIUtils.AddSideScreenContent<SensorSimpleInputSideScreen>();
         }

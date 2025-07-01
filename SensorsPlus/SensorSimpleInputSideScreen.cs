@@ -25,7 +25,7 @@ namespace SensorsPlus
             bool hasPressure = target != null && target.GetComponent<LogicPressureSensor>() != null;
             bool hasTemperature = target != null && target.GetComponent<LogicTemperatureSensor>() != null;
             bool valid = hasPressure || hasTemperature;
-            //HLib.CustomLogger.Log($"[SideScreen] IsValidForTarget: target={target?.name}, hasPressure={hasPressure}, hasTemperature={hasTemperature}, valid={valid}");
+            Patches.Logger.Log($"[SideScreen] IsValidForTarget: target={target?.name}, hasPressure={hasPressure}, hasTemperature={hasTemperature}, valid={valid}");
             return valid;
         }
 
@@ -51,7 +51,7 @@ namespace SensorsPlus
 
         protected override void OnPrefabInit()
         {
-            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
+            Patches.Logger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
             base.OnPrefabInit();
         }
 
@@ -150,7 +150,7 @@ namespace SensorsPlus
 
                 if (textChild == null)
                 {
-                    HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child NOT FOUND.");
+                    Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child NOT FOUND.");
                     derivativeText = null;
                 }
                 else
@@ -158,12 +158,12 @@ namespace SensorsPlus
                     derivativeText = textChild.GetComponent<TMP_Text>();
                     if (derivativeText != null)
                     {
-                        HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: TMP_Text assigned.");
+                        Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: TMP_Text assigned.");
                         derivativeText.alignment = TMPro.TextAlignmentOptions.Left;
                     }
                     else
                     {
-                        HLib.CustomLogger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child found, but TMP_Text not present.");
+                        Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child found, but TMP_Text not present.");
                         derivativeText = null;
                     }
                 }
@@ -178,7 +178,7 @@ namespace SensorsPlus
             rowGO.transform.SetParent(container.transform, false);
             rowGO.transform.SetAsLastSibling();
 
-            HLib.CustomLogger.Log("[SensorSimpleInputSideScreen] Added text fields, threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
+            Patches.Logger.Log("[SensorSimpleInputSideScreen] Added text fields, threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
         }
 
         private void UpdateDerivativeLabel()
@@ -205,14 +205,14 @@ namespace SensorsPlus
             if (derivativeText == null)
             {
                 string sensorType = pressureSensor != null ? "Pressure" : (temperatureSensor != null ? "Temperature" : "Unknown");
-                HLib.CustomLogger.Log($"[UI] UpdateDerivativeLabel: derivativeText is null for {sensorType} sensor!");
+                Patches.Logger.Log($"[UI] UpdateDerivativeLabel: derivativeText is null for {sensorType} sensor!");
                 return;
             }
 
             if (!(derivativeText is LocText locText))
             {
                 string sensorType = pressureSensor != null ? "Pressure" : (temperatureSensor != null ? "Temperature" : "Unknown");
-                HLib.CustomLogger.Log($"[UI] UpdateDerivativeLabel: derivativeText is not LocText (actual type: {derivativeText.GetType().Name}) for {sensorType} sensor!");
+                Patches.Logger.Log($"[UI] UpdateDerivativeLabel: derivativeText is not LocText (actual type: {derivativeText.GetType().Name}) for {sensorType} sensor!");
                 return;
             }
 
