@@ -23,31 +23,6 @@ namespace ArtifactsPlus
             return ArtifactStateTracker.TryGetArtifactAttributes(artifactId, out modifiers);
         }
 
-        public static void OnArtifactStateChanged(GameObject artifact, string artifactId, bool isActive, List<GameObject> minionList)
-        {
-            if (artifact == null)
-                return;
-
-            if (isActive)
-            {
-                foreach (var minion in minionList)
-                {
-                    ApplyOrRemoveArtifactModifiersToMinion(minion, artifact, true);
-                    ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifact, true);
-                }
-            }
-            else
-            {
-                foreach (var minion in GetAllMinions())
-                {
-                    ApplyOrRemoveArtifactModifiersToMinion(minion, artifact, false);
-                    ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifact, false);
-                }
-            }
-
-            System.IO.File.AppendAllText(HLib.CustomLogger.LogPath, "");
-        }
-
         private static IEnumerable<GameObject> GetAllMinions()
         {
             foreach (var minion in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
@@ -85,13 +60,13 @@ namespace ArtifactsPlus
                 {
                     if (artifact == null) continue;
                     string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                    ApplyOrRemoveArtifactModifiersToMinion(minion, artifact, false);
-                    ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifact, false);
+                    RemoveArtifactModifiersToMinion(minion, artifact);
+                    RemoveArtifactStatusEffectsToMinion(minion, artifact);
                 }
             }
         }
 
-        public static void ApplyOrRemoveArtifactModifiersToMinion(GameObject minion, GameObject artifact, bool apply)
+        public static void ApplyArtifactModifiersToMinion(GameObject minion, GameObject artifact)
         {
             if (minion == null || artifact == null)
                 return;
@@ -119,8 +94,7 @@ namespace ArtifactsPlus
                     if (attrInstance != null)
                     {
                         var modifierKey = (attrName, modValue, artifactInstanceId);
-                        if (apply)
-                        {
+
                             // Add a new modifier for stacking
                             var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Modifier: {artifactInstanceId}");
                             attrInstance.Add(modifier);
@@ -132,9 +106,40 @@ namespace ArtifactsPlus
                                 minionModifierArtifactMap[minion] = modMap;
                             }
                             modMap[modifierKey] = artifactInstanceId;
-                        }
-                        else
-                        {
+                    }
+                }
+            }
+        }
+
+
+        public static void RemoveArtifactModifiersToMinion(GameObject minion, GameObject artifact)
+        {
+            if (minion == null || artifact == null)
+                return;
+
+            int artifactInstanceId = artifact.GetInstanceID();
+            var minionModifiers = minion.GetComponent<MinionModifiers>();
+            if (minionModifiers == null)
+                return;
+
+            if (TryGetArtifactModifiers(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name, out var modifierDict))
+            {
+                foreach (var kvp in modifierDict)
+                {
+                    string attrName = kvp.Key;
+                    float modValue = kvp.Value;
+
+                    Klei.AI.Attribute attribute = Db.Get().Attributes.resources
+                        .FirstOrDefault(a => string.Equals(a.Id, attrName, StringComparison.OrdinalIgnoreCase) ||
+                                             string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));
+
+                    if (attribute == null)
+                        continue;
+
+                    var attrInstance = minionModifiers.attributes?.Get(attribute);
+                    if (attrInstance != null)
+                    {
+                        var modifierKey = (attrName, modValue, artifactInstanceId);
                             // Remove only the specific modifier applied by this artifact
                             var toRemove = new List<AttributeModifier>();
                             for (int i = 0; i < attrInstance.Modifiers.size; i++)
@@ -156,12 +161,11 @@ namespace ArtifactsPlus
                                     minionModifierArtifactMap.Remove(minion);
                             }
                         }
-                    }
                 }
             }
         }
 
-        public static void ApplyOrRemoveArtifactStatusEffectsToMinion(GameObject minion, GameObject artifact, bool apply)
+        public static void ApplyArtifactStatusEffectsToMinion(GameObject minion, GameObject artifact)
         {
             if (artifact == null)
                 return;
@@ -176,8 +180,6 @@ namespace ArtifactsPlus
                     if (effectsComponent == null)
                         continue;
 
-                    if (apply)
-                    {
                         // Add the effect with stacking logic
                         if (!effectsComponent.HasEffect(effectId))
                         {
@@ -190,10 +192,26 @@ namespace ArtifactsPlus
                             effectMap = new Dictionary<string, int>();
                             minionEffectArtifactMap[minion] = effectMap;
                         }
-                        effectMap[effectId] = artifactInstanceId;
-                    }
-                    else
-                    {
+                    effectMap[effectId] = artifactInstanceId;
+                }
+            }
+        }
+
+        public static void RemoveArtifactStatusEffectsToMinion(GameObject minion, GameObject artifact)
+        {
+            if (artifact == null)
+                return;
+
+            int artifactInstanceId = artifact.GetInstanceID();
+            if (ArtifactStateTracker.TryGetArtifactEffects(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name, out var effects) && effects != null)
+            {
+                foreach (var effect in effects)
+                {
+                    string effectId = effect.Key;
+                    var effectsComponent = minion.GetComponent<Effects>();
+                    if (effectsComponent == null)
+                        continue;
+
                         // Remove the effect only if it was applied by this artifact
                         if (minionEffectArtifactMap.TryGetValue(minion, out var effectMap) && effectMap.TryGetValue(effectId, out var appliedArtifactInstanceId))
                         {
@@ -205,7 +223,6 @@ namespace ArtifactsPlus
                                     minionEffectArtifactMap.Remove(minion);
                             }
                         }
-                    }
                 }
             }
         }

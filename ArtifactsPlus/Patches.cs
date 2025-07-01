@@ -452,7 +452,6 @@ namespace ArtifactsPlus
                 else
                     minionList = GetAllMinions();
 
-                ArtifactEffectTracker.OnArtifactStateChanged(artifact, internalName, state.IsActive, minionList);
                 ApplyGlowEffect(artifact, state.IsActive);
             }
         }
@@ -680,37 +679,6 @@ namespace ArtifactsPlus
             return count;
         }
 
-        public static void HandleMinionMigration(GameObject minion, int oldWorldId, int newWorldId)
-        {
-            foreach (var artifact in ArtifactsOnPedestals)
-            {
-                if (artifact == null) continue;
-
-                // Check if the artifact is active
-                if (!ArtifactStates.TryGetValue(artifact.GetInstanceID(), out var state) || !state.IsActive)
-                {
-                    continue; // Skip inactive artifacts
-                }
-
-                int artifactWorldId = Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)];
-                string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
-                var config = GetArtifactConfig(internalName);
-
-                // Remove effects from the old world
-                if (artifactWorldId == oldWorldId && config.Scope == "InWorld")
-                {
-                    ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minion, artifact, false);
-                    ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifact, false);
-                }
-
-                // Apply effects in the new world
-                if (artifactWorldId == newWorldId && config.Scope == "InWorld")
-                {
-                    ArtifactEffectTracker.ApplyOrRemoveArtifactModifiersToMinion(minion, artifact, true);
-                    ArtifactEffectTracker.ApplyOrRemoveArtifactStatusEffectsToMinion(minion, artifact, true);
-                }
-            }
-        }
     }
 
     public class ArtifactStatePoller : MonoBehaviour
@@ -823,25 +791,6 @@ namespace ArtifactsPlus
             {
                 var poller = Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
                 poller.hotkeyListener = Patches.hotkeyListener;
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(AssignmentManager), "MinionMigration")]
-    public static class AssignmentManager_MinionMigration_Patch
-    {
-        public static void Postfix(object data)
-        {
-            var migrationEventArgs = data as MinionMigrationEventArgs;
-            if (migrationEventArgs != null)
-            {
-                var minionGo = migrationEventArgs.minionId?.gameObject;
-                if (minionGo == null) return;
-
-                int oldWorldId = migrationEventArgs.prevWorldId;
-                int newWorldId = migrationEventArgs.targetWorldId;
-
-                ArtifactStateTracker.HandleMinionMigration(minionGo, oldWorldId, newWorldId);
             }
         }
     }
