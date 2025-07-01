@@ -628,6 +628,7 @@ namespace ArtifactsPlus
                 }
                 UpdateArtifactState(artifact);
             }
+            UpdateMinions();
         }
 
         private static int CountArtifactsOnPedestalsInRoom(Room room)
@@ -679,12 +680,66 @@ namespace ArtifactsPlus
             return count;
         }
 
+        public static void UpdateMinions()
+        {
+            // Get all minions in the game
+            var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Minion"))
+                .Select(kp => kp.gameObject);
+
+            // step 1
+            foreach (var minion in allMinions)
+            {
+                foreach (var artifact in ArtifactsOnPedestals)
+                {
+                    if (artifact == null) continue;
+
+                    int artifactId = artifact.GetInstanceID();
+                    if (ArtifactStates.TryGetValue(artifactId, out var state) && !state.IsActive)
+                    {
+                        // Remove modifiers and effects associated with deactivated artifacts
+                        ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
+                        ArtifactEffectTracker.RemoveArtifactStatusEffectsToMinion(minion, artifact);
+                    }
+                }
+            }
+
+            // step 2
+            foreach (var minion in allMinions)
+            {
+                foreach (var artifact in ArtifactsOnPedestals)
+                {
+                    if (artifact == null) continue;
+
+                    int artifactId = artifact.GetInstanceID();
+                    if (ArtifactStates.TryGetValue(artifactId, out var state) && state.IsActive)
+                    {
+                        // Get artifact config
+                        var config = GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
+                        if (config == null) continue;
+
+                        // Check if the minion is in scope for the artifact
+                        bool inScope = config.Scope == "All" ||
+                                       (config.Scope == "InRoom" && GetMinionsInSameRoom(artifact).Contains(minion)) ||
+                                       (config.Scope == "InWorld" && GetMinionsInSameWorld(artifact).Contains(minion));
+
+                        if (inScope)
+                        {
+                            // Apply modifiers if not already active
+                            ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
+                            ArtifactEffectTracker.ApplyArtifactStatusEffectsToMinion(minion, artifact);
+
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public class ArtifactStatePoller : MonoBehaviour
     {
         private int tickCounter = 0;
-        private const int PollInterval = 20;
+        private const int PollInterval = 300;
 
         public HLib.HotkeyListener hotkeyListener { get; set; }
 

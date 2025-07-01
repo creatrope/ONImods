@@ -95,22 +95,44 @@ namespace ArtifactsPlus
                     {
                         var modifierKey = (attrName, modValue, artifactInstanceId);
 
-                            // Add a new modifier for stacking
-                            var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Modifier: {artifactInstanceId}");
-                            attrInstance.Add(modifier);
+                        // Debugging: Attempting to add a modifier
+                        CustomLogger.Log($"Attempting to add modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}'.");
 
-                            // Track which artifact applied this modifier
-                            if (!minionModifierArtifactMap.TryGetValue(minion, out var modMap))
+                        bool modifierExists = false;
+                        for (int i = 0; i < attrInstance.Modifiers.size; i++)
+                        {
+                            var mod = attrInstance.Modifiers[i];
+                            if (mod.Description == $"Artifact Modifier: {artifactInstanceId}" && mod.Value == modValue)
                             {
-                                modMap = new Dictionary<(string attrName, float value, int artifactInstanceId), int>();
-                                minionModifierArtifactMap[minion] = modMap;
+                                modifierExists = true;
+                                break;
                             }
-                            modMap[modifierKey] = artifactInstanceId;
+                        }
+
+                        if (modifierExists)
+                        {
+                            CustomLogger.Log($"Modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}' already exists. Skipping.");
+                            continue;
+                        }
+
+                        // Add a new modifier for stacking
+                        var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Modifier: {artifactInstanceId}");
+                        attrInstance.Add(modifier);
+
+                        // Debugging: Modifier added
+                        CustomLogger.Log($"Modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}' added successfully.");
+
+                        // Track which artifact applied this modifier
+                        if (!minionModifierArtifactMap.TryGetValue(minion, out var modMap))
+                        {
+                            modMap = new Dictionary<(string attrName, float value, int artifactInstanceId), int>();
+                            minionModifierArtifactMap[minion] = modMap;
+                        }
+                        modMap[modifierKey] = artifactInstanceId;
                     }
                 }
             }
         }
-
 
         public static void RemoveArtifactModifiersToMinion(GameObject minion, GameObject artifact)
         {
@@ -140,27 +162,35 @@ namespace ArtifactsPlus
                     if (attrInstance != null)
                     {
                         var modifierKey = (attrName, modValue, artifactInstanceId);
-                            // Remove only the specific modifier applied by this artifact
-                            var toRemove = new List<AttributeModifier>();
-                            for (int i = 0; i < attrInstance.Modifiers.size; i++)
-                            {
-                                var mod = attrInstance.Modifiers[i];
-                                if (mod.Description == $"Artifact Modifier: {artifactInstanceId}" && mod.Value == modValue)
-                                {
-                                    toRemove.Add(mod);
-                                }
-                            }
-                            for (int i = 0; i < toRemove.Count; i++)
-                                attrInstance.Remove(toRemove[i]);
 
-                            // Remove tracking
-                            if (minionModifierArtifactMap.TryGetValue(minion, out var modMap))
+                        // Debugging: Attempting to delete a modifier
+                        CustomLogger.Log($"Attempting to delete modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}'.");
+
+                        var toRemove = new List<AttributeModifier>();
+                        for (int i = 0; i < attrInstance.Modifiers.size; i++)
+                        {
+                            var mod = attrInstance.Modifiers[i];
+                            if (mod.Description == $"Artifact Modifier: {artifactInstanceId}" && mod.Value == modValue)
                             {
-                                modMap.Remove(modifierKey);
-                                if (modMap.Count == 0)
-                                    minionModifierArtifactMap.Remove(minion);
+                                toRemove.Add(mod);
                             }
                         }
+                        for (int i = 0; i < toRemove.Count; i++)
+                        {
+                            attrInstance.Remove(toRemove[i]);
+
+                            // Debugging: Modifier deleted
+                            CustomLogger.Log($"Modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}' deleted successfully.");
+                        }
+
+                        // Remove tracking
+                        if (minionModifierArtifactMap.TryGetValue(minion, out var modMap))
+                        {
+                            modMap.Remove(modifierKey);
+                            if (modMap.Count == 0)
+                                minionModifierArtifactMap.Remove(minion);
+                        }
+                    }
                 }
             }
         }
@@ -180,19 +210,32 @@ namespace ArtifactsPlus
                     if (effectsComponent == null)
                         continue;
 
-                        // Add the effect with stacking logic
-                        if (!effectsComponent.HasEffect(effectId))
-                        {
-                            effectsComponent.Add(new HashedString(effectId), true);
-                        }
+                    // Debugging: Attempting to add an effect
+                    CustomLogger.Log($"Attempting to add effect '{effectId}' for artifact '{artifactInstanceId}'.");
 
-                        // Track the effect and artifact
-                        if (!minionEffectArtifactMap.TryGetValue(minion, out var effectMap))
+                    if (minionEffectArtifactMap.TryGetValue(minion, out var effectMap) && effectMap.TryGetValue(effectId, out var appliedArtifactInstanceId))
+                    {
+                        if (appliedArtifactInstanceId == artifactInstanceId)
                         {
-                            effectMap = new Dictionary<string, int>();
-                            minionEffectArtifactMap[minion] = effectMap;
+                            CustomLogger.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' already exists. Skipping.");
+                            continue;
                         }
-                    effectMap[effectId] = artifactInstanceId;
+                    }
+
+                    if (!effectsComponent.HasEffect(effectId))
+                    {
+                        effectsComponent.Add(new HashedString(effectId), true);
+
+                        // Debugging: Effect added
+                        CustomLogger.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' added successfully.");
+                    }
+
+                    if (!minionEffectArtifactMap.TryGetValue(minion, out var newEffectMap))
+                    {
+                        newEffectMap = new Dictionary<string, int>();
+                        minionEffectArtifactMap[minion] = newEffectMap;
+                    }
+                    newEffectMap[effectId] = artifactInstanceId;
                 }
             }
         }
@@ -212,17 +255,23 @@ namespace ArtifactsPlus
                     if (effectsComponent == null)
                         continue;
 
-                        // Remove the effect only if it was applied by this artifact
-                        if (minionEffectArtifactMap.TryGetValue(minion, out var effectMap) && effectMap.TryGetValue(effectId, out var appliedArtifactInstanceId))
+                    // Debugging: Attempting to delete an effect
+                    CustomLogger.Log($"Attempting to delete effect '{effectId}' for artifact '{artifactInstanceId}'.");
+
+                    if (minionEffectArtifactMap.TryGetValue(minion, out var effectMap) && effectMap.TryGetValue(effectId, out var appliedArtifactInstanceId))
+                    {
+                        if (appliedArtifactInstanceId == artifactInstanceId)
                         {
-                            if (appliedArtifactInstanceId == artifactInstanceId)
-                            {
-                                effectsComponent.Remove(new HashedString(effectId));
-                                effectMap.Remove(effectId);
-                                if (effectMap.Count == 0)
-                                    minionEffectArtifactMap.Remove(minion);
-                            }
+                            effectsComponent.Remove(new HashedString(effectId));
+
+                            // Debugging: Effect deleted
+                            CustomLogger.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' deleted successfully.");
+
+                            effectMap.Remove(effectId);
+                            if (effectMap.Count == 0)
+                                minionEffectArtifactMap.Remove(minion);
                         }
+                    }
                 }
             }
         }
