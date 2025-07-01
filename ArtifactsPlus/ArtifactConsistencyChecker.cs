@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Klei.AI;
-using HLib; // Add this line to use CustomLogger
+using HLib; // Ensure this import is present
 
 namespace ArtifactsPlus
 {
@@ -84,7 +84,7 @@ namespace ArtifactsPlus
                     if (!hasAny)
                     {
                         isConsistent = false;
-                        CustomLogger.Log($"[CONSISTENCY] Minion '{minion.name}' is in artifactHistoryMap for artifact '{artifactId}' but has no matching effects/modifiers.");
+                        Debug.Log($"[CONSISTENCY] Minion '{minion.name}' is in artifactHistoryMap for artifact '{artifactId}' but has no matching effects/modifiers.");
                     }
                 }
             }
@@ -159,7 +159,7 @@ namespace ArtifactsPlus
                         if (!artifactHistoryMap.TryGetValue(artifact, out var minionSet) || !minionSet.Contains(minion))
                         {
                             isConsistent = false;
-                            CustomLogger.Log($"[CONSISTENCY] Minion '{minion.name}' has artifact effect/modifier for '{artifactId}' but is NOT in artifactHistoryMap.");
+                            Debug.Log($"[CONSISTENCY] Minion '{minion.name}' has artifact effect/modifier for '{artifactId}' but is NOT in artifactHistoryMap.");
                         }
                     }
                 }
@@ -167,11 +167,11 @@ namespace ArtifactsPlus
 
             if (isConsistent)
             {
-                CustomLogger.Log("[CONSISTENCY] All artifact/minion states are consistent.");
+                Debug.Log("[CONSISTENCY] All artifact/minion states are consistent.");
             }
             else
             {
-                CustomLogger.Log("[CONSISTENCY] Inconsistencies detected in artifact/minion states.");
+                Debug.Log("[CONSISTENCY] Inconsistencies detected in artifact/minion states.");
             }
         }
     }

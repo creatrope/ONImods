@@ -1,32 +1,25 @@
 using System;
 using System.IO;
-using UnityEngine; // Add this for Debug.Log
+using UnityEngine;
 
 namespace HLib
 {
     /// <summary>
-    /// A simple, reusable logger for writing text messages to a file.
+    /// A reusable logger for writing text messages to a file, supporting instance-based usage for multi-mod logging.
     /// </summary>
-    public static class CustomLogger
+    public class CustomLogger
     {
-        /// <summary>
-        /// Path to the log file. Automatically set based on the mod name.
-        /// If null, logging is silently discarded.
-        /// </summary>
-        public static string LogPath { get; private set; }
+        private readonly string logPath;
+        private bool isLoggingEnabled = false; // Tracks whether logging is enabled
 
         /// <summary>
-        /// Sets the log path using the mod name. The internal path structure is hidden.
+        /// Initializes a new instance of the CustomLogger class for a specific mod.
         /// </summary>
         /// <param name="modName">The name of the mod.</param>
-        public static void SetLogPath(string modName)
+        public CustomLogger(string modName) // Fixed constructor name
         {
             if (string.IsNullOrWhiteSpace(modName))
-            {
-                // Silently discard invalid mod names
-                LogPath = null;
-                return;
-            }
+                throw new ArgumentException("Mod name cannot be null or empty.", nameof(modName));
 
             try
             {
@@ -38,34 +31,41 @@ namespace HLib
                 if (!Directory.Exists(basePath))
                     Directory.CreateDirectory(basePath);
 
-                LogPath = Path.Combine(basePath, $"{modName}.log");
+                logPath = Path.Combine(basePath, $"{modName}.log");
 
-                // Write the log path to Debug.Log
-                Debug.Log($"[{modName}] LogPath set to: {LogPath}");
+                Debug.Log($"[{modName}] LogPath set to: {logPath}");
             }
             catch
             {
-                // Silently discard errors during log path setup
-                LogPath = null;
+                throw new InvalidOperationException("Failed to initialize log path.");
             }
         }
 
         /// <summary>
-        /// Writes a message to the log file if LogPath is set.
+        /// Enables or disables logging output.
+        /// </summary>
+        /// <param name="enabled">True to enable logging, false to disable.</param>
+        public void SetLoggingEnabled(bool enabled)
+        {
+            isLoggingEnabled = enabled;
+        }
+
+        /// <summary>
+        /// Writes a message to the log file if logging is enabled.
         /// </summary>
         /// <param name="message">The message to log.</param>
-        public static void Log(string message)
+        public void Log(string message)
         {
-            if (string.IsNullOrWhiteSpace(LogPath))
-                return; // Silently discard logging if LogPath is not set
+            if (!isLoggingEnabled || string.IsNullOrWhiteSpace(logPath))
+                return;
 
             try
             {
-                var logDir = Path.GetDirectoryName(LogPath);
+                var logDir = Path.GetDirectoryName(logPath);
                 if (!Directory.Exists(logDir))
                     Directory.CreateDirectory(logDir);
 
-                using (var fs = new FileStream(LogPath, FileMode.Append, FileAccess.Write, FileShare.Read))
+                using (var fs = new FileStream(logPath, FileMode.Append, FileAccess.Write, FileShare.Read))
                 using (var sw = new StreamWriter(fs))
                 {
                     sw.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
@@ -80,14 +80,14 @@ namespace HLib
         /// <summary>
         /// Resets the log file by overwriting it with a reset message.
         /// </summary>
-        public static void Reset()
+        public void Reset()
         {
-            if (string.IsNullOrWhiteSpace(LogPath))
-                return; // Silently discard reset operation if LogPath is not set
+            if (string.IsNullOrWhiteSpace(logPath))
+                return;
 
             try
             {
-                File.WriteAllText(LogPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log reset.\n");
+                File.WriteAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log reset.\n");
             }
             catch
             {

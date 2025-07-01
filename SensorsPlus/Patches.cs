@@ -4,6 +4,8 @@ using HarmonyLib;
 using HLib;
 using KMod;
 using KSerialization;
+using Newtonsoft.Json; // Ensure this using directive is present
+
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.UI;
@@ -14,7 +16,7 @@ using TUNING; // Or the correct namespace for LogicPressureSensorConfig
 using UnityEngine;
 using static SensorMathUtils;
 
-namespace SensorsPlus // CHANGED FROM SensorsP
+namespace SensorsPlus
 {
     public class Patches
     {
@@ -115,19 +117,20 @@ namespace SensorsPlus // CHANGED FROM SensorsP
             }
         }
     }
-
-    [ConfigFile("modoptions.yaml", true, true)]
     public class ModOptions
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
+        [JsonProperty] // Add JSON property for serialization
         public bool EnableCustomLog { get; set; } = true;
 
         [Option("Moving Average Window", "Number of samples for the moving average of the derivative (minimum 1).")]
         [Limit(1, 32)]
+        [JsonProperty] // Add JSON property for serialization
         public int MovingAverageWindow { get; set; } = 3;
 
         [Option("Sampling Interval (seconds)", "How often sensors sample values (in seconds). Default is 1.0.")]
         [Limit(0.05, 10.0)]
+        [JsonProperty] // Add JSON property for serialization
         public float SamplingIntervalSeconds { get; set; } = 1.0f;
     }
 

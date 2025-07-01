@@ -82,12 +82,12 @@
     <Compile Include="ArtifactConsistencyChecker.cs" />
     <Compile Include="ArtifactEffectTracker.cs" />
     <Compile Include="ArtifactPedestalPanelPatch.cs" />
-    <Compile Include="ArtifactsPlusOptions.cs" />
     <Compile Include="MinionPersonalityPanelPatch.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="ArtifactsConfig.json" />
     <None Include="ArtifactsConfigAlt.json" />
     <None Include="Attributes.json" />
@@ -95,6 +95,7 @@
     <None Include="mod.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="config.json" />
     <None Include="mod_info.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -114,14 +115,17 @@
   </PropertyGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Message Text="ArtifactsPlus PostBuild target running!" Importance="high" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" />
     <Copy SourceFiles="ArtifactsConfig.json" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="mod.yaml" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="mod_info.yaml" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="config.json" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(MSBuildProjectDirectory)\bin\Release\ArtifactsPlus.dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\ArtifactsPlus.dll&quot; &quot;$(SolutionDir)lib\PLib.dll&quot; &quot;$(SolutionDir)HLib\bin\Release\HLib.dll&quot;" IgnoreExitCode="false" />
-    <Message Text="ILRepack completed successfully: ArtifactsPlus.dll + PLib.dll + HLib.dll → ArtifactsPlus.dll" Importance="high" Condition="'$(MSBuildLastTaskResult)' == 'True'" />
-    <Error Text="ILRepack failed! See build output for details." Condition="'$(MSBuildLastTaskResult)' == 'False'" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Release\ArtifactsPlus.dll" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" />
-    <Copy SourceFiles="ArtifactsConfig.json" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+    <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(MSBuildProjectDirectory)\bin\Release\ArtifactsPlus.Merged.dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\ArtifactsPlus.dll&quot; &quot;$(SolutionDir)lib\PLib.dll&quot; &quot;$(SolutionDir)HLib\bin\Release\HLib.dll&quot;" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Release\ArtifactsPlus.Merged.dll" DestinationFiles="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\ArtifactsPlus\ArtifactsPlus.dll" OverwriteReadOnlyFiles="true" />
+  </Target>
+  <Target Name="CleanMergedAfterDeploy" AfterTargets="RunDeploy" Condition="'$(Configuration)' == 'Release'">
+    <Delete Files="$(MSBuildProjectDirectory)\bin\Release\ArtifactsPlus.Merged.dll" />
+    <Delete Files="$(MSBuildProjectDirectory)\bin\Release\ArtifactsPlus.Merged.pdb" />
   </Target>
 </Project>

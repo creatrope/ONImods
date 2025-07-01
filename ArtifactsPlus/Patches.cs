@@ -1,26 +1,30 @@
 ﻿using HarmonyLib;
-using UnityEngine;
-using System.IO;
-using KMod;
-using System.Collections.Generic;
-using System.Linq;
-using System;
+using HLib;
 using Klei.AI; // Add this import for Analyzable
-using System.Reflection;
+using KMod;
+using KSerialization; // Add this import for HotkeyListener
 using Newtonsoft.Json.Linq;
-using PeterHan.PLib.UI;
-using PeterHan.PLib.Options;
+using Newtonsoft.Json; // Add this import for JsonObject and JsonObjectAttribute
 using PeterHan.PLib.Core; // Add this import for PUtil
-using Object = UnityEngine.Object; // Explicitly alias UnityEngine.Object to avoid ambiguity
+using PeterHan.PLib.Options;
+using PeterHan.PLib.UI;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Text; // <-- Add this for StringBuilder
-using HLib; // <-- Add this for CustomLogger
+using UnityEngine;
+using Object = UnityEngine.Object; // Explicitly alias UnityEngine.Object to avoid ambiguity
+
 
 namespace ArtifactsPlus
 {
     public static class Patches
     {
-        public static string DesktopLogPath => HLib.CustomLogger.LogPath;
         public static HLib.HotkeyListener hotkeyListener;
+
+        public static readonly CustomLogger Logger = new CustomLogger("ArtifactsPlus");
 
         public static string ArtifactPowersConfigPath
         {
@@ -36,22 +40,26 @@ namespace ArtifactsPlus
 
         public static void OnLoad()
         {
-            // Only print custom log file location and log to custom log if verbose is enabled
-            if (ArtifactsPlusOptions.Instance.Verbose)
+            try
             {
-                Debug.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
+                var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+                Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
+                Patches.Logger.Log($"[ArtifactsPlus] Logging enabled: {options.EnableCustomLog}");
+
+                ArtifactStateTracker.LoadArtifactAttributeMap();
+
+                // Initialize and register hotkeys
+                hotkeyListener = new HotkeyListener();
+
+                hotkeyListener.RegisterHotkey("Ctrl+F12", () =>
+                {
+                    PrintActiveArtifactsWithWorlds();
+                });
             }
-
-            ArtifactStateTracker.LoadArtifactAttributeMap();
-
-            // Initialize and register hotkeys
-            hotkeyListener = new HLib.HotkeyListener();
-
-            hotkeyListener.RegisterHotkey("Ctrl+F12", () =>
+            catch (Exception ex)
             {
-                PrintActiveArtifactsWithWorlds();
-            });
-
+                Debug.LogError($"[ArtifactsPlus] Failed to initialize OnLoad: {ex.Message}");
+            }
         }
 
         public static void PrintActiveArtifactsWithWorlds()
@@ -61,11 +69,11 @@ namespace ArtifactsPlus
 
             if (!activeArtifacts.Any())
             {
-                HLib.CustomLogger.Log("[ArtifactsPlus] No active artifacts found.");
+                Debug.Log("[ArtifactsPlus] No active artifacts found.");
                 return;
             }
 
-            HLib.CustomLogger.Log("[ArtifactsPlus] Active Artifacts and their Worlds:");
+            Debug.Log("[ArtifactsPlus] Active Artifacts and their Worlds:");
             foreach (var artifact in activeArtifacts)
             {
                 int cell = Grid.PosToCell(artifact.transform.position);
@@ -73,10 +81,11 @@ namespace ArtifactsPlus
                 string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
                 string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
 
-                HLib.CustomLogger.Log($"- {artifactName} in {worldName}");
+                Debug.Log($"- {artifactName} in {worldName}");
             }
         }
     }
+
     public class ArtifactState
     {
         public bool OnPedestal;
@@ -139,7 +148,7 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                HLib.CustomLogger.Log("[WARN] Artifact is null in EvaluateArtifactCriteria.");
+                Debug.Log("[WARN] Artifact is null in EvaluateArtifactCriteria.");
                 return new ArtifactCriteriaResult
                 {
                     MeetsAll = false,
@@ -149,7 +158,7 @@ namespace ArtifactsPlus
 
             if (artifact.transform == null)
             {
-                HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
+                Debug.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
                 return new ArtifactCriteriaResult
                 {
                     MeetsAll = false,
@@ -188,7 +197,6 @@ namespace ArtifactsPlus
             result.MeetsAll = ArtifactsOnPedestals.Contains(artifact);
             if (!result.MeetsAll)
             {
-                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' is not on a pedestal.");
                 result.ShortCircuited = true;
             }
             return result.MeetsAll;
@@ -200,7 +208,6 @@ namespace ArtifactsPlus
             result.MeetsAll = !string.IsNullOrEmpty(artifactId) && ArtifactSelector.Instance?.GetAnalyzedArtifactIDs().Contains(artifactId) == true;
             if (!result.MeetsAll)
             {
-                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' is not analyzed.");
                 result.ShortCircuited = true;
             }
             return result.MeetsAll;
@@ -212,7 +219,6 @@ namespace ArtifactsPlus
             result.MeetsAll = Grid.Element[cell].id != SimHashes.Unobtanium;
             if (!result.MeetsAll)
             {
-                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' is entombed.");
                 result.ShortCircuited = true;
             }
             return result.MeetsAll;
@@ -238,7 +244,6 @@ namespace ArtifactsPlus
 
             if (!result.MeetsAll)
             {
-                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' does not meet room size requirements.");
                 result.ShortCircuited = true;
             }
             return result.MeetsAll;
@@ -264,7 +269,6 @@ namespace ArtifactsPlus
 
             if (!result.MeetsAll)
             {
-                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' does not meet neighbor count requirements.");
                 result.ShortCircuited = true;
             }
             return result.MeetsAll;
@@ -303,7 +307,6 @@ namespace ArtifactsPlus
 
             if (!result.MeetsAll)
             {
-                //HLib.CustomLogger.Log($"[DEBUG] Artifact '{artifact.name}' does not meet decor requirements.");
                 result.ShortCircuited = true;
             }
             return result.MeetsAll;
@@ -313,14 +316,14 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                HLib.CustomLogger.Log("[ERROR] Attempted to register a null artifact.");
+                Debug.Log("[ERROR] Attempted to register a null artifact.");
                 return;
             }
 
             var artifactPrefabID = artifact.GetComponent<KPrefabID>();
             if (artifactPrefabID == null)
             {
-                HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' does not have a KPrefabID component.");
+                Debug.Log($"[ERROR] Artifact '{artifact.name}' does not have a KPrefabID component.");
                 return;
             }
 
@@ -329,9 +332,6 @@ namespace ArtifactsPlus
 
             var artifactType = artifactPrefabID.PrefabTag.Name;
             var count = ArtifactsOnPedestals.Count(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactType);
-
-            //HLib.CustomLogger.Log($"[ArtifactsPlus] Registered artifact on pedestal: {artifact.name}");
-            //HLib.CustomLogger.Log($"[DEBUG] Artifact type '{artifactType}' has {count} instances registered.");
         }
 
         public static void UnregisterArtifactOnPedestal(GameObject artifact)
@@ -340,7 +340,6 @@ namespace ArtifactsPlus
             {
                 ArtifactsOnPedestals.Remove(artifact);
                 UpdateArtifactState(artifact);
-                //HLib.CustomLogger.Log($"[ArtifactsPlus] Unregistered artifact from pedestal: {artifact.name}");
             }
         }
 
@@ -393,8 +392,8 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                HLib.CustomLogger.Log("[ERROR] UpdateArtifactState called with a null artifact.");
-                return; // Null check for artifact
+                Debug.Log("[ERROR] UpdateArtifactState called with a null artifact.");
+                return;
             }
 
             int id = artifact.GetInstanceID();
@@ -404,14 +403,14 @@ namespace ArtifactsPlus
                 ArtifactStates[id] = state;
             }
 
-            bool wasActive = state.IsActive; // save the current state (which will shortly become the previous state)
+            bool wasActive = state.IsActive;
 
             // Get artifact config
             string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
             var config = GetArtifactConfig(internalName);
             if (config == null)
             {
-                HLib.CustomLogger.Log($"[WARN] No config found for artifact '{internalName}'");
+                Debug.Log($"[WARN] No config found for artifact '{internalName}'");
                 return;
             }
 
@@ -425,15 +424,14 @@ namespace ArtifactsPlus
                 ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
                 ?? internalName;
 
-
-            if (wasActive != state.IsActive) // state has changed
+            if (wasActive != state.IsActive)
             {
                 int cell = Grid.PosToCell(artifact.transform.position);
                 int worldId = Grid.WorldIdx[cell];
                 string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
                 string shortCircuitText = criteria.ShortCircuited ? " SHORTCIRCUIT" : "";
-                HLib.CustomLogger.Log($"[ArtifactsPlus] Artifact '{artifact.name}' state changed to: {(state.IsActive ? "ACTIVE" : "INACTIVE")}");
+                Debug.Log($"[ArtifactsPlus] Artifact '{artifact.name}' state changed to: {(state.IsActive ? "ACTIVE" : "INACTIVE")}");
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
@@ -482,11 +480,9 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                HLib.CustomLogger.Log("[ERROR] ApplyGlowEffect called with a null artifact.");
-                return; // Null check for artifact
+                Debug.Log("[ERROR] ApplyGlowEffect called with a null artifact.");
+                return;
             }
-
-            //HLib.CustomLogger.Log($"[DEBUG] ApplyGlowEffect called for artifact: {artifact.name}, enable: {enable}");
 
             var parent = artifact.transform;
             var glowChild = parent.Find(GlowChildName)?.gameObject;
@@ -498,7 +494,6 @@ namespace ArtifactsPlus
                     glowChild = new GameObject(GlowChildName);
                     glowChild.transform.SetParent(parent, false);
 
-                    // Add Light2D component for in-game lighting
                     var light2D = glowChild.AddComponent<Light2D>();
                     light2D.overlayColour = new Color(1f, 1f, 1f, 0.2f);
                     light2D.Color = Color.yellow;
@@ -540,7 +535,7 @@ namespace ArtifactsPlus
 
                 if (!(configJson["Artifacts"] is JArray arr))
                 {
-                    HLib.CustomLogger.Log("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
+                    Debug.Log("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
                     return;
                 }
 
@@ -549,10 +544,8 @@ namespace ArtifactsPlus
                     var artifactId = (string)obj["ArtifactId"];
                     if (artifactId == null) continue;
 
-                    // Inherit global config
                     var artifactConfig = new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, globalDecorMinimum, globalScope, globalNeighbors);
 
-                    // Local overrides
                     if (obj["RoomSizeMin"] != null) artifactConfig.RoomSizeMin = (int)obj["RoomSizeMin"];
                     if (obj["RoomSizeMax"] != null) artifactConfig.RoomSizeMax = (int)obj["RoomSizeMax"];
                     if (obj["DecorMinimum"] != null) artifactConfig.DecorMinimum = (int)obj["DecorMinimum"];
@@ -568,7 +561,6 @@ namespace ArtifactsPlus
                         }
                     }
 
-                    // Load Effects (statuses) from config
                     if (obj["Effects"] is JObject effects)
                     {
                         foreach (var prop in effects.Properties())
@@ -585,7 +577,7 @@ namespace ArtifactsPlus
             }
             catch (Exception ex)
             {
-                HLib.CustomLogger.Log($"[ERROR] Failed to load artifact config: {ex}");
+                Debug.Log($"[ERROR] Failed to load artifact config: {ex}");
             }
         }
 
@@ -594,7 +586,6 @@ namespace ArtifactsPlus
             if (artifactConfigMap != null && artifactConfigMap.TryGetValue(artifactId, out var config))
                 return config;
 
-            // Return a config using global values if not found
             return new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, decorMinimum, "All");
         }
 
@@ -610,10 +601,8 @@ namespace ArtifactsPlus
 
         public static void PollAllArtifacts()
         {
-            // Clean up null artifacts from the collection
             ArtifactsOnPedestals.RemoveWhere(artifact => artifact == null);
 
-            // Find all artifacts in the scene
             var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Artifact"))
                 .Select(kp => kp.gameObject)
@@ -623,7 +612,7 @@ namespace ArtifactsPlus
             {
                 if (artifact.transform == null)
                 {
-                    HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in PollAllArtifacts.");
+                    Debug.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in PollAllArtifacts.");
                     continue;
                 }
                 UpdateArtifactState(artifact);
@@ -640,7 +629,6 @@ namespace ArtifactsPlus
                 {
                     if (building == null)
                     {
-                        HLib.CustomLogger.Log("[DEBUG] Skipping null building.");
                         continue;
                     }
 
@@ -662,32 +650,21 @@ namespace ArtifactsPlus
                     var prefabId = occupant.GetComponent<KPrefabID>();
                     if (prefabId == null)
                     {
-                        HLib.CustomLogger.Log($"[DEBUG] Occupant on pedestal {building.name} has no KPrefabID.");
                         continue;
                     }
 
-                    // Count the artifact
                     count++;
-                    // HLib.CustomLogger.Log($"[DEBUG] Counted artifact '{prefabId.PrefabTag.Name}' on pedestal {building.name}.");
                 }
             }
-            else
-            {
-                HLib.CustomLogger.Log("[DEBUG] Room or room.cavity is null in CountArtifactsOnPedestalsInRoom.");
-            }
-
-            // HLib.CustomLogger.Log($"[DEBUG] Final artifact count in room: {count}");
             return count;
         }
 
         public static void UpdateMinions()
         {
-            // Get all minions in the game
             var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Minion"))
                 .Select(kp => kp.gameObject);
 
-            // step 1
             foreach (var minion in allMinions)
             {
                 foreach (var artifact in ArtifactsOnPedestals)
@@ -697,14 +674,12 @@ namespace ArtifactsPlus
                     int artifactId = artifact.GetInstanceID();
                     if (ArtifactStates.TryGetValue(artifactId, out var state) && !state.IsActive)
                     {
-                        // Remove modifiers and effects associated with deactivated artifacts
                         ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
                         ArtifactEffectTracker.RemoveArtifactStatusEffectsToMinion(minion, artifact);
                     }
                 }
             }
 
-            // step 2
             foreach (var minion in allMinions)
             {
                 foreach (var artifact in ArtifactsOnPedestals)
@@ -714,21 +689,17 @@ namespace ArtifactsPlus
                     int artifactId = artifact.GetInstanceID();
                     if (ArtifactStates.TryGetValue(artifactId, out var state) && state.IsActive)
                     {
-                        // Get artifact config
                         var config = GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
                         if (config == null) continue;
 
-                        // Check if the minion is in scope for the artifact
                         bool inScope = config.Scope == "All" ||
                                        (config.Scope == "InRoom" && GetMinionsInSameRoom(artifact).Contains(minion)) ||
                                        (config.Scope == "InWorld" && GetMinionsInSameWorld(artifact).Contains(minion));
 
                         if (inScope)
                         {
-                            // Apply modifiers if not already active
                             ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
                             ArtifactEffectTracker.ApplyArtifactStatusEffectsToMinion(minion, artifact);
-
                         }
                     }
                 }
@@ -769,36 +740,38 @@ namespace ArtifactsPlus
 
         public override void OnLoad(Harmony harmony)
         {
-            // Set logger enabled flag from options (match SensorsPlus)
-            HLib.CustomLogger.Enabled = ArtifactsPlusOptions.Instance.Verbose;
-
-            // Set log path before resetting log, so the correct file is overwritten
-            HLib.CustomLogger.LogPath = System.IO.Path.Combine(
-                System.IO.Path.GetDirectoryName(HLib.CustomLogger.LogPath),
-                "ArtifactsPlus.log"
-            );
-            if (HLib.CustomLogger.Enabled)
-                HLib.CustomLogger.ResetLog();
-
             onLoadCount++;
             var uniqueId = Guid.NewGuid();
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             Debug.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-            //HLib.CustomLogger.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+
+            new POptions().RegisterOptions(this, typeof(ModOptions));
 
             try
             {
-                new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions));
+                var options = POptions.ReadSettings<ModOptions>();
+                if (options == null)
+                {
+                    throw new Exception("ModOptions settings could not be loaded.");
+                }
+
+                Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
+                Patches.OnLoad();
             }
             catch (Exception ex)
             {
-                HLib.CustomLogger.Log($"[ArtifactsPlus] RegisterOptions threw exception: {ex}");
+                PUtil.LogError($"[ArtifactsPlus2] {ex.Message} Debugging ModOptions: Expected file path: {Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "modoptions.json")}");
+            }
+
+            if (harmony == null)
+            {
+                Debug.LogError("[ArtifactsPlus] Harmony instance is null.");
+                return;
             }
 
             harmony.PatchAll();
-            Patches.OnLoad();
             PUtil.InitLibrary();
         }
     }
@@ -814,7 +787,7 @@ namespace ArtifactsPlus
 
             foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals.ToArray())
             {
-                if (artifact == null) continue; // Null check for artifact
+                if (artifact == null) continue;
                 bool stillOnPedestal = false;
                 foreach (var pedestal in GameObject.FindObjectsOfType<ItemPedestal>())
                 {
@@ -855,7 +828,6 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename, bool isAutoSave, bool updateSavePointer)
         {
-            //HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Save called for file: " + filename);
         }
     }
 
@@ -864,7 +836,34 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename)
         {
-            //HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
         }
+    }
+
+    public sealed class ArtifactsPlusOptions
+    {
+        private static readonly Lazy<ArtifactsPlusOptions> _instance = new Lazy<ArtifactsPlusOptions>(() => new ArtifactsPlusOptions());
+
+        public static ArtifactsPlusOptions Instance => _instance.Value;
+
+        public string ArtifactConfigFile { get; set; }
+        public bool EnableCustomLog { get; set; }
+
+        private ArtifactsPlusOptions()
+        {
+            ArtifactConfigFile = "ArtifactsConfig.json";
+            EnableCustomLog = false;
+        }
+    }
+
+    [JsonObject(Newtonsoft.Json.MemberSerialization.OptIn)] // Explicitly specify the namespace
+    public class ModOptions
+    {
+        [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
+        [JsonProperty]
+        public bool EnableCustomLog { get; set; } = true;
+
+        [Option("Artifact Config File", "Set the path to the artifact configuration file.")]
+        [JsonProperty]
+        public string ArtifactConfigFile { get; set; } = "ArtifactsConfig.json";
     }
 }

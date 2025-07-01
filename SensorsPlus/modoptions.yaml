@@ -1,4 +1,0 @@
-EnableCustomLog: true
-MovingAverageWindow: 3
-SamplingIntervalSeconds: 1.0
-LoggerType: MultiModLogger # Add configuration for the new logger type

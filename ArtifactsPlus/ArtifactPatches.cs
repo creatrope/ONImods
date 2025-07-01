@@ -122,7 +122,7 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename, bool isAutoSave, bool updateSavePointer)
         {
-            HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Save called for file: " + filename);
+            Debug.Log("[ArtifactsPlus] SaveLoader.Save called for file: " + filename);
         }
     }
 
@@ -131,7 +131,7 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename)
         {
-            HLib.CustomLogger.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
+            Debug.Log("[ArtifactsPlus] SaveLoader.Load called for file: " + filename);
         }
     }
 }

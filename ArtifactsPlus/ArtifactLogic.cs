@@ -31,7 +31,7 @@ namespace ArtifactsPlus
         {
             if (ArtifactsPlusOptions.Instance.Verbose)
             {
-                HLib.CustomLogger.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
+                Debug.Log($"[ArtifactsPlus] Custom log file target location: {DesktopLogPath}");
             }
             ArtifactStateTracker.LoadArtifactAttributeMap();
         }
@@ -96,7 +96,7 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                HLib.CustomLogger.Log("[ERROR] Artifact is null in EvaluateArtifactCriteria.");
+                Debug.Log("[ERROR] Artifact is null in EvaluateArtifactCriteria.");
                 return new ArtifactCriteriaResult
                 {
                     MeetsAll = false,
@@ -106,7 +106,7 @@ namespace ArtifactsPlus
 
             if (artifact.transform == null)
             {
-                HLib.CustomLogger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
+                Debug.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
                 return new ArtifactCriteriaResult
                 {
                     MeetsAll = false,
@@ -115,7 +115,7 @@ namespace ArtifactsPlus
             }
 
             // Debug log for artifact evaluation start
-            HLib.CustomLogger.Log($"[DEBUG] Evaluating criteria for artifact: {artifact.name}");
+            Debug.Log($"[DEBUG] Evaluating criteria for artifact: {artifact.name}");
 
             int actualRoomSize = -1;
             float actualDecor = float.NaN;
@@ -167,7 +167,7 @@ namespace ArtifactsPlus
                 meetsAll = meetsRoomSize && meetsDecor && !isEntombed && neighborsOk;
 
             // Debug log for evaluation result
-            HLib.CustomLogger.Log($"[DEBUG] Evaluation result for artifact {artifact.name}: MeetsAll={meetsAll}");
+            Debug.Log($"[DEBUG] Evaluation result for artifact {artifact.name}: MeetsAll={meetsAll}");
 
             return new ArtifactCriteriaResult
             {
@@ -192,7 +192,7 @@ namespace ArtifactsPlus
                 var configText = File.ReadAllText(ModInit.ArtifactPowersConfigPath);
                 var configJson = JObject.Parse(configText);
 
-                HLib.CustomLogger.Log("[ArtifactsPlus] Loading artifact configuration...");
+                Debug.Log("[ArtifactsPlus] Loading artifact configuration...");
 
                 foreach (var artifact in configJson)
                 {
@@ -200,11 +200,11 @@ namespace ArtifactsPlus
                     artifactConfigMap[artifact.Key] = artifactConfig;
                 }
 
-                HLib.CustomLogger.Log("[ArtifactsPlus] Artifact configuration loaded successfully.");
+                Debug.Log("[ArtifactsPlus] Artifact configuration loaded successfully.");
             }
             catch (Exception ex)
             {
-                HLib.CustomLogger.Log($"[ERROR] Failed to load artifact config: {ex}");
+                Debug.Log($"[ERROR] Failed to load artifact config: {ex}");
             }
         }
 
@@ -215,12 +215,12 @@ namespace ArtifactsPlus
                 if (artifact != null)
                 {
                     var artifactState = ArtifactStates[artifact.GetInstanceID()];
-                    HLib.CustomLogger.Log($"[DEBUG] Polling artifact: {artifact.name}, State: {artifactState}");
+                    Debug.Log($"[DEBUG] Polling artifact: {artifact.name}, State: {artifactState}");
                     // Update artifact state logic here
                 }
                 else
                 {
-                    HLib.CustomLogger.Log("[WARN] Null artifact encountered during PollAllArtifacts.");
+                    Debug.Log("[WARN] Null artifact encountered during PollAllArtifacts.");
                 }
             }
         }
