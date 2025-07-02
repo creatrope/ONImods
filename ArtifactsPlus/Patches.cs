@@ -700,20 +700,17 @@ namespace ArtifactsPlus
                 .Where(kp => kp != null && kp.HasTag("Artifact"))
                 .Select(kp => kp.gameObject);
 
+            // remove all modifiers from all minions
             foreach (var minion in allMinions)
             {
                 foreach (var artifact in allArtifacts)
                 {
                     if (artifact == null) continue;
-
-                    if (!ActiveAndInScope(minion, artifact))
-                    {
-                        ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
-                        ArtifactEffectTracker.RemoveArtifactStatusEffectsToMinion(minion, artifact);
-                    }
+                    ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
                 }
             }
 
+            // re-add in appropriately scoped active artifacts
             foreach (var minion in allMinions)
             {
                 foreach (var artifact in allArtifacts)
@@ -733,7 +730,6 @@ namespace ArtifactsPlus
                         if (inScope)
                         {
                             ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
-                            ArtifactEffectTracker.ApplyArtifactStatusEffectsToMinion(minion, artifact);
                         }
                     }
                 }
