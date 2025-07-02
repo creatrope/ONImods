@@ -127,7 +127,7 @@ namespace ArtifactsPlus
                     {
                         if (descriptionCB.Equals(artifactInstanceId.ToString(), StringComparison.OrdinalIgnoreCase))
                         {
-                            Patches.Logger.Log($"Removing Modifier: ID='{currentModifier.AttributeId}', Value='{currentModifier.Value}', Description='{currentModifier.Description}', DescriptionCB='{descriptionCB}'");
+                            //Patches.Logger.Log($"Removing Modifier: ID='{currentModifier.AttributeId}', Value='{currentModifier.Value}', Description='{currentModifier.Description}', DescriptionCB='{descriptionCB}'");
                             attrInstance.Remove(currentModifier); // Safely remove the modifier
                         }
                     }
@@ -196,23 +196,25 @@ namespace ArtifactsPlus
         }
         private static string GetArtifactProperName(int artifactInstanceId)
         {
-            // Debugging: Log the artifactInstanceId being searched
-            Patches.Logger.Log($"GetArtifactProperName: Searching for artifact with InstanceID '{artifactInstanceId}'.");
-
-            var artifact = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .FirstOrDefault(a => a.GetInstanceID() == artifactInstanceId);
-
-            // Debugging: Log whether the artifact was found or not
-            if (artifact != null)
-            {
-                Patches.Logger.Log($"GetArtifactProperName: Found artifact '{artifact.GetProperName()}' with InstanceID '{artifactInstanceId}'.");
-            }
-            else
-            {
-                Patches.Logger.Log($"GetArtifactProperName: No artifact found with InstanceID '{artifactInstanceId}'.");
-            }
-
+            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Artifact"))
+                .Select(kp => kp.gameObject);
+            // Search for the artifact in allArtifacts  
+            var artifact = allArtifacts.FirstOrDefault(a => a.GetInstanceID() == artifactInstanceId);
             return artifact?.GetProperName() ?? "Unknown Artifact";
+        }
+        public static void PrintAllArtifactIDsAndInstanceIDs()
+        {
+            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Artifact"))
+                .Select(kp => kp.gameObject);
+
+            foreach (var artifact in allArtifacts)
+            {
+                int instanceId = artifact.GetInstanceID();
+                string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact ID";
+                Patches.Logger.Log($"Artifact ID: {artifactId}, Instance ID: {instanceId}");
+            }
         }
     }
 }

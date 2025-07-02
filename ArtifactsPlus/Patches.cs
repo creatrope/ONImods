@@ -199,13 +199,18 @@ namespace ArtifactsPlus
 
         private static bool CheckOnPedestal(GameObject artifact, ref ArtifactCriteriaResult result)
         {
-            var prefabID = artifact.GetComponent<KPrefabID>();
-            result.MeetsAll = prefabID != null && prefabID.HasTag("OnPedestal");
-            if (!result.MeetsAll)
+            if (artifact == null)
+                return false;
+
+            foreach (var pedestal in UnityEngine.Object.FindObjectsOfType<ItemPedestal>())
             {
-                result.ShortCircuited = true;
+                var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
+                var receptacle = receptacleField?.GetValue(pedestal) as SingleEntityReceptacle;
+                if (receptacle?.Occupant == artifact)
+                    return true;
             }
-            return result.MeetsAll;
+
+            return false;
         }
 
         private static bool CheckAnalyzed(GameObject artifact, ref ArtifactCriteriaResult result)
@@ -318,50 +323,6 @@ namespace ArtifactsPlus
             return result.MeetsAll;
         }
 
-        public static void RegisterArtifactOnPedestal(GameObject artifact)
-        {
-            if (artifact == null)
-            {
-                Patches.Logger.Log("[ERROR] Attempted to register a null artifact.");
-                return;
-            }
-
-            var artifactPrefabID = artifact.GetComponent<KPrefabID>();
-            if (artifactPrefabID == null)
-            {
-                Patches.Logger.Log($"[ERROR] Artifact '{artifact.name}' does not have a KPrefabID component.");
-                return;
-            }
-
-            // Attach a safe flag or callback
-            artifactPrefabID.AddTag("OnPedestal");
-
-            Patches.Logger.Log($"[INFO] Artifact '{artifactPrefabID.PrefabTag.Name}' registered on pedestal.");
-            UpdateArtifactState(artifact);
-        }
-
-        public static void UnregisterArtifactOnPedestal(GameObject artifact)
-        {
-            if (artifact == null)
-            {
-                Patches.Logger.Log("[ERROR] Attempted to unregister a null artifact.");
-                return;
-            }
-
-            var artifactPrefabID = artifact.GetComponent<KPrefabID>();
-            if (artifactPrefabID == null)
-            {
-                Patches.Logger.Log($"[ERROR] Artifact '{artifact.name}' does not have a KPrefabID component.");
-                return;
-            }
-
-            // Remove the safe flag or callback
-            artifactPrefabID.RemoveTag("OnPedestal");
-
-            Patches.Logger.Log($"[INFO] Artifact '{artifactPrefabID.PrefabTag.Name}' unregistered from pedestal.");
-            UpdateArtifactState(artifact);
-        }
-
         private static List<GameObject> GetAllMinions()
         {
             return UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -441,6 +402,8 @@ namespace ArtifactsPlus
             }
 
             int id = artifact.GetInstanceID();
+            Patches.Logger.Log($"[ArtifactsPlus] Updating artifact state for artifact with Instance ID: {id}");
+
             if (!ArtifactStates.TryGetValue(id, out var state))
             {
                 state = new ArtifactState();
@@ -449,7 +412,7 @@ namespace ArtifactsPlus
 
             bool wasActive = state.IsActive;
 
-            // Get artifact config
+            // Get artifact config  
             string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
             var config = GetArtifactConfig(internalName);
             if (config == null)
@@ -458,10 +421,10 @@ namespace ArtifactsPlus
                 return;
             }
 
-            // Evaluate criteria
+            // Evaluate criteria  
             var criteria = EvaluateArtifactCriteria(artifact, config);
 
-            // Artifact is active only if it's on the pedestal, meets all criteria, and is analyzed
+            // Artifact is active only if it's on the pedestal, meets all criteria, and is analyzed  
             state.IsActive = criteria.MeetsAll;
 
             string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
@@ -625,14 +588,6 @@ namespace ArtifactsPlus
             return new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, decorMinimum, "All");
         }
 
-        public static void PollAllArtifacts()
-        {
-            Patches.Logger.Log($"\n");
-            ArtifactsOnPedestals.RemoveWhere(artifact => artifact == null);
-
-            UpdateMinions();
-        }
-
         private static int CountArtifactsOnPedestalsInRoom(Room room)
         {
             int count = 0;
@@ -645,7 +600,7 @@ namespace ArtifactsPlus
                         continue;
                     }
 
-                    var pedestal = building.GetComponent<ItaemPedestal>();
+                    var pedestal = building.GetComponent<ItemPedestal>();
                     if (pedestal == null)
                     {
                         continue;
@@ -747,7 +702,7 @@ namespace ArtifactsPlus
             if (tickCounter >= pollInterval)
             {
                 tickCounter = 0;
-                ArtifactStateTracker.PollAllArtifacts();
+                ArtifactStateTracker.UpdateMinions();
             }
 
             hotkeyListener?.Update();
@@ -796,22 +751,43 @@ namespace ArtifactsPlus
         }
     }
 
+    public class PedestalState : MonoBehaviour
+    {
+        public GameObject CurrentOccupant { get; set; }
+    }
+
     [HarmonyPatch(typeof(ItemPedestal), "OnOccupantChanged")]
     public static class ItemPedestal_OnOccupantChanged_Patch
     {
         public static void Postfix(ItemPedestal __instance)
         {
+            var pedestalState = __instance.gameObject.GetComponent<PedestalState>() ?? __instance.gameObject.AddComponent<PedestalState>();
             var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
             var receptacle = receptacleField?.GetValue(__instance) as SingleEntityReceptacle;
-            var occupant = receptacle?.Occupant;
+            var newOccupant = receptacle?.Occupant;
 
-            if (occupant != null)
+            // Check if the pedestal is currently unoccupied
+            bool isUnoccupied = newOccupant == null;
+
+            if (pedestalState.CurrentOccupant != null && isUnoccupied)
             {
-                ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
+                // The occupant has been removed
+                Patches.Logger.Log($"[DEBUG] Occupant '{pedestalState.CurrentOccupant.name}' has been removed from pedestal.");
+                ArtifactStateTracker.UpdateArtifactState(pedestalState.CurrentOccupant);
+
+                pedestalState.CurrentOccupant = null;
+            }
+            else if (pedestalState.CurrentOccupant == null && newOccupant != null)
+            {
+                // The pedestal is now occupied
+                Patches.Logger.Log($"[DEBUG] New occupant '{newOccupant.name}' has been added to pedestal.");
+                pedestalState.CurrentOccupant = newOccupant;
+                ArtifactStateTracker.UpdateArtifactState(newOccupant);
             }
             else
             {
-                ArtifactStateTracker.UnregisterArtifactOnPedestal(__instance.gameObject);
+                // Unexpected state
+                Patches.Logger.Log($"[ERROR] Unexpected state: CurrentOccupant='{pedestalState.CurrentOccupant?.name ?? "null"}', NewOccupant='{newOccupant?.name ?? "null"}'.");
             }
         }
     }
