@@ -393,6 +393,31 @@ namespace ArtifactsPlus
             return minionsInWorld;
         }
 
+        private static bool ActiveAndInScope(GameObject minion, GameObject artifact)
+        {
+            if (artifact == null || minion == null)
+                return false;
+
+            int artifactId = artifact.GetInstanceID();
+            if (!ArtifactStates.TryGetValue(artifactId, out var state) || !state.IsActive)
+                return false;
+
+            var config = GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
+            if (config == null)
+                return false;
+
+            if (config.Scope == "All")
+                return true;
+
+            if (config.Scope == "InRoom")
+                return GetMinionsInSameRoom(artifact).Contains(minion);
+
+            if (config.Scope == "InWorld")
+                return GetMinionsInSameWorld(artifact).Contains(minion);
+
+            return false;
+        }
+
         public static void UpdateArtifactState(GameObject artifact)
         {
             if (artifact == null)
@@ -681,8 +706,7 @@ namespace ArtifactsPlus
                 {
                     if (artifact == null) continue;
 
-                    int artifactId = artifact.GetInstanceID();
-                    if (ArtifactStates.TryGetValue(artifactId, out var state) && !state.IsActive)
+                    if (!ActiveAndInScope(minion, artifact))
                     {
                         ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
                         ArtifactEffectTracker.RemoveArtifactStatusEffectsToMinion(minion, artifact);

@@ -1,12 +1,13 @@
+using HLib; // Add this if you want to use 'CustomLogger' directly, or fully qualify as shown below
+using Klei.AI;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
-using Klei.AI;
 using System.IO;
-using Newtonsoft.Json;
+using System.Linq;
 using System.Reflection;
-using HLib; // Add this if you want to use 'CustomLogger' directly, or fully qualify as shown below
+using UnityEngine;
+using ArtifactsPlus; // Add this namespace to access ArtifactStateTracker
 
 namespace ArtifactsPlus
 {
@@ -30,6 +31,38 @@ namespace ArtifactsPlus
                 if (minion != null && minion.HasTag("Minion"))
                     yield return minion.gameObject;
             }
+        }
+
+        private static IEnumerable<GameObject> GetMinionsInSameWorld(GameObject artifact)
+        {
+            if (artifact == null)
+                return Enumerable.Empty<GameObject>();
+
+            var artifactWorld = artifact.GetComponent<KPrefabID>()?.GetMyWorldId();
+            if (artifactWorld == null)
+                return Enumerable.Empty<GameObject>();
+
+            return GetAllMinions().Where(minion =>
+            {
+                var minionWorld = minion.GetComponent<KPrefabID>()?.GetMyWorldId();
+                return minionWorld == artifactWorld;
+            });
+        }
+
+        private static IEnumerable<GameObject> GetMinionsInSameRoom(GameObject artifact)
+        {
+            if (artifact == null)
+                return Enumerable.Empty<GameObject>();
+
+            var artifactRoom = artifact.GetComponent<KPrefabID>()?.GetComponent<RoomTracker>()?.room; // Use 'room' property instead of 'RoomId'
+            if (artifactRoom == null)
+                return Enumerable.Empty<GameObject>();
+
+            return GetAllMinions().Where(minion =>
+            {
+                var minionRoom = minion.GetComponent<KPrefabID>()?.GetComponent<RoomTracker>()?.room; // Use 'room' property instead of 'RoomId'
+                return minionRoom == artifactRoom;
+            });
         }
 
         public static void AddStatusToAllMinions(string statusId)
@@ -253,6 +286,32 @@ namespace ArtifactsPlus
             }
         }
 
+        private static bool ActiveAndInScope(GameObject minion, GameObject artifact)
+        {
+            if (minion == null || artifact == null)
+                return false;
+
+            var artifactId = artifact.GetInstanceID();
+            if (!ArtifactStateTracker.ArtifactStates.TryGetValue(artifactId, out var state) || !state.IsActive)
+                return false;
+
+            var config = ArtifactStateTracker.GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
+            if (config == null)
+                return false;
+
+            switch (config.Scope)
+            {
+                case "All":
+                    return true;
+                case "InRoom":
+                    return GetMinionsInSameRoom(artifact).Contains(minion);
+                case "InWorld":
+                    return GetMinionsInSameWorld(artifact).Contains(minion);
+                default:
+                    return false;
+            }
+        }
+
         public static HashSet<GameObject> GetMinionsForArtifact(GameObject artifact)
         {
             var result = new HashSet<GameObject>();
@@ -307,9 +366,11 @@ namespace ArtifactsPlus
                 {
                     var modifier = attrInstance.Modifiers[i];
                     string descriptionCBResult = modifier.DescriptionCB?.Invoke();
-                    if (!string.IsNullOrEmpty(descriptionCBResult))
+
+                    if (int.TryParse(descriptionCBResult, out int artifactInstanceId))
                     {
-                        summary.AppendLine($"{attribute.Name}: {modifier.Value} (Artifact ID: {descriptionCBResult})");
+                        string artifactProperName = GetArtifactProperName(artifactInstanceId);
+                        summary.AppendLine($"{attribute.Name}: {(modifier.Value > 0 ? "+" : "")}{modifier.Value} ({artifactProperName})");
                     }
                 }
             }

@@ -79,7 +79,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ArtifactConsistencyChecker.cs" />
     <Compile Include="ArtifactEffectTracker.cs" />
     <Compile Include="ArtifactPedestalPanelPatch.cs" />
     <Compile Include="MinionPersonalityPanelPatch.cs" />
