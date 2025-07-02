@@ -8,11 +8,53 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using ArtifactsPlus; // Add this namespace to access ArtifactStateTracker
+using PeterHan.PLib.Options; // Add this namespace to resolve 'POptions'
 
 namespace ArtifactsPlus
 {
     public class ArtifactEffectTracker : MonoBehaviour
     {
+        private static HotkeyListener hotkeyListener;
+
+        public static void OnLoad()
+        {
+            try
+            {
+                var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+
+                Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
+                if (options.EnableCustomLog)
+                {
+                    Patches.Logger.Reset(); // Reset the log file at the start of the game
+                }
+                Patches.Logger.Log($"[ArtifactsPlus] Logging enabled: {options.EnableCustomLog}");
+
+                ArtifactStateTracker.LoadArtifactConfig();
+
+                // Initialize and register hotkeys
+                hotkeyListener = new HotkeyListener();
+
+                hotkeyListener.RegisterHotkey("Ctrl+F12", () =>
+                {
+                    PrintActiveArtifactsWithWorlds();
+                });
+
+                // Update the state of all artifacts
+                var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                    .Where(kp => kp != null && kp.HasTag("Artifact"))
+                    .Select(kp => kp.gameObject);
+
+                foreach (var artifact in allArtifacts)
+                {
+                    ArtifactStateTracker.UpdateArtifactState(artifact);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ArtifactsPlus] Failed to initialize OnLoad: {ex.Message}");
+            }
+        }
+
         public static bool TryGetArtifactModifiers(string artifactId, out Dictionary<string, float> modifiers)
         {
             return ArtifactStateTracker.TryGetArtifactAttributes(artifactId, out modifiers);
@@ -27,29 +69,68 @@ namespace ArtifactsPlus
             }
         }
 
-        private static IEnumerable<GameObject> GetMinionsInScope(GameObject artifact, Func<KPrefabID, object> scopeSelector)
+        public static List<GameObject> GetMinionsInSameRoom(GameObject artifact)
         {
-            if (artifact == null)
-                return Enumerable.Empty<GameObject>();
+            var minionsInRoom = new List<GameObject>();
+            int artifactCell = Grid.PosToCell(artifact.transform.position);
+            var artifactCavity = Game.Instance?.roomProber?.GetCavityForCell(artifactCell)?.room?.cavity;
+            if (artifactCavity == null)
+                return minionsInRoom;
 
-            var artifactScope = scopeSelector(artifact.GetComponent<KPrefabID>());
-            if (artifactScope == null)
-                return Enumerable.Empty<GameObject>();
-
-            return GetAllMinions().Where(minion =>
+            foreach (var kp in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
             {
-                var minionScope = scopeSelector(minion.GetComponent<KPrefabID>());
-                return minionScope != null && minionScope.Equals(artifactScope);
-            });
+                if (kp != null && kp.HasTag("Minion"))
+                {
+                    int minionCell = Grid.PosToCell(kp.transform.position);
+                    var minionCavity = Game.Instance.roomProber.GetCavityForCell(minionCell)?.room?.cavity;
+                    if (minionCavity == artifactCavity)
+                        minionsInRoom.Add(kp.gameObject);
+                }
+            }
+            return minionsInRoom;
         }
 
-        private static IEnumerable<GameObject> GetMinionsInSameWorld(GameObject artifact) =>
-            GetMinionsInScope(artifact, kp => kp?.GetMyWorldId());
+        public static List<GameObject> GetMinionsInSameWorld(GameObject artifact)
+        {
+            var minionsInWorld = new List<GameObject>();
+            int artifactWorldId = Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)];
+            foreach (var kp in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
+            {
+                if (kp != null && kp.HasTag("Minion"))
+                {
+                    int minionWorldId = Grid.WorldIdx[Grid.PosToCell(kp.transform.position)];
+                    if (minionWorldId == artifactWorldId)
+                        minionsInWorld.Add(kp.gameObject);
+                }
+            }
+            return minionsInWorld;
+        }
 
-        private static IEnumerable<GameObject> GetMinionsInSameRoom(GameObject artifact) =>
-            GetMinionsInScope(artifact, kp => kp?.GetComponent<RoomTracker>()?.room);
+        public static bool ActiveAndInScope(GameObject minion, GameObject artifact)
+        {
+            if (artifact == null || minion == null)
+                return false;
 
-        // no protection at the moment preventing adding the same modifier from the same artifact multiple times
+            int artifactId = artifact.GetInstanceID();
+            if (!ArtifactStateTracker.ArtifactStates.TryGetValue(artifactId, out var state) || !state.IsActive)
+                return false;
+
+            var config = ArtifactStateTracker.GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
+            if (config == null)
+                return false;
+
+            if (config.Scope == "All")
+                return true;
+
+            if (config.Scope == "InRoom")
+                return GetMinionsInSameRoom(artifact).Contains(minion);
+
+            if (config.Scope == "InWorld")
+                return GetMinionsInSameWorld(artifact).Contains(minion);
+
+            return false;
+        }
+
         public static void ApplyArtifactModifiersToMinion(GameObject minion, GameObject artifact)
         {
             if (minion == null || artifact == null)
@@ -134,31 +215,6 @@ namespace ArtifactsPlus
                 }
             }
         }
-        private static bool ActiveAndInScope(GameObject minion, GameObject artifact)
-        {
-            if (minion == null || artifact == null)
-                return false;
-
-            var artifactId = artifact.GetInstanceID();
-            if (!ArtifactStateTracker.ArtifactStates.TryGetValue(artifactId, out var state) || !state.IsActive)
-                return false;
-
-            var config = ArtifactStateTracker.GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
-            if (config == null)
-                return false;
-
-            switch (config.Scope)
-            {
-                case "All":
-                    return true;
-                case "InRoom":
-                    return GetMinionsInSameRoom(artifact).Contains(minion);
-                case "InWorld":
-                    return GetMinionsInSameWorld(artifact).Contains(minion);
-                default:
-                    return false;
-            }
-        }
 
         public static string GetMinionArtifactInfusions(GameObject minion)
         {
@@ -194,6 +250,7 @@ namespace ArtifactsPlus
 
             return summary.ToString();
         }
+
         private static string GetArtifactProperName(int artifactInstanceId)
         {
             var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -203,6 +260,7 @@ namespace ArtifactsPlus
             var artifact = allArtifacts.FirstOrDefault(a => a.GetInstanceID() == artifactInstanceId);
             return artifact?.GetProperName() ?? "Unknown Artifact";
         }
+
         public static void PrintAllArtifactIDsAndInstanceIDs()
         {
             var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -214,6 +272,20 @@ namespace ArtifactsPlus
                 int instanceId = artifact.GetInstanceID();
                 string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact ID";
                 Patches.Logger.Log($"Artifact ID: {artifactId}, Instance ID: {instanceId}");
+            }
+        }
+
+        private static void PrintActiveArtifactsWithWorlds()
+        {
+            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Artifact"))
+                .Select(kp => kp.gameObject);
+
+            foreach (var artifact in allArtifacts)
+            {
+                int worldId = artifact.GetComponent<KPrefabID>()?.GetMyWorldId() ?? -1;
+                string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact ID";
+                Patches.Logger.Log($"Artifact ID: {artifactId}, World ID: {worldId}");
             }
         }
     }

@@ -16,7 +16,7 @@ using System.Reflection;
 using System.Text; // <-- Add this for StringBuilder
 using UnityEngine;
 using Object = UnityEngine.Object; // Explicitly alias UnityEngine.Object to avoid ambiguity
-
+using ArtifactsPlus; // Add this import for ArtifactEffectTracker
 
 namespace ArtifactsPlus
 {
@@ -49,9 +49,7 @@ namespace ArtifactsPlus
                 {
                     Patches.Logger.Reset(); // Reset the log file at the start of the game
                 }
-                Patches.Logger.Log($"[ArtifactsPlus] Logging enabled: {options.EnableCustomLog}");
-
-                ArtifactStateTracker.LoadArtifactAttributeMap();
+                ArtifactStateTracker.LoadArtifactConfig();
 
                 // Initialize and register hotkeys
                 hotkeyListener = new HotkeyListener();
@@ -60,6 +58,18 @@ namespace ArtifactsPlus
                 {
                     PrintActiveArtifactsWithWorlds();
                 });
+
+                Patches.Logger.Log($"[ArtifactsPlus] updating all artifacts");
+
+                var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+    .Where(kp => kp != null && kp.HasTag("Artifact"))
+    .Select(kp => kp.gameObject);
+
+                foreach (var artifact in allArtifacts)
+                {
+                    ArtifactStateTracker.UpdateArtifactState(artifact);
+                }
+
             }
             catch (Exception ex)
             {
@@ -333,64 +343,17 @@ namespace ArtifactsPlus
 
         private static List<GameObject> GetMinionsInSameRoom(GameObject artifact)
         {
-            var minionsInRoom = new List<GameObject>();
-            int artifactCell = Grid.PosToCell(artifact.transform.position);
-            var artifactCavity = Game.Instance?.roomProber?.GetCavityForCell(artifactCell)?.room?.cavity;
-            if (artifactCavity == null)
-                return minionsInRoom;
-
-            foreach (var kp in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
-            {
-                if (kp != null && kp.HasTag("Minion"))
-                {
-                    int minionCell = Grid.PosToCell(kp.transform.position);
-                    var minionCavity = Game.Instance.roomProber.GetCavityForCell(minionCell)?.room?.cavity;
-                    if (minionCavity == artifactCavity)
-                        minionsInRoom.Add(kp.gameObject);
-                }
-            }
-            return minionsInRoom;
+            return ArtifactEffectTracker.GetMinionsInSameRoom(artifact);
         }
 
         private static List<GameObject> GetMinionsInSameWorld(GameObject artifact)
         {
-            var minionsInWorld = new List<GameObject>();
-            int artifactWorldId = Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)];
-            foreach (var kp in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
-            {
-                if (kp != null && kp.HasTag("Minion"))
-                {
-                    int minionWorldId = Grid.WorldIdx[Grid.PosToCell(kp.transform.position)];
-                    if (minionWorldId == artifactWorldId)
-                        minionsInWorld.Add(kp.gameObject);
-                }
-            }
-            return minionsInWorld;
+            return ArtifactEffectTracker.GetMinionsInSameWorld(artifact);
         }
 
         private static bool ActiveAndInScope(GameObject minion, GameObject artifact)
         {
-            if (artifact == null || minion == null)
-                return false;
-
-            int artifactId = artifact.GetInstanceID();
-            if (!ArtifactStates.TryGetValue(artifactId, out var state) || !state.IsActive)
-                return false;
-
-            var config = GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
-            if (config == null)
-                return false;
-
-            if (config.Scope == "All")
-                return true;
-
-            if (config.Scope == "InRoom")
-                return GetMinionsInSameRoom(artifact).Contains(minion);
-
-            if (config.Scope == "InWorld")
-                return GetMinionsInSameWorld(artifact).Contains(minion);
-
-            return false;
+            return ArtifactEffectTracker.ActiveAndInScope(minion, artifact);
         }
 
         public static void UpdateArtifactState(GameObject artifact)
@@ -402,7 +365,6 @@ namespace ArtifactsPlus
             }
 
             int id = artifact.GetInstanceID();
-            Patches.Logger.Log($"[ArtifactsPlus] Updating artifact state for artifact with Instance ID: {id}");
 
             if (!ArtifactStates.TryGetValue(id, out var state))
             {
@@ -412,7 +374,6 @@ namespace ArtifactsPlus
 
             bool wasActive = state.IsActive;
 
-            // Get artifact config  
             string internalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
             var config = GetArtifactConfig(internalName);
             if (config == null)
@@ -421,10 +382,7 @@ namespace ArtifactsPlus
                 return;
             }
 
-            // Evaluate criteria  
             var criteria = EvaluateArtifactCriteria(artifact, config);
-
-            // Artifact is active only if it's on the pedestal, meets all criteria, and is analyzed  
             state.IsActive = criteria.MeetsAll;
 
             string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
@@ -438,7 +396,6 @@ namespace ArtifactsPlus
                 string worldName = ClusterManager.Instance.GetWorld(worldId)?.GetProperName() ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
                 string shortCircuitText = criteria.ShortCircuited ? " SHORTCIRCUIT" : "";
-                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{internalName}' (ID: {id}) state changed to: {stateText} on world '{worldName}'");
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
@@ -461,17 +418,6 @@ namespace ArtifactsPlus
                 return true;
             }
             attributes = null;
-            return false;
-        }
-
-        public static bool TryGetArtifactEffects(string artifactId, out Dictionary<string, float> effects)
-        {
-            if (artifactConfigMap != null && artifactConfigMap.TryGetValue(artifactId, out var config))
-            {
-                effects = config.Effects;
-                return true;
-            }
-            effects = null;
             return false;
         }
 
@@ -517,7 +463,7 @@ namespace ArtifactsPlus
             }
         }
 
-        public static void LoadArtifactAttributeMap()
+        public static void LoadArtifactConfig()
         {
             artifactConfigMap = new Dictionary<string, ArtifactConfig>(StringComparer.OrdinalIgnoreCase);
 
@@ -637,16 +583,6 @@ namespace ArtifactsPlus
                 .Where(kp => kp != null && kp.HasTag("Artifact"))
                 .Select(kp => kp.gameObject);
 
-            // remove all modifiers from all minions
-            foreach (var minion in allMinions)
-            {
-                foreach (var artifact in allArtifacts)
-                {
-                    if (artifact == null) continue;
-                    ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
-                }
-            }
-
             // re-add in appropre
             foreach (var minion in allMinions)
             {
@@ -654,6 +590,10 @@ namespace ArtifactsPlus
                 {
                     if (artifact == null) continue;
 
+                    // first removal all existing modifiers for that artifact on the minion
+                    ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
+
+                    // re-add in properly scoped artifacts
                     int artifactId = artifact.GetInstanceID();
                     if (ArtifactStates.TryGetValue(artifactId, out var state) && state.IsActive)
                     {
