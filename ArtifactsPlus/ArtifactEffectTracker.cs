@@ -72,11 +72,12 @@ namespace ArtifactsPlus
                 return;
 
             int artifactInstanceId = artifact.GetInstanceID();
+            string artifactInternalName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "unknown";
             var minionModifiers = minion.GetComponent<MinionModifiers>();
             if (minionModifiers == null)
                 return;
 
-            if (TryGetArtifactModifiers(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name, out var modifierDict))
+            if (TryGetArtifactModifiers(artifactInternalName, out var modifierDict))
             {
                 foreach (var kvp in modifierDict)
                 {
@@ -96,34 +97,24 @@ namespace ArtifactsPlus
                         var modifierKey = (attrName, modValue, artifactInstanceId);
 
                         // Debugging: Attempting to add a modifier
-                        Debug.Log($"Attempting to add modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}'.");
+                        //Patches.Logger.Log($"Attempting to add modifier '{attrName}' with value '{modValue}' for artifact '{artifactInternalName}' (ID: {artifactInstanceId}) to minion '{minion.name}'.");
 
-                        bool modifierExists = false;
-                        for (int i = 0; i < attrInstance.Modifiers.size; i++)
-                        {
-                            var mod = attrInstance.Modifiers[i];
-                            if (mod.Description == $"Artifact Modifier: {artifactInstanceId}" && mod.Value == modValue)
-                            {
-                                modifierExists = true;
-                                break;
-                            }
-                        }
+                        // Enhanced existence check
+                        bool modifierExists = minionModifierArtifactMap.TryGetValue(minion, out var modMap) && modMap.ContainsKey(modifierKey);
 
                         if (modifierExists)
                         {
-                            Debug.Log($"Modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}' already exists. Skipping.");
+                            Patches.Logger.Log($"Modifier '{attrName}' with value '{modValue}' for artifact '{artifactInternalName}' (ID: {artifactInstanceId}) already exists for minion '{minion.name}'. Skipping.");
                             continue;
                         }
 
-                        // Add a new modifier for stacking
-                        var modifier = new AttributeModifier(attribute.Id, modValue, $"Artifact Modifier: {artifactInstanceId}");
+                        // Create a unique identifier for the modifier
+                        var modifier = new AttributeModifier(attribute.Id, modValue, "Skill Level");
+                        modifier.DescriptionCB = () => artifactInstanceId.ToString(); // Convert int to string for callback
                         attrInstance.Add(modifier);
 
-                        // Debugging: Modifier added
-                        Debug.Log($"Modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}' added successfully.");
-
                         // Track which artifact applied this modifier
-                        if (!minionModifierArtifactMap.TryGetValue(minion, out var modMap))
+                        if (!minionModifierArtifactMap.TryGetValue(minion, out modMap))
                         {
                             modMap = new Dictionary<(string attrName, float value, int artifactInstanceId), int>();
                             minionModifierArtifactMap[minion] = modMap;
@@ -137,58 +128,44 @@ namespace ArtifactsPlus
         public static void RemoveArtifactModifiersToMinion(GameObject minion, GameObject artifact)
         {
             if (minion == null || artifact == null)
+            {
+                Patches.Logger.Log("RemoveArtifactModifiersToMinion: Minion or artifact is null.");
                 return;
+            }
 
             int artifactInstanceId = artifact.GetInstanceID();
+
             var minionModifiers = minion.GetComponent<MinionModifiers>();
             if (minionModifiers == null)
-                return;
-
-            if (TryGetArtifactModifiers(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name, out var modifierDict))
             {
-                foreach (var kvp in modifierDict)
+                Patches.Logger.Log($"RemoveArtifactModifiersToMinion: Minion '{minion.name}' does not have a MinionModifiers component.");
+                return;
+            }
+
+            if (minionModifiers.attributes == null)
+            {
+                Patches.Logger.Log($"RemoveArtifactModifiersToMinion: Minion '{minion.name}' does not have any attributes.");
+                return;
+            }
+
+            foreach (var attribute in Db.Get().Attributes.resources)
+            {
+                var attrInstance = minionModifiers.attributes.Get(attribute.Id);
+                if (attrInstance == null)
                 {
-                    string attrName = kvp.Key;
-                    float modValue = kvp.Value;
+                    continue;
+                }
 
-                    Klei.AI.Attribute attribute = Db.Get().Attributes.resources
-                        .FirstOrDefault(a => string.Equals(a.Id, attrName, StringComparison.OrdinalIgnoreCase) ||
-                                             string.Equals(a.Name, attrName, StringComparison.OrdinalIgnoreCase));
-
-                    if (attribute == null)
-                        continue;
-
-                    var attrInstance = minionModifiers.attributes?.Get(attribute);
-                    if (attrInstance != null)
+                for (int i = attrInstance.Modifiers.size - 1; i >= 0; i--) // Iterate in reverse to safely remove items
+                {
+                    var currentModifier = attrInstance.Modifiers[i];
+                    string descriptionCB = currentModifier.DescriptionCB?.Invoke();
+                    if (descriptionCB != null)
                     {
-                        var modifierKey = (attrName, modValue, artifactInstanceId);
-
-                        // Debugging: Attempting to delete a modifier
-                        Debug.Log($"Attempting to delete modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}'.");
-
-                        var toRemove = new List<AttributeModifier>();
-                        for (int i = 0; i < attrInstance.Modifiers.size; i++)
+                        if (descriptionCB.Equals(artifactInstanceId.ToString(), StringComparison.OrdinalIgnoreCase))
                         {
-                            var mod = attrInstance.Modifiers[i];
-                            if (mod.Description == $"Artifact Modifier: {artifactInstanceId}" && mod.Value == modValue)
-                            {
-                                toRemove.Add(mod);
-                            }
-                        }
-                        for (int i = 0; i < toRemove.Count; i++)
-                        {
-                            attrInstance.Remove(toRemove[i]);
-
-                            // Debugging: Modifier deleted
-                            Debug.Log($"Modifier '{attrName}' with value '{modValue}' for artifact '{artifactInstanceId}' deleted successfully.");
-                        }
-
-                        // Remove tracking
-                        if (minionModifierArtifactMap.TryGetValue(minion, out var modMap))
-                        {
-                            modMap.Remove(modifierKey);
-                            if (modMap.Count == 0)
-                                minionModifierArtifactMap.Remove(minion);
+                            Patches.Logger.Log($"Removing Modifier: ID='{currentModifier.AttributeId}', Value='{currentModifier.Value}', Description='{currentModifier.Description}', DescriptionCB='{descriptionCB}'");
+                            attrInstance.Remove(currentModifier); // Safely remove the modifier
                         }
                     }
                 }
@@ -211,13 +188,13 @@ namespace ArtifactsPlus
                         continue;
 
                     // Debugging: Attempting to add an effect
-                    Debug.Log($"Attempting to add effect '{effectId}' for artifact '{artifactInstanceId}'.");
+                    Patches.Logger.Log($"Attempting to add effect '{effectId}' for artifact '{artifactInstanceId}'.");
 
                     if (minionEffectArtifactMap.TryGetValue(minion, out var effectMap) && effectMap.TryGetValue(effectId, out var appliedArtifactInstanceId))
                     {
                         if (appliedArtifactInstanceId == artifactInstanceId)
                         {
-                            Debug.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' already exists. Skipping.");
+                            Patches.Logger.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' already exists. Skipping.");
                             continue;
                         }
                     }
@@ -227,7 +204,7 @@ namespace ArtifactsPlus
                         effectsComponent.Add(new HashedString(effectId), true);
 
                         // Debugging: Effect added
-                        Debug.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' added successfully.");
+                        Patches.Logger.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' added successfully.");
                     }
 
                     if (!minionEffectArtifactMap.TryGetValue(minion, out var newEffectMap))
@@ -256,7 +233,7 @@ namespace ArtifactsPlus
                         continue;
 
                     // Debugging: Attempting to delete an effect
-                    Debug.Log($"Attempting to delete effect '{effectId}' for artifact '{artifactInstanceId}'.");
+                    Patches.Logger.Log($"Attempting to delete effect '{effectId}' for artifact '{artifactInstanceId}'.");
 
                     if (minionEffectArtifactMap.TryGetValue(minion, out var effectMap) && effectMap.TryGetValue(effectId, out var appliedArtifactInstanceId))
                     {
@@ -265,7 +242,7 @@ namespace ArtifactsPlus
                             effectsComponent.Remove(new HashedString(effectId));
 
                             // Debugging: Effect deleted
-                            Debug.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' deleted successfully.");
+                            Patches.Logger.Log($"Effect '{effectId}' for artifact '{artifactInstanceId}' deleted successfully.");
 
                             effectMap.Remove(effectId);
                             if (effectMap.Count == 0)

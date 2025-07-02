@@ -84,7 +84,7 @@ namespace ArtifactsPlus
                     if (!hasAny)
                     {
                         isConsistent = false;
-                        Debug.Log($"[CONSISTENCY] Minion '{minion.name}' is in artifactHistoryMap for artifact '{artifactId}' but has no matching effects/modifiers.");
+                        Patches.Logger.Log($"[CONSISTENCY] Minion '{minion.name}' is in artifactHistoryMap for artifact '{artifactId}' but has no matching effects/modifiers.");
                     }
                 }
             }
@@ -159,7 +159,7 @@ namespace ArtifactsPlus
                         if (!artifactHistoryMap.TryGetValue(artifact, out var minionSet) || !minionSet.Contains(minion))
                         {
                             isConsistent = false;
-                            Debug.Log($"[CONSISTENCY] Minion '{minion.name}' has artifact effect/modifier for '{artifactId}' but is NOT in artifactHistoryMap.");
+                            Patches.Logger.Log($"[CONSISTENCY] Minion '{minion.name}' has artifact effect/modifier for '{artifactId}' but is NOT in artifactHistoryMap.");
                         }
                     }
                 }
@@ -167,11 +167,11 @@ namespace ArtifactsPlus
 
             if (isConsistent)
             {
-                Debug.Log("[CONSISTENCY] All artifact/minion states are consistent.");
+                Patches.Logger.Log("[CONSISTENCY] All artifact/minion states are consistent.");
             }
             else
             {
-                Debug.Log("[CONSISTENCY] Inconsistencies detected in artifact/minion states.");
+                Patches.Logger.Log("[CONSISTENCY] Inconsistencies detected in artifact/minion states.");
             }
         }
     }

@@ -3,8 +3,8 @@ using HLib;
 using Klei.AI; // Add this import for Analyzable
 using KMod;
 using KSerialization; // Add this import for HotkeyListener
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json; // Add this import for JsonObject and JsonObjectAttribute
+using Newtonsoft.Json.Linq;
 using PeterHan.PLib.Core; // Add this import for PUtil
 using PeterHan.PLib.Options;
 using PeterHan.PLib.UI;
@@ -42,8 +42,13 @@ namespace ArtifactsPlus
         {
             try
             {
+
                 var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
                 Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
+                if (options.EnableCustomLog)
+                {
+                    Patches.Logger.Reset(); // Reset the log file at the start of the game
+                }
                 Patches.Logger.Log($"[ArtifactsPlus] Logging enabled: {options.EnableCustomLog}");
 
                 ArtifactStateTracker.LoadArtifactAttributeMap();
@@ -69,11 +74,11 @@ namespace ArtifactsPlus
 
             if (!activeArtifacts.Any())
             {
-                Debug.Log("[ArtifactsPlus] No active artifacts found.");
+                Patches.Logger.Log("[ArtifactsPlus] No active artifacts found.");
                 return;
             }
 
-            Debug.Log("[ArtifactsPlus] Active Artifacts and their Worlds:");
+            Patches.Logger.Log("[ArtifactsPlus] Active Artifacts and their Worlds:");
             foreach (var artifact in activeArtifacts)
             {
                 int cell = Grid.PosToCell(artifact.transform.position);
@@ -81,7 +86,7 @@ namespace ArtifactsPlus
                 string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
                 string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
 
-                Debug.Log($"- {artifactName} in {worldName}");
+                Patches.Logger.Log($"- {artifactName} in {worldName}");
             }
         }
     }
@@ -148,7 +153,7 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                Debug.Log("[WARN] Artifact is null in EvaluateArtifactCriteria.");
+                Patches.Logger.Log("[WARN] Artifact is null in EvaluateArtifactCriteria.");
                 return new ArtifactCriteriaResult
                 {
                     MeetsAll = false,
@@ -158,7 +163,7 @@ namespace ArtifactsPlus
 
             if (artifact.transform == null)
             {
-                Debug.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
+                Patches.Logger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
                 return new ArtifactCriteriaResult
                 {
                     MeetsAll = false,
@@ -316,14 +321,14 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                Debug.Log("[ERROR] Attempted to register a null artifact.");
+                Patches.Logger.Log("[ERROR] Attempted to register a null artifact.");
                 return;
             }
 
             var artifactPrefabID = artifact.GetComponent<KPrefabID>();
             if (artifactPrefabID == null)
             {
-                Debug.Log($"[ERROR] Artifact '{artifact.name}' does not have a KPrefabID component.");
+                Patches.Logger.Log($"[ERROR] Artifact '{artifact.name}' does not have a KPrefabID component.");
                 return;
             }
 
@@ -339,7 +344,7 @@ namespace ArtifactsPlus
             if (artifact != null)
             {
                 ArtifactsOnPedestals.Remove(artifact);
-                UpdateArtifactState(artifact);
+                //UpdateArtifactState(artifact);
             }
         }
 
@@ -392,7 +397,7 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                Debug.Log("[ERROR] UpdateArtifactState called with a null artifact.");
+                Patches.Logger.Log("[ERROR] UpdateArtifactState called with a null artifact.");
                 return;
             }
 
@@ -410,7 +415,7 @@ namespace ArtifactsPlus
             var config = GetArtifactConfig(internalName);
             if (config == null)
             {
-                Debug.Log($"[WARN] No config found for artifact '{internalName}'");
+                Patches.Logger.Log($"[WARN] No config found for artifact '{internalName}'");
                 return;
             }
 
@@ -428,10 +433,10 @@ namespace ArtifactsPlus
             {
                 int cell = Grid.PosToCell(artifact.transform.position);
                 int worldId = Grid.WorldIdx[cell];
-                string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
+                string worldName = ClusterManager.Instance.GetWorld(worldId)?.GetProperName() ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
                 string shortCircuitText = criteria.ShortCircuited ? " SHORTCIRCUIT" : "";
-                Debug.Log($"[ArtifactsPlus] Artifact '{artifact.name}' state changed to: {(state.IsActive ? "ACTIVE" : "INACTIVE")}");
+                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{internalName}' (ID: {id}) state changed to: {stateText} on world '{worldName}'");
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
@@ -480,7 +485,7 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                Debug.Log("[ERROR] ApplyGlowEffect called with a null artifact.");
+                Patches.Logger.Log("[ERROR] ApplyGlowEffect called with a null artifact.");
                 return;
             }
 
@@ -535,7 +540,7 @@ namespace ArtifactsPlus
 
                 if (!(configJson["Artifacts"] is JArray arr))
                 {
-                    Debug.Log("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
+                    Patches.Logger.Log("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
                     return;
                 }
 
@@ -577,7 +582,7 @@ namespace ArtifactsPlus
             }
             catch (Exception ex)
             {
-                Debug.Log($"[ERROR] Failed to load artifact config: {ex}");
+                Patches.Logger.Log($"[ERROR] Failed to load artifact config: {ex}");
             }
         }
 
@@ -601,6 +606,7 @@ namespace ArtifactsPlus
 
         public static void PollAllArtifacts()
         {
+            Patches.Logger.Log($"\n");
             ArtifactsOnPedestals.RemoveWhere(artifact => artifact == null);
 
             var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -612,7 +618,7 @@ namespace ArtifactsPlus
             {
                 if (artifact.transform == null)
                 {
-                    Debug.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in PollAllArtifacts.");
+                    Patches.Logger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in PollAllArtifacts.");
                     continue;
                 }
                 UpdateArtifactState(artifact);
@@ -665,9 +671,13 @@ namespace ArtifactsPlus
                 .Where(kp => kp != null && kp.HasTag("Minion"))
                 .Select(kp => kp.gameObject);
 
+            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Artifact"))
+                .Select(kp => kp.gameObject);
+
             foreach (var minion in allMinions)
             {
-                foreach (var artifact in ArtifactsOnPedestals)
+                foreach (var artifact in allArtifacts)
                 {
                     if (artifact == null) continue;
 
@@ -682,7 +692,7 @@ namespace ArtifactsPlus
 
             foreach (var minion in allMinions)
             {
-                foreach (var artifact in ArtifactsOnPedestals)
+                foreach (var artifact in allArtifacts)
                 {
                     if (artifact == null) continue;
 
@@ -710,21 +720,29 @@ namespace ArtifactsPlus
     public class ArtifactStatePoller : MonoBehaviour
     {
         private int tickCounter = 0;
-        private const int PollInterval = 300;
+        private static int pollInterval; // Cache poll interval for the current save/load  
 
         public HLib.HotkeyListener hotkeyListener { get; set; }
 
         public ArtifactStatePoller(HLib.HotkeyListener hotkeyListener)
         {
             this.hotkeyListener = hotkeyListener;
+            var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+            pollInterval = options.ArtifactPollingInterval; // Read polling interval from configuration
         }
 
         void Awake() { }
-        void Start() { }
+        void Start()
+        {
+            // Read and cache the poll interval once during initialization  
+            var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+            pollInterval = options.ArtifactPollingInterval;
+        }
         void Update()
         {
             tickCounter++;
-            if (tickCounter >= PollInterval)
+
+            if (tickCounter >= pollInterval)
             {
                 tickCounter = 0;
                 ArtifactStateTracker.PollAllArtifacts();
@@ -745,7 +763,7 @@ namespace ArtifactsPlus
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            Debug.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            Patches.Logger.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
             new POptions().RegisterOptions(this, typeof(ModOptions));
 
@@ -767,7 +785,7 @@ namespace ArtifactsPlus
 
             if (harmony == null)
             {
-                Debug.LogError("[ArtifactsPlus] Harmony instance is null.");
+                Patches.Logger.Log("[ArtifactsPlus] Harmony instance is null.");
                 return;
             }
 
@@ -865,5 +883,10 @@ namespace ArtifactsPlus
         [Option("Artifact Config File", "Set the path to the artifact configuration file.")]
         [JsonProperty]
         public string ArtifactConfigFile { get; set; } = "ArtifactsConfig.json";
+
+        [Option("Artifact Polling Interval", "Set the interval (in ticks) for artifact polling.")]
+        [Limit(1, 1000)]
+        [JsonProperty]
+        public int ArtifactPollingInterval { get; set; } = 600; // Default value
     }
 }
