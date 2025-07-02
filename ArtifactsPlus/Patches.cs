@@ -199,7 +199,8 @@ namespace ArtifactsPlus
 
         private static bool CheckOnPedestal(GameObject artifact, ref ArtifactCriteriaResult result)
         {
-            result.MeetsAll = ArtifactsOnPedestals.Contains(artifact);
+            var prefabID = artifact.GetComponent<KPrefabID>();
+            result.MeetsAll = prefabID != null && prefabID.HasTag("OnPedestal");
             if (!result.MeetsAll)
             {
                 result.ShortCircuited = true;
@@ -332,20 +333,33 @@ namespace ArtifactsPlus
                 return;
             }
 
-            // Allow multiple artifacts of the same type
-            ArtifactsOnPedestals.Add(artifact);
+            // Attach a safe flag or callback
+            artifactPrefabID.AddTag("OnPedestal");
 
-            var artifactType = artifactPrefabID.PrefabTag.Name;
-            var count = ArtifactsOnPedestals.Count(a => a != null && a.GetComponent<KPrefabID>()?.PrefabTag.Name == artifactType);
+            Patches.Logger.Log($"[INFO] Artifact '{artifactPrefabID.PrefabTag.Name}' registered on pedestal.");
+            UpdateArtifactState(artifact);
         }
 
         public static void UnregisterArtifactOnPedestal(GameObject artifact)
         {
-            if (artifact != null)
+            if (artifact == null)
             {
-                ArtifactsOnPedestals.Remove(artifact);
-                //UpdateArtifactState(artifact);
+                Patches.Logger.Log("[ERROR] Attempted to unregister a null artifact.");
+                return;
             }
+
+            var artifactPrefabID = artifact.GetComponent<KPrefabID>();
+            if (artifactPrefabID == null)
+            {
+                Patches.Logger.Log($"[ERROR] Artifact '{artifact.name}' does not have a KPrefabID component.");
+                return;
+            }
+
+            // Remove the safe flag or callback
+            artifactPrefabID.RemoveTag("OnPedestal");
+
+            Patches.Logger.Log($"[INFO] Artifact '{artifactPrefabID.PrefabTag.Name}' unregistered from pedestal.");
+            UpdateArtifactState(artifact);
         }
 
         private static List<GameObject> GetAllMinions()
@@ -471,14 +485,6 @@ namespace ArtifactsPlus
                     2f,
                     false
                 );
-
-                List<GameObject> minionList;
-                if (config.Scope == "InRoom")
-                    minionList = GetMinionsInSameRoom(artifact);
-                else if (config.Scope == "InWorld")
-                    minionList = GetMinionsInSameWorld(artifact);
-                else
-                    minionList = GetAllMinions();
 
                 ApplyGlowEffect(artifact, state.IsActive);
             }
@@ -619,35 +625,11 @@ namespace ArtifactsPlus
             return new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, decorMinimum, "All");
         }
 
-        public static void RemoveArtifact(GameObject artifact)
-        {
-            if (artifact != null)
-            {
-                int id = artifact.GetInstanceID();
-                ArtifactStates.Remove(id);
-                ArtifactsOnPedestals.Remove(artifact);
-            }
-        }
-
         public static void PollAllArtifacts()
         {
             Patches.Logger.Log($"\n");
             ArtifactsOnPedestals.RemoveWhere(artifact => artifact == null);
 
-            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Artifact"))
-                .Select(kp => kp.gameObject)
-                .ToArray();
-
-            foreach (var artifact in allArtifacts)
-            {
-                if (artifact.transform == null)
-                {
-                    Patches.Logger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in PollAllArtifacts.");
-                    continue;
-                }
-                UpdateArtifactState(artifact);
-            }
             UpdateMinions();
         }
 
@@ -663,7 +645,7 @@ namespace ArtifactsPlus
                         continue;
                     }
 
-                    var pedestal = building.GetComponent<ItemPedestal>();
+                    var pedestal = building.GetComponent<ItaemPedestal>();
                     if (pedestal == null)
                     {
                         continue;
@@ -710,7 +692,7 @@ namespace ArtifactsPlus
                 }
             }
 
-            // re-add in appropriately scoped active artifacts
+            // re-add in appropre
             foreach (var minion in allMinions)
             {
                 foreach (var artifact in allArtifacts)
@@ -823,27 +805,13 @@ namespace ArtifactsPlus
             var receptacle = receptacleField?.GetValue(__instance) as SingleEntityReceptacle;
             var occupant = receptacle?.Occupant;
 
-            foreach (var artifact in ArtifactStateTracker.ArtifactsOnPedestals.ToArray())
-            {
-                if (artifact == null) continue;
-                bool stillOnPedestal = false;
-                foreach (var pedestal in GameObject.FindObjectsOfType<ItemPedestal>())
-                {
-                    var recField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
-                    var rec = recField?.GetValue(pedestal) as SingleEntityReceptacle;
-                    if (rec != null && rec.Occupant == artifact)
-                    {
-                        stillOnPedestal = true;
-                        break;
-                    }
-                }
-                if (!stillOnPedestal)
-                    ArtifactStateTracker.UnregisterArtifactOnPedestal(artifact);
-            }
-
             if (occupant != null)
             {
                 ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
+            }
+            else
+            {
+                ArtifactStateTracker.UnregisterArtifactOnPedestal(__instance.gameObject);
             }
         }
     }

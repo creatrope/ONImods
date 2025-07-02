@@ -27,38 +27,27 @@ namespace ArtifactsPlus
             }
         }
 
-        private static IEnumerable<GameObject> GetMinionsInSameWorld(GameObject artifact)
+        private static IEnumerable<GameObject> GetMinionsInScope(GameObject artifact, Func<KPrefabID, object> scopeSelector)
         {
             if (artifact == null)
                 return Enumerable.Empty<GameObject>();
 
-            var artifactWorld = artifact.GetComponent<KPrefabID>()?.GetMyWorldId();
-            if (artifactWorld == null)
+            var artifactScope = scopeSelector(artifact.GetComponent<KPrefabID>());
+            if (artifactScope == null)
                 return Enumerable.Empty<GameObject>();
 
             return GetAllMinions().Where(minion =>
             {
-                var minionWorld = minion.GetComponent<KPrefabID>()?.GetMyWorldId();
-                return minionWorld == artifactWorld;
+                var minionScope = scopeSelector(minion.GetComponent<KPrefabID>());
+                return minionScope != null && minionScope.Equals(artifactScope);
             });
         }
 
-        private static IEnumerable<GameObject> GetMinionsInSameRoom(GameObject artifact)
-        {
-            if (artifact == null)
-                return Enumerable.Empty<GameObject>();
+        private static IEnumerable<GameObject> GetMinionsInSameWorld(GameObject artifact) =>
+            GetMinionsInScope(artifact, kp => kp?.GetMyWorldId());
 
-            var artifactRoom = artifact.GetComponent<KPrefabID>()?.GetComponent<RoomTracker>()?.room; // Use 'room' property instead of 'RoomId'
-            if (artifactRoom == null)
-                return Enumerable.Empty<GameObject>();
-
-            return GetAllMinions().Where(minion =>
-            {
-                var minionRoom = minion.GetComponent<KPrefabID>()?.GetComponent<RoomTracker>()?.room; // Use 'room' property instead of 'RoomId'
-                return minionRoom == artifactRoom;
-            });
-        }
-
+        private static IEnumerable<GameObject> GetMinionsInSameRoom(GameObject artifact) =>
+            GetMinionsInScope(artifact, kp => kp?.GetComponent<RoomTracker>()?.room);
 
         // no protection at the moment preventing adding the same modifier from the same artifact multiple times
         public static void ApplyArtifactModifiersToMinion(GameObject minion, GameObject artifact)
@@ -190,7 +179,7 @@ namespace ArtifactsPlus
                     continue;
                 }
 
-                for (int i = 0; i < attrInstance.Modifiers.size; i++) // Regular iteration
+                for (int i = 0; i < attrInstance.Modifiers.size; i++)
                 {
                     var modifier = attrInstance.Modifiers[i];
                     string descriptionCBResult = modifier.DescriptionCB?.Invoke();
@@ -205,51 +194,25 @@ namespace ArtifactsPlus
 
             return summary.ToString();
         }
-
         private static string GetArtifactProperName(int artifactInstanceId)
         {
-            // Try to find the artifact GameObject in the world using the instance ID
-            var artifact = ArtifactsPlus.ArtifactStateTracker.ArtifactsOnPedestals
-                .FirstOrDefault(a => a != null && a.GetInstanceID() == artifactInstanceId);
+            // Debugging: Log the artifactInstanceId being searched
+            Patches.Logger.Log($"GetArtifactProperName: Searching for artifact with InstanceID '{artifactInstanceId}'.");
+
+            var artifact = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .FirstOrDefault(a => a.GetInstanceID() == artifactInstanceId);
+
+            // Debugging: Log whether the artifact was found or not
             if (artifact != null)
             {
-                var selectable = artifact.GetComponent<KSelectable>();
-                if (selectable != null)
-                    return selectable.GetProperName();
+                Patches.Logger.Log($"GetArtifactProperName: Found artifact '{artifact.GetProperName()}' with InstanceID '{artifactInstanceId}'.");
             }
-            // Fallback to instance ID as a string if not found
-            return artifactInstanceId.ToString();
-        }
-        public static bool MinionHasModifiersFromArtifact(GameObject minion, GameObject artifact)
-        {
-            if (minion == null || artifact == null)
-                return false;
-
-            int artifactInstanceId = artifact.GetInstanceID();
-            var minionModifiers = minion.GetComponent<MinionModifiers>();
-
-            if (minionModifiers == null || minionModifiers.attributes == null)
-                return false;
-
-            foreach (var attribute in Db.Get().Attributes.resources)
+            else
             {
-                var attrInstance = minionModifiers.attributes.Get(attribute.Id);
-                if (attrInstance == null)
-                    continue;
-
-                for (int i = 0; i < attrInstance.Modifiers.size; i++)
-                {
-                    var modifier = attrInstance.Modifiers[i];
-                    string descriptionCBResult = modifier.DescriptionCB?.Invoke();
-
-                    if (int.TryParse(descriptionCBResult, out int modifierArtifactId) && modifierArtifactId == artifactInstanceId)
-                    {
-                        return true;
-                    }
-                }
+                Patches.Logger.Log($"GetArtifactProperName: No artifact found with InstanceID '{artifactInstanceId}'.");
             }
 
-            return false;
+            return artifact?.GetProperName() ?? "Unknown Artifact";
         }
     }
 }
