@@ -287,34 +287,29 @@ namespace ArtifactsPlus
         public static string GetMinionArtifactInfusions(GameObject minion)
         {
             var summary = new System.Text.StringBuilder();
-            var listedEffects = new HashSet<string>();
-            var listedModifiers = new HashSet<(string attrName, float value, int artifactInstanceId)>();
+            var minionModifiers = minion.GetComponent<MinionModifiers>();
 
-            // Effects
-            if (minionEffectArtifactMap.TryGetValue(minion, out var effectMap))
+            if (minionModifiers == null || minionModifiers.attributes == null)
             {
-                foreach (var kvp in effectMap)
-                {
-                    if (listedEffects.Add(kvp.Key))
-                    {
-                        string properName = GetArtifactProperName(kvp.Value);
-                        summary.AppendLine($"{kvp.Key} ({properName})");
-                    }
-                }
+                Patches.Logger.Log($"GetMinionArtifactInfusions: Minion '{minion.name}' does not have a MinionModifiers component or attributes.");
+                return summary.ToString();
             }
 
-            // Modifiers
-            if (minionModifierArtifactMap.TryGetValue(minion, out var modMap))
+            foreach (var attribute in Db.Get().Attributes.resources)
             {
-                foreach (var kvp in modMap)
+                var attrInstance = minionModifiers.attributes.Get(attribute.Id);
+                if (attrInstance == null)
                 {
-                    string attrName = kvp.Key.attrName;
-                    float val = kvp.Key.value;
-                    int artifactInstanceId = kvp.Key.artifactInstanceId;
-                    if (listedModifiers.Add((attrName, val, artifactInstanceId)))
+                    continue;
+                }
+
+                for (int i = 0; i < attrInstance.Modifiers.size; i++) // Regular iteration
+                {
+                    var modifier = attrInstance.Modifiers[i];
+                    string descriptionCBResult = modifier.DescriptionCB?.Invoke();
+                    if (!string.IsNullOrEmpty(descriptionCBResult))
                     {
-                        string properName = GetArtifactProperName(artifactInstanceId);
-                        summary.AppendLine($"{attrName} {(val >= 0 ? "+" : "")}{val} ({properName})");
+                        summary.AppendLine($"{attribute.Name}: {modifier.Value} (Artifact ID: {descriptionCBResult})");
                     }
                 }
             }
