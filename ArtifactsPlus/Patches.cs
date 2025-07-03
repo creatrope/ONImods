@@ -58,18 +58,6 @@ namespace ArtifactsPlus
                 {
                     PrintActiveArtifactsWithWorlds();
                 });
-
-                Patches.Logger.Log($"[ArtifactsPlus] updating all artifacts");
-
-                var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-    .Where(kp => kp != null && kp.HasTag("Artifact"))
-    .Select(kp => kp.gameObject);
-
-                foreach (var artifact in allArtifacts)
-                {
-                    ArtifactStateTracker.UpdateArtifactState(artifact);
-                }
-
             }
             catch (Exception ex)
             {
@@ -98,6 +86,18 @@ namespace ArtifactsPlus
 
                 Patches.Logger.Log($"- {artifactName} in {worldName}");
             }
+        }
+
+        public static void LogArtifactShortCircuitIssue(GameObject artifact, ArtifactStateTracker.ArtifactCriteriaResult criteria)
+        {
+            if (artifact == null || string.IsNullOrEmpty(criteria.ShortCircuited))
+                return;
+
+            string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
+            int instanceId = artifact.GetInstanceID();
+            string shortCircuitIssue = criteria.ShortCircuited;
+
+            Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifactId}' ({instanceId}) failed due to: {shortCircuitIssue}.");
         }
     }
 
@@ -148,43 +148,39 @@ namespace ArtifactsPlus
 
         public struct ArtifactCriteriaResult
         {
-            public int ActualRoomSize;
-            public bool MeetsRoomSize;
-            public float ActualDecor;
-            public bool MeetsDecor;
             public string Scope;
+            public bool Transform; // Adjusted case
+            public bool isFree;
+            public bool IsAnalyzed;
+            public int ActualRoomSize; // Adjusted case
+            public bool MeetsRoomSize; // Adjusted case
+            public float ActualDecor; // Adjusted case
+            public bool MeetsDecor; // Adjusted case
             public int ArtifactCountInRoom;
             public bool NeighborsOk;
+            public bool OnPedestal; // Adjusted case
+            public string ShortCircuited;
             public bool MeetsAll;
-            public bool ShortCircuited;
+
         }
 
         public static ArtifactCriteriaResult EvaluateArtifactCriteria(GameObject artifact, ArtifactConfig config)
         {
-            if (artifact == null)
-            {
-                Patches.Logger.Log("[WARN] Artifact is null in EvaluateArtifactCriteria.");
-                return new ArtifactCriteriaResult
-                {
-                    MeetsAll = false,
-                    ShortCircuited = true
-                };
-            }
-
-            if (artifact.transform == null)
-            {
-                Patches.Logger.Log($"[ERROR] Artifact '{artifact.name}' has a null transform in EvaluateArtifactCriteria.");
-                return new ArtifactCriteriaResult
-                {
-                    MeetsAll = false,
-                    ShortCircuited = true
-                };
-            }
-
             var result = new ArtifactCriteriaResult
             {
                 Scope = config.Scope
             };
+
+            result.MeetsAll = false;
+
+            if (artifact == null)
+            {
+                return result;
+            }
+
+
+            // 0. Check if the artifact is on a pedestal
+            if (!CheckTransform(artifact, ref result)) return result;
 
             // 1. Check if the artifact is on a pedestal
             if (!CheckOnPedestal(artifact, ref result)) return result;
@@ -193,7 +189,7 @@ namespace ArtifactsPlus
             if (!CheckAnalyzed(artifact, ref result)) return result;
 
             // 3. Check if the artifact is entombed
-            if (!CheckEntombed(artifact, ref result)) return result;
+            if (!CheckFree(artifact, ref result)) return result;
 
             // 4. Check room size
             if (!CheckRoomSize(artifact, config, ref result)) return result;
@@ -204,74 +200,69 @@ namespace ArtifactsPlus
             // 6. Check decor
             if (!CheckDecor(artifact, config, ref result)) return result;
 
+            result.MeetsAll = true;
             return result;
+        }
+
+        private static bool CheckTransform(GameObject artifact, ref ArtifactCriteriaResult result)
+        {
+            result.Transform = artifact.transform ? true : false; // Adjusted case to match ArtifactCriteriaResult
+            return result.Transform;
         }
 
         private static bool CheckOnPedestal(GameObject artifact, ref ArtifactCriteriaResult result)
         {
-            if (artifact == null)
-                return false;
-
+            result.OnPedestal = false; // Adjusted case to match ArtifactCriteriaResult
             foreach (var pedestal in UnityEngine.Object.FindObjectsOfType<ItemPedestal>())
             {
                 var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
                 var receptacle = receptacleField?.GetValue(pedestal) as SingleEntityReceptacle;
                 if (receptacle?.Occupant == artifact)
+                {
+                    result.OnPedestal = true; // Adjusted case to match ArtifactCriteriaResult
                     return true;
+                }
             }
-
-            return false;
+            return result.OnPedestal;
         }
 
         private static bool CheckAnalyzed(GameObject artifact, ref ArtifactCriteriaResult result)
         {
+            result.IsAnalyzed = false;
+
             var artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name;
-            result.MeetsAll = !string.IsNullOrEmpty(artifactId) && ArtifactSelector.Instance?.GetAnalyzedArtifactIDs().Contains(artifactId) == true;
-            if (!result.MeetsAll)
-            {
-                result.ShortCircuited = true;
-            }
-            return result.MeetsAll;
+            result.IsAnalyzed = !string.IsNullOrEmpty(artifactId) && ArtifactSelector.Instance?.GetAnalyzedArtifactIDs().Contains(artifactId) == true;
+            result.ShortCircuited = result.IsAnalyzed ? null : "isAnalyzed";
+            return result.IsAnalyzed;
         }
 
-        private static bool CheckEntombed(GameObject artifact, ref ArtifactCriteriaResult result)
+        private static bool CheckFree(GameObject artifact, ref ArtifactCriteriaResult result) // not entombed
         {
+            result.isFree = false;
             int cell = Grid.PosToCell(artifact.transform.position);
-            result.MeetsAll = Grid.Element[cell].id != SimHashes.Unobtanium;
-            if (!result.MeetsAll)
-            {
-                result.ShortCircuited = true;
-            }
-            return result.MeetsAll;
+            result.isFree = Grid.Element[cell].id != SimHashes.Unobtanium;
+            result.ShortCircuited = result.isFree ? null : "isFree";
+            return result.isFree;
         }
 
         private static bool CheckRoomSize(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
         {
+            result.MeetsRoomSize = false; // Adjusted case to match ArtifactCriteriaResult
             int cell = Grid.PosToCell(artifact.transform.position);
             var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
             var room = cavity?.room;
 
             if (room != null && room.cavity != null)
             {
-                result.ActualRoomSize = room.cavity.numCells;
-                result.MeetsRoomSize = result.ActualRoomSize >= config.RoomSizeMin && result.ActualRoomSize <= config.RoomSizeMax;
-                result.MeetsAll = result.MeetsRoomSize;
+                result.ActualRoomSize = room.cavity.numCells; // Adjusted case to match ArtifactCriteriaResult
+                result.MeetsRoomSize = result.ActualRoomSize >= config.RoomSizeMin && result.ActualRoomSize <= config.RoomSizeMax; // Adjusted case to match ArtifactCriteriaResult
             }
-            else
-            {
-                result.MeetsRoomSize = false;
-                result.MeetsAll = false;
-            }
-
-            if (!result.MeetsAll)
-            {
-                result.ShortCircuited = true;
-            }
-            return result.MeetsAll;
+            return result.MeetsRoomSize;
         }
 
         private static bool CheckNeighbors(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
         {
+            result.NeighborsOk = false;
             int cell = Grid.PosToCell(artifact.transform.position);
             var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
             var room = cavity?.room;
@@ -280,23 +271,14 @@ namespace ArtifactsPlus
             {
                 result.ArtifactCountInRoom = CountArtifactsOnPedestalsInRoom(room);
                 result.NeighborsOk = result.ArtifactCountInRoom <= config.Neighbors;
-                result.MeetsAll = result.NeighborsOk;
             }
-            else
-            {
-                result.NeighborsOk = false;
-                result.MeetsAll = false;
-            }
-
-            if (!result.MeetsAll)
-            {
-                result.ShortCircuited = true;
-            }
-            return result.MeetsAll;
+            result.ShortCircuited = result.NeighborsOk ? null : "NeighborsOk";
+            return result.NeighborsOk;
         }
 
         private static bool CheckDecor(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
         {
+            result.MeetsDecor = false; // Adjusted case to match ArtifactCriteriaResult
             int cell = Grid.PosToCell(artifact.transform.position);
             var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
             var room = cavity?.room;
@@ -313,24 +295,13 @@ namespace ArtifactsPlus
                         decorCount++;
                     }
                 }
-                result.ActualDecor = decorCount > 0 ? (float)decorSum / decorCount : 0f;
+                result.ActualDecor = decorCount > 0 ? (float)decorSum / decorCount : 0f; // Adjusted case to match ArtifactCriteriaResult
 
                 bool isActive = ArtifactStateTracker.ArtifactStates.TryGetValue(artifact.GetInstanceID(), out var state) && state.IsActive;
                 float requiredDecor = isActive ? config.DecorMinimum * 0.9f : config.DecorMinimum;
-                result.MeetsDecor = result.ActualDecor >= requiredDecor;
-                result.MeetsAll = result.MeetsDecor;
+                result.MeetsDecor = result.ActualDecor >= requiredDecor; // Adjusted case to match ArtifactCriteriaResult
             }
-            else
-            {
-                result.MeetsDecor = false;
-                result.MeetsAll = false;
-            }
-
-            if (!result.MeetsAll)
-            {
-                result.ShortCircuited = true;
-            }
-            return result.MeetsAll;
+            return result.MeetsDecor;
         }
 
         private static List<GameObject> GetAllMinions()
@@ -366,9 +337,10 @@ namespace ArtifactsPlus
 
             int id = artifact.GetInstanceID();
 
-            if (!ArtifactStates.TryGetValue(id, out var state))
+            if (!ArtifactStates.TryGetValue(id, out var state)) // checking this artifact state for first time.
             {
                 state = new ArtifactState();
+                state.IsActive = false;
                 ArtifactStates[id] = state;
             }
 
@@ -384,19 +356,26 @@ namespace ArtifactsPlus
 
             var criteria = EvaluateArtifactCriteria(artifact, config);
             state.IsActive = criteria.MeetsAll;
+            if (criteria.MeetsAll)
+            {
+                Patches.Logger.Log($"-->Artifact '{internalName}'  ({artifact.GetInstanceID()}) meets all criteria!");
+            }
+            {
+                Patches.LogArtifactShortCircuitIssue(artifact, criteria); // Fixed reference to LogArtifactShortCircuitIssue
+            }
 
             string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
-                ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
-                ?? internalName;
+                    ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
+                    ?? internalName;
 
             if (wasActive != state.IsActive)
             {
-                int cell = Grid.PosToCell(artifact.transform.position);
-                int worldId = Grid.WorldIdx[cell];
-                string worldName = ClusterManager.Instance.GetWorld(worldId)?.GetProperName() ?? $"World_{worldId}";
+                //int cell = Grid.PosToCell(artifact.transform.position);
+                //int worldId = Grid.WorldIdx[cell];
+                //string worldName = ClusterManager.Instance.GetWorld(worldId)?.GetProperName() ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
-                string shortCircuitText = criteria.ShortCircuited ? " SHORTCIRCUIT" : "";
 
+                // show change with a toast
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
                     $"Artifact '{displayName}' {stateText}",
@@ -406,8 +385,10 @@ namespace ArtifactsPlus
                     false
                 );
 
-                ApplyGlowEffect(artifact, state.IsActive);
+
             }
+            Patches.Logger.Log($"Artifact '{internalName}' ({artifact.GetInstanceID()})  WasActive={wasActive} to IsActive={state.IsActive}.");
+            ApplyGlowEffect(artifact, state.IsActive);
         }
 
         public static bool TryGetArtifactAttributes(string artifactId, out Dictionary<string, float> attributes)
@@ -573,6 +554,21 @@ namespace ArtifactsPlus
             return count;
         }
 
+        // need to run through all artifacts because things around them could have changed.
+        public static void PollAllArtifacts()
+            {
+            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Artifact"))
+                .Select(kp => kp.gameObject);
+            foreach (var artifact in allArtifacts)
+            {
+                if (artifact == null) continue;
+                // Update the artifact state
+                UpdateArtifactState(artifact);
+            }
+            // Update all minions with the current artifact states
+        }
+
         public static void UpdateMinions()
         {
             var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -642,6 +638,7 @@ namespace ArtifactsPlus
             if (tickCounter >= pollInterval)
             {
                 tickCounter = 0;
+                ArtifactStateTracker.PollAllArtifacts();
                 ArtifactStateTracker.UpdateMinions();
             }
 
@@ -691,44 +688,11 @@ namespace ArtifactsPlus
         }
     }
 
-    public class PedestalState : MonoBehaviour
-    {
-        public GameObject CurrentOccupant { get; set; }
-    }
-
     [HarmonyPatch(typeof(ItemPedestal), "OnOccupantChanged")]
     public static class ItemPedestal_OnOccupantChanged_Patch
     {
         public static void Postfix(ItemPedestal __instance)
         {
-            var pedestalState = __instance.gameObject.GetComponent<PedestalState>() ?? __instance.gameObject.AddComponent<PedestalState>();
-            var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
-            var receptacle = receptacleField?.GetValue(__instance) as SingleEntityReceptacle;
-            var newOccupant = receptacle?.Occupant;
-
-            // Check if the pedestal is currently unoccupied
-            bool isUnoccupied = newOccupant == null;
-
-            if (pedestalState.CurrentOccupant != null && isUnoccupied)
-            {
-                // The occupant has been removed
-                Patches.Logger.Log($"[DEBUG] Occupant '{pedestalState.CurrentOccupant.name}' has been removed from pedestal.");
-                ArtifactStateTracker.UpdateArtifactState(pedestalState.CurrentOccupant);
-
-                pedestalState.CurrentOccupant = null;
-            }
-            else if (pedestalState.CurrentOccupant == null && newOccupant != null)
-            {
-                // The pedestal is now occupied
-                Patches.Logger.Log($"[DEBUG] New occupant '{newOccupant.name}' has been added to pedestal.");
-                pedestalState.CurrentOccupant = newOccupant;
-                ArtifactStateTracker.UpdateArtifactState(newOccupant);
-            }
-            else
-            {
-                // Unexpected state
-                Patches.Logger.Log($"[ERROR] Unexpected state: CurrentOccupant='{pedestalState.CurrentOccupant?.name ?? "null"}', NewOccupant='{newOccupant?.name ?? "null"}'.");
-            }
         }
     }
 

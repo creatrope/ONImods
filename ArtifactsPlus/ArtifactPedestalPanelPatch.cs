@@ -58,7 +58,8 @@ namespace ArtifactsPlus
                 {
                     lines.Add("Status: Unknown");
                 }
-
+                // Add artifact instance ID
+                lines.Add($"Instance ID: {receptacle.Occupant.GetInstanceID()}");
                 // Add modifiers
                 if (ArtifactEffectTracker.TryGetArtifactModifiers(artifactId, out var modifiers) && modifiers.Count > 0)
                 {

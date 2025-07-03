@@ -27,7 +27,6 @@ namespace ArtifactsPlus
                 {
                     Patches.Logger.Reset(); // Reset the log file at the start of the game
                 }
-                Patches.Logger.Log($"[ArtifactsPlus] Logging enabled: {options.EnableCustomLog}");
 
                 ArtifactStateTracker.LoadArtifactConfig();
 
@@ -38,6 +37,8 @@ namespace ArtifactsPlus
                 {
                     PrintActiveArtifactsWithWorlds();
                 });
+
+                Patches.Logger.Log($"[ArtifactsPlus] onLoad: update the state of the artifacts");
 
                 // Update the state of all artifacts
                 var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
