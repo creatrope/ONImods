@@ -356,12 +356,9 @@ namespace ArtifactsPlus
 
             var criteria = EvaluateArtifactCriteria(artifact, config);
             state.IsActive = criteria.MeetsAll;
-            if (criteria.MeetsAll)
+            if (!criteria.MeetsAll)
             {
-                Patches.Logger.Log($"-->Artifact '{internalName}'  ({artifact.GetInstanceID()}) meets all criteria!");
-            }
-            {
-                Patches.LogArtifactShortCircuitIssue(artifact, criteria); // Fixed reference to LogArtifactShortCircuitIssue
+                //LogArtifactShortCircuitIssue(artifact, criteria);
             }
 
             string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
@@ -370,12 +367,8 @@ namespace ArtifactsPlus
 
             if (wasActive != state.IsActive)
             {
-                //int cell = Grid.PosToCell(artifact.transform.position);
-                //int worldId = Grid.WorldIdx[cell];
-                //string worldName = ClusterManager.Instance.GetWorld(worldId)?.GetProperName() ?? $"World_{worldId}";
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
 
-                // show change with a toast
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
                     $"Artifact '{displayName}' {stateText}",
@@ -384,10 +377,10 @@ namespace ArtifactsPlus
                     2f,
                     false
                 );
-
-
             }
-            Patches.Logger.Log($"Artifact '{internalName}' ({artifact.GetInstanceID()})  WasActive={wasActive} to IsActive={state.IsActive}.");
+
+            // Commented out the log line as requested
+            // Patches.Logger.Log($"Artifact '{internalName}' ({artifact.GetInstanceID()})  WasActive={wasActive} to IsActive={state.IsActive}.");
             ApplyGlowEffect(artifact, state.IsActive);
         }
 
