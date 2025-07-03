@@ -30,17 +30,24 @@ namespace ArtifactsPlus
         {
             get
             {
-                var options = GlobalArtifactsPlusOptions.Options;
-                var optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
-                var configFile = options.ArtifactConfigFile;
+                try
+                {
+                    var config = ArtifactsPlusConfig.Instance; // Access the configuration using PLib's SingletonOptions
+                    Patches.Logger.Log($"[ArtifactsPlus] Config object: {JsonConvert.SerializeObject(config, Formatting.Indented)}");
 
-                var fullPath = Path.Combine(
-                    Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), configFile
-                );
+                    var configFile = config.ArtifactConfigFile;
+                    var fullPath = Path.Combine(
+                        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), configFile
+                    );
 
-                Patches.Logger.Log($"[ArtifactsPlus] Using ArtifactConfig file: {fullPath}");
-                Patches.Logger.Log($"[ArtifactsPlus] options {optionsJson}");
-                return fullPath;
+                    Patches.Logger.Log($"[ArtifactsPlus] Using ArtifactConfig file: {fullPath}");
+                    return fullPath;
+                }
+                catch (Exception ex)
+                {
+                    Patches.Logger.Log($"[ArtifactsPlus] Failed to retrieve ArtifactConfig file: {ex.Message}");
+                    throw;
+                }
             }
         }
 
@@ -57,6 +64,14 @@ namespace ArtifactsPlus
                 {
                     PrintActiveArtifactsWithWorlds();
                 });
+
+                var config = ArtifactsPlusConfig.Instance; // Access the configuration using PLib's SingletonOptions
+                Patches.Logger.SetLoggingEnabled(config.EnableCustomLog);
+
+                if (config.EnableCustomLog)
+                {
+                    Patches.Logger.Reset(); // Reset the log file at the start of the game
+                }
             }
             catch (Exception ex)
             {
@@ -97,6 +112,34 @@ namespace ArtifactsPlus
             string shortCircuitIssue = criteria.ShortCircuited;
 
             Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifactId}' ({instanceId}) failed due to: {shortCircuitIssue}.");
+        }
+
+        [HarmonyPatch(typeof(Game), "OnPrefabInit")]
+        public class Game_OnPrefabInit_Patch
+        {
+            public static void Postfix()
+            {
+                // Access the configuration using PLib's SingletonOptions
+                var config = ArtifactsPlusConfig.Instance;
+
+                if (config.EnableCustomLog)
+                {
+                    Patches.Logger.Log("[ArtifactsPlus] Custom logging is enabled.");
+                }
+
+                Patches.Logger.Log($"[ArtifactsPlus] Using ArtifactConfig file: {config.ArtifactConfigFile}");
+                Patches.Logger.Log($"[ArtifactsPlus] Artifact polling interval: {config.ArtifactPollingInterval}");
+            }
+        }
+
+        [HarmonyPatch(typeof(Localization), "Initialize")]
+        public static class Localization_Initialize_Patch
+        {
+            public static void Postfix()
+            {
+                // Example of localization logic
+                Patches.Logger.Log("[ArtifactsPlus] Localization initialized.");
+            }
         }
     }
 
@@ -611,22 +654,23 @@ namespace ArtifactsPlus
         public ArtifactStatePoller(HLib.HotkeyListener hotkeyListener)
         {
             this.hotkeyListener = hotkeyListener;
-            var options = GlobalArtifactsPlusOptions.Options;
-            pollInterval = options.ArtifactPollingInterval; // Read polling interval from configuration
+            var config = ArtifactsPlusConfig.Instance;
+            pollInterval = config.ArtifactPollingInterval; // Read polling interval from configuration
         }
 
         void Awake() { }
         void Start()
         {
             // Read and cache the poll interval once during initialization  
-            var options = GlobalArtifactsPlusOptions.Options;
-            pollInterval = options.ArtifactPollingInterval;
+            var config = ArtifactsPlusConfig.Instance;
+            pollInterval = config.ArtifactPollingInterval;
         }
+
         void Update()
         {
             tickCounter++;
 
-            if (tickCounter >= pollInterval)
+            if (tickCounter >= pollInterval*60)
             {
                 tickCounter = 0;
                 ArtifactStateTracker.PollAllArtifacts();
@@ -643,21 +687,7 @@ namespace ArtifactsPlus
 
         public override void OnLoad(Harmony harmony)
         {
-            onLoadCount++;
-            var uniqueId = Guid.NewGuid();
-            var timestamp = System.DateTime.Now.ToString("O");
-            var domain = AppDomain.CurrentDomain.FriendlyName;
-            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            //Debug.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-
-            new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions));
-            GlobalArtifactsPlusOptions.Initialize();
-            Patches.Logger.SetLoggingEnabled(GlobalArtifactsPlusOptions.Options.EnableCustomLog);
-            if (GlobalArtifactsPlusOptions.Options.EnableCustomLog)
-            {
-                Patches.Logger.Reset(); // Reset the log file at the start of the game
-            }
-
+            new POptions().RegisterOptions(this, typeof(ArtifactsPlusConfig)); // Register the options
             Patches.OnLoad();
 
             if (harmony == null)
@@ -728,7 +758,7 @@ namespace ArtifactsPlus
         {
             EnableCustomLog = true;
             ArtifactConfigFile = "ArtifactsConfig.json";
-            ArtifactPollingInterval = 900; // Default value, 15 seconds
+            ArtifactPollingInterval = 15; // Default value, 15 seconds
         }
 
         public override string ToString()
@@ -748,15 +778,5 @@ namespace ArtifactsPlus
 
         public string ArtifactConfigFile { get; set; }
         public bool EnableCustomLog { get; set; }
-    }
-
-    public static class GlobalArtifactsPlusOptions
-    {
-        public static ArtifactsPlusOptions Options { get; private set; }
-
-        public static void Initialize()
-        {
-            Options = POptions.ReadSettings<ArtifactsPlusOptions>() ?? new ArtifactsPlusOptions();
-        }
     }
 }

@@ -11,6 +11,7 @@ namespace HLib
     {
         private readonly string logPath;
         private bool isLoggingEnabled = false; // Tracks whether logging is enabled
+        private bool isLogInitialized = false; // Tracks whether the log has been initialized
 
         /// <summary>
         /// Initializes a new instance of the CustomLogger class for a specific mod.
@@ -64,6 +65,13 @@ namespace HLib
                 var logDir = Path.GetDirectoryName(logPath);
                 if (!Directory.Exists(logDir))
                     Directory.CreateDirectory(logDir);
+
+                // Reset the log file if it hasn't been initialized yet
+                if (!isLogInitialized)
+                {
+                    Reset();
+                    isLogInitialized = true;
+                }
 
                 using (var fs = new FileStream(logPath, FileMode.Append, FileAccess.Write, FileShare.Read))
                 using (var sw = new StreamWriter(fs))
