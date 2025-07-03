@@ -30,11 +30,17 @@ namespace ArtifactsPlus
         {
             get
             {
-                var configFile = ArtifactsPlusOptions.Instance.ArtifactConfigFile;
-                return Path.Combine(
-                    Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
-                    string.IsNullOrEmpty(configFile) ? "ArtifactsConfig.json" : configFile
+                var options = GlobalArtifactsPlusOptions.Options;
+                var optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
+                Patches.Logger.Log($"[ArtifactsPlus] options {optionsJson}");
+                var configFile = options.ArtifactConfigFile;
+
+                var fullPath = Path.Combine(
+                    Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), configFile
                 );
+
+                Patches.Logger.Log($"[ArtifactsPlus] Using ArtifactConfig file: {fullPath}");
+                return fullPath;
             }
         }
 
@@ -42,13 +48,6 @@ namespace ArtifactsPlus
         {
             try
             {
-
-                var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
-                Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
-                if (options.EnableCustomLog)
-                {
-                    Patches.Logger.Reset(); // Reset the log file at the start of the game
-                }
                 ArtifactStateTracker.LoadArtifactConfig();
 
                 // Initialize and register hotkeys
@@ -549,40 +548,39 @@ namespace ArtifactsPlus
 
         // need to run through all artifacts because things around them could have changed.
         public static void PollAllArtifacts()
-            {
+        {
             var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Artifact"))
-                .Select(kp => kp.gameObject);
+                .Select(kp => kp.gameObject)
+                .ToArray(); // Use ToArray to avoid multiple enumerations.
+
             foreach (var artifact in allArtifacts)
             {
                 if (artifact == null) continue;
-                // Update the artifact state
                 UpdateArtifactState(artifact);
             }
-            // Update all minions with the current artifact states
         }
 
         public static void UpdateMinions()
         {
             var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Minion"))
-                .Select(kp => kp.gameObject);
+                .Select(kp => kp.gameObject)
+                .ToArray(); // Use ToArray to avoid multiple enumerations.
 
             var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Artifact"))
-                .Select(kp => kp.gameObject);
+                .Select(kp => kp.gameObject)
+                .ToArray(); // Use ToArray to avoid multiple enumerations.
 
-            // re-add in appropre
             foreach (var minion in allMinions)
             {
                 foreach (var artifact in allArtifacts)
                 {
                     if (artifact == null) continue;
 
-                    // first removal all existing modifiers for that artifact on the minion
                     ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
 
-                    // re-add in properly scoped artifacts
                     int artifactId = artifact.GetInstanceID();
                     if (ArtifactStates.TryGetValue(artifactId, out var state) && state.IsActive)
                     {
@@ -613,7 +611,7 @@ namespace ArtifactsPlus
         public ArtifactStatePoller(HLib.HotkeyListener hotkeyListener)
         {
             this.hotkeyListener = hotkeyListener;
-            var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+            var options = GlobalArtifactsPlusOptions.Options;
             pollInterval = options.ArtifactPollingInterval; // Read polling interval from configuration
         }
 
@@ -621,7 +619,7 @@ namespace ArtifactsPlus
         void Start()
         {
             // Read and cache the poll interval once during initialization  
-            var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+            var options = GlobalArtifactsPlusOptions.Options;
             pollInterval = options.ArtifactPollingInterval;
         }
         void Update()
@@ -650,25 +648,17 @@ namespace ArtifactsPlus
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            Patches.Logger.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
+            //Debug.Log($"ArtifactsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
 
-            new POptions().RegisterOptions(this, typeof(ModOptions));
-
-            try
+            new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions));
+            GlobalArtifactsPlusOptions.Initialize();
+            Patches.Logger.SetLoggingEnabled(GlobalArtifactsPlusOptions.Options.EnableCustomLog);
+            if (GlobalArtifactsPlusOptions.Options.EnableCustomLog)
             {
-                var options = POptions.ReadSettings<ModOptions>();
-                if (options == null)
-                {
-                    throw new Exception("ModOptions settings could not be loaded.");
-                }
+                Patches.Logger.Reset(); // Reset the log file at the start of the game
+            }
 
-                Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
-                Patches.OnLoad();
-            }
-            catch (Exception ex)
-            {
-                PUtil.LogError($"[ArtifactsPlus2] {ex.Message} Debugging ModOptions: Expected file path: {Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "modoptions.json")}");
-            }
+            Patches.OnLoad();
 
             if (harmony == null)
             {
@@ -718,36 +708,59 @@ namespace ArtifactsPlus
         }
     }
 
-    public sealed class ArtifactsPlusOptions
-    {
-        private static readonly Lazy<ArtifactsPlusOptions> _instance = new Lazy<ArtifactsPlusOptions>(() => new ArtifactsPlusOptions());
-
-        public static ArtifactsPlusOptions Instance => _instance.Value;
-
-        public string ArtifactConfigFile { get; set; }
-        public bool EnableCustomLog { get; set; }
-
-        private ArtifactsPlusOptions()
-        {
-            ArtifactConfigFile = "ArtifactsConfig.json";
-            EnableCustomLog = false;
-        }
-    }
-
     [JsonObject(Newtonsoft.Json.MemberSerialization.OptIn)] // Explicitly specify the namespace
-    public class ModOptions
+    public sealed class ArtifactsPlusOptions
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         [JsonProperty]
-        public bool EnableCustomLog { get; set; } = true;
+        public bool EnableCustomLog { get; set; }
 
-        [Option("Artifact Config File", "Set the path to the artifact configuration file.")]
+        [Option("Artifact Config File", "Set the path to the artifact configuration file.", Format = "F")]
         [JsonProperty]
-        public string ArtifactConfigFile { get; set; } = "ArtifactsConfig.json";
+        public string ArtifactConfigFile { get; set; }
 
         [Option("Artifact Polling Interval", "Set the interval (in ticks) for artifact polling.")]
         [Limit(1, 1000)]
         [JsonProperty]
-        public int ArtifactPollingInterval { get; set; } = 600; // Default value
+        public int ArtifactPollingInterval { get; set; }
+
+        public ArtifactsPlusOptions()
+        {
+            EnableCustomLog = true;
+            ArtifactConfigFile = "ArtifactsConfig.json";
+            ArtifactPollingInterval = 600; // Default value
+        }
+
+        public override string ToString()
+        {
+            return string.Format("ArtifactsPlusOptions[EnableCustomLog={0}, ArtifactConfigFile={1}, ArtifactPollingInterval={2}]",
+                EnableCustomLog, ArtifactConfigFile, ArtifactPollingInterval);
+        }
+    }
+
+    public sealed class ArtifactsPlusOptionsSingleton
+    {
+        private static readonly Lazy<ArtifactsPlusOptionsSingleton> _instance = new Lazy<ArtifactsPlusOptionsSingleton>(() => new ArtifactsPlusOptionsSingleton());
+
+        public static ArtifactsPlusOptionsSingleton Instance => _instance.Value;
+
+        public const string DefaultArtifactConfigFile = "ArtifactsConfig.json";
+
+        public string ArtifactConfigFile { get; set; }
+        public bool EnableCustomLog { get; set; }
+    }
+
+    public static class GlobalArtifactsPlusOptions
+    {
+        public static ArtifactsPlusOptions Options { get; private set; }
+
+        public static void Initialize()
+        {
+            Options = POptions.ReadSettings<ArtifactsPlusOptions>() ?? new ArtifactsPlusOptions();
+
+            // Log the options to the custom debug log
+            var optionsJson = JsonConvert.SerializeObject(Options, Formatting.Indented);
+            Patches.Logger.Log($"[ArtifactsPlus] Initialized options: {optionsJson}");
+        }
     }
 }

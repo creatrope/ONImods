@@ -1,5 +1,0 @@
-{
-  "EnableCustomLog": true,
-  "ArtifactConfigFile": "ArtifactsConfig.json",
-  "LoggerType": "MultiModLogger"
-}

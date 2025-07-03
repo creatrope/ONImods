@@ -20,7 +20,7 @@ namespace ArtifactsPlus
         {
             try
             {
-                var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+                var options = POptions.ReadSettings<ArtifactsPlusOptions>();
 
                 Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
                 if (options.EnableCustomLog)
