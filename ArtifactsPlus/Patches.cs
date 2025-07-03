@@ -157,8 +157,8 @@ namespace ArtifactsPlus
                     int newWorldId = migrationEventArgs.targetWorldId;
 
                     string minionName = minionGo.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
-                    string oldWorldName = ClusterManager.Instance.GetWorld(oldWorldId)?.name ?? $"World_{oldWorldId}";
-                    string newWorldName = ClusterManager.Instance.GetWorld(newWorldId)?.name ?? $"World_{newWorldId}";
+                    string oldWorldName = ClusterManager.Instance.GetWorld(oldWorldId)?.GetProperName() ?? $"World_{oldWorldId}";
+                    string newWorldName = ClusterManager.Instance.GetWorld(newWorldId)?.GetProperName() ?? $"World_{newWorldId}";
 
                     Patches.Logger.Log($"[MinionMigration] Minion '{minionName}' migrated from '{oldWorldName}' to '{newWorldName}'.");
                 }
