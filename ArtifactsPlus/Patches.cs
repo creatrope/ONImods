@@ -141,6 +141,42 @@ namespace ArtifactsPlus
                 Patches.Logger.Log("[ArtifactsPlus] Localization initialized.");
             }
         }
+
+        [HarmonyPatch(typeof(AssignmentManager), "MinionMigration")]
+        public static class AssignmentManager_MinionMigration_Patch
+        {
+            public static void Postfix(object data)
+            {
+                var migrationEventArgs = data as MinionMigrationEventArgs;
+                if (migrationEventArgs != null)
+                {
+                    var minionGo = migrationEventArgs.minionId?.gameObject;
+                    if (minionGo == null) return;
+
+                    int oldWorldId = migrationEventArgs.prevWorldId;
+                    int newWorldId = migrationEventArgs.targetWorldId;
+
+                    string minionName = minionGo.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+                    string oldWorldName = ClusterManager.Instance.GetWorld(oldWorldId)?.name ?? $"World_{oldWorldId}";
+                    string newWorldName = ClusterManager.Instance.GetWorld(newWorldId)?.name ?? $"World_{newWorldId}";
+
+                    Patches.Logger.Log($"[MinionMigration] Minion '{minionName}' migrated from '{oldWorldName}' to '{newWorldName}'.");
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(MinionConfig), "OnSpawn")]
+        public static class MinionConfig_OnSpawn_Patch
+        {
+            public static void Postfix(GameObject go)
+            {
+                if (go == null)
+                    return;
+
+                string minionName = go.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+                Patches.Logger.Log($"[MinionConfig] Minion '{minionName}' spawned.");
+            }
+        }
     }
 
     public class ArtifactState
