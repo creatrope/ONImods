@@ -402,10 +402,6 @@ namespace ArtifactsPlus
                 .ToList();
         }
 
-        private static List<GameObject> GetMinionsInSameRoom(GameObject artifact)
-        {
-            return ArtifactEffectTracker.GetMinionsInSameRoom(artifact);
-        }
 
         private static List<GameObject> GetMinionsInSameWorld(GameObject artifact)
         {
@@ -641,9 +637,44 @@ namespace ArtifactsPlus
                 .Select(kp => kp.gameObject)
                 .ToArray(); // Use ToArray to avoid multiple enumerations.
 
+
+            // Track the number of minions in each world, indexed by world ID
+            var minionsPerWorld = new Dictionary<int, int>();
+
+            var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Minion"))
+                .Select(kp => kp.gameObject);
+
+            foreach (var minion in allMinions)
+            {
+                int cell = Grid.PosToCell(minion.transform.position);
+                int worldId = Grid.WorldIdx[cell];
+
+                if (!minionsPerWorld.ContainsKey(worldId))
+                {
+                    minionsPerWorld[worldId] = 0;
+                }
+
+                minionsPerWorld[worldId]++;
+            }
+
+            foreach (var kvp in minionsPerWorld)
+            {
+                Patches.Logger.Log($"[ArtifactsPlus] World ID {kvp.Key} has {kvp.Value} minions.");
+            }
+
             foreach (var artifact in allArtifacts)
             {
                 if (artifact == null) continue;
+
+                int cell = Grid.PosToCell(artifact.transform.position);
+                int worldId = Grid.WorldIdx[cell];
+
+                if (!minionsPerWorld.TryGetValue(worldId, out int minionCount) || minionCount == 0)
+                {
+                    //Patches.Logger.Log($"[ArtifactsPlus] Skipping artifact in World ID {worldId} as it has no minions.");
+                    continue;
+                }
 
                 // Update the artifact state and check if it changed
                 if (UpdateArtifactState(artifact))
@@ -686,9 +717,7 @@ namespace ArtifactsPlus
                     var config = GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
                     if (config == null) continue;
 
-                    bool inScope = config.Scope == "All" ||
-                                   (config.Scope == "InRoom" && GetMinionsInSameRoom(artifact).Contains(minion)) ||
-                                   (config.Scope == "InWorld" && GetMinionsInSameWorld(artifact).Contains(minion));
+                    bool inScope = GetMinionsInSameWorld(artifact).Contains(minion);
 
                     if (inScope)
                     {
@@ -779,8 +808,6 @@ namespace ArtifactsPlus
 
     public class Mod : UserMod2
     {
-        private static int onLoadCount = 0;
-
         public override void OnLoad(Harmony harmony)
         {
             new POptions().RegisterOptions(this, typeof(ArtifactsPlusConfig)); // Register the options

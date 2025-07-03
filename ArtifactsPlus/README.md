@@ -14,8 +14,7 @@ The artifact will only "activate" in a room between these sizes:
 An artifact will only "activate" in a room with this minimum amount of decor:
   "DecorMinimum": 128,
 
-The "Scope" defines the set of dupes the artifact affects when activated.  "InWorld" only affects dupes in the current world/asteriod.  "InRoom" only affects dupes that are in the current room with the artifact when it become active.  "All" means it affects dupes in the entire game (all asteroids/worlds).
-  "Scope": "InWorld",
+The "Scope" defines the set of dupes the artifact affects when activated. The only currently supported Scope is "inWorld" which means the modifier applies to all dupes in the same world as the activated artifact.
 
 Neighbors defines how many other activated artifacts are allowed to be in the room.  If the number is exceeded, all active artifacts become inactive.
   "Neighbors": 2
@@ -39,16 +38,22 @@ Artifact modifiers are reapplied when an artifact becomes "active" or a dupe ent
 
 Internal names for attributes and effects are used. Note that many of these names are modified for the user facing UI we see while playing the game, via in interface called "AttributeConverter".  The exact interactions are weighted and can be unintuitive.
 
-# Options
+# On Customizing ArtifactsConfig.json in 1.0.0
 
-There is an option to adjust how often the artifact and minion status is updated. 
-The current default is 15 seconds (900 ticks).
+1. Copy ArtifactsConfig.json to a new custom file (e.g MyCfg.json) in the mod directory (e.g. Mods/ArtifactsPlus/).
+   - If you are using the Steam Workshop, you can find the mod directory at: `Steam\steamapps\workshop\content\457140\` followed by the mod ID.
+   - If you are using a manual install, it will be in the `Mods/ArtifactsPlus/` directory of your ONI installation.
+2. Make changes to the custom file.
+3. When you load the game, change the mod settings to point to your new file.
+4. Updating the mod WILL erase your custom file, so my suggestion is that you make a backup, and put a shortcut to it in mod directory (or just remember to copy it back after the mod updates)
+
+# 1.0.0 Release
 
 If you believe an artifact should be active, but it is not, wait a few seconds!
 
-Note there may be performance implications for setting this too low.
+The only currently support scope is "inWorld". This means that the artifact will only affect dupes in the same world as the activated artifact.  If you want to have an artifact that affects dupes in a specific room, you can set the scope to "inRoom" and then set the room size minimum and maximum to be the same.
 
-# 1.0.0 Release
+Note there may be performance implications/stuttering for setting polling interval  too low.
 
 Status Effects have been removed. I will add them back in in a future release.
 

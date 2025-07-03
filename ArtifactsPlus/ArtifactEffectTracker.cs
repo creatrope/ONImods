@@ -70,27 +70,6 @@ namespace ArtifactsPlus
             }
         }
 
-        public static List<GameObject> GetMinionsInSameRoom(GameObject artifact)
-        {
-            var minionsInRoom = new List<GameObject>();
-            int artifactCell = Grid.PosToCell(artifact.transform.position);
-            var artifactCavity = Game.Instance?.roomProber?.GetCavityForCell(artifactCell)?.room?.cavity;
-            if (artifactCavity == null)
-                return minionsInRoom;
-
-            foreach (var kp in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
-            {
-                if (kp != null && kp.HasTag("Minion"))
-                {
-                    int minionCell = Grid.PosToCell(kp.transform.position);
-                    var minionCavity = Game.Instance.roomProber.GetCavityForCell(minionCell)?.room?.cavity;
-                    if (minionCavity == artifactCavity)
-                        minionsInRoom.Add(kp.gameObject);
-                }
-            }
-            return minionsInRoom;
-        }
-
         public static List<GameObject> GetMinionsInSameWorld(GameObject artifact)
         {
             var minionsInWorld = new List<GameObject>();
@@ -119,12 +98,6 @@ namespace ArtifactsPlus
             var config = ArtifactStateTracker.GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
             if (config == null)
                 return false;
-
-            if (config.Scope == "All")
-                return true;
-
-            if (config.Scope == "InRoom")
-                return GetMinionsInSameRoom(artifact).Contains(minion);
 
             if (config.Scope == "InWorld")
                 return GetMinionsInSameWorld(artifact).Contains(minion);
