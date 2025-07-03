@@ -32,7 +32,6 @@ namespace ArtifactsPlus
             {
                 var options = GlobalArtifactsPlusOptions.Options;
                 var optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
-                Patches.Logger.Log($"[ArtifactsPlus] options {optionsJson}");
                 var configFile = options.ArtifactConfigFile;
 
                 var fullPath = Path.Combine(
@@ -40,6 +39,7 @@ namespace ArtifactsPlus
                 );
 
                 Patches.Logger.Log($"[ArtifactsPlus] Using ArtifactConfig file: {fullPath}");
+                Patches.Logger.Log($"[ArtifactsPlus] options {optionsJson}");
                 return fullPath;
             }
         }
@@ -728,7 +728,7 @@ namespace ArtifactsPlus
         {
             EnableCustomLog = true;
             ArtifactConfigFile = "ArtifactsConfig.json";
-            ArtifactPollingInterval = 600; // Default value
+            ArtifactPollingInterval = 900; // Default value
         }
 
         public override string ToString()
@@ -757,10 +757,6 @@ namespace ArtifactsPlus
         public static void Initialize()
         {
             Options = POptions.ReadSettings<ArtifactsPlusOptions>() ?? new ArtifactsPlusOptions();
-
-            // Log the options to the custom debug log
-            var optionsJson = JsonConvert.SerializeObject(Options, Formatting.Indented);
-            Patches.Logger.Log($"[ArtifactsPlus] Initialized options: {optionsJson}");
         }
     }
 }
