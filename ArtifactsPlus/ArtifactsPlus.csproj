@@ -81,6 +81,7 @@
   <ItemGroup>
     <Compile Include="ArtifactEffectTracker.cs" />
     <Compile Include="ArtifactPedestalPanelPatch.cs" />
+    <Compile Include="ArtifactStatePoller.cs" />
     <Compile Include="MinionPersonalityPanelPatch.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
