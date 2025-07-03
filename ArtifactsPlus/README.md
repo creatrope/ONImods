@@ -42,7 +42,10 @@ Internal names for attributes and effects are used. Note that many of these name
 # Options
 
 There is an option to adjust how often the artifact and minion status is updated. 
+The current default is 15 seconds (900 ticks).
+
 If you believe an artifact should be active, but it is not, wait a few seconds!
+
 Note there may be performance implications for setting this too low.
 
 # 1.0.0 Release

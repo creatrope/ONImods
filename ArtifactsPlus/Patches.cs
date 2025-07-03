@@ -720,7 +720,7 @@ namespace ArtifactsPlus
         public string ArtifactConfigFile { get; set; }
 
         [Option("Artifact Polling Interval", "Set the interval (in ticks) for artifact polling.")]
-        [Limit(1, 1000)]
+        [Limit(1, 10000)]
         [JsonProperty]
         public int ArtifactPollingInterval { get; set; }
 
@@ -728,7 +728,7 @@ namespace ArtifactsPlus
         {
             EnableCustomLog = true;
             ArtifactConfigFile = "ArtifactsConfig.json";
-            ArtifactPollingInterval = 900; // Default value
+            ArtifactPollingInterval = 900; // Default value, 15 seconds
         }
 
         public override string ToString()
