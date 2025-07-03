@@ -161,6 +161,12 @@ namespace ArtifactsPlus
                     string newWorldName = ClusterManager.Instance.GetWorld(newWorldId)?.GetProperName() ?? $"World_{newWorldId}";
 
                     Patches.Logger.Log($"[MinionMigration] Minion '{minionName}' migrated from '{oldWorldName}' to '{newWorldName}'.");
+
+                    var prefabId = minionGo.GetComponent<KPrefabID>();
+                    if (prefabId != null)
+                    {
+                        prefabId.AddTag("worldChanged"); // Add the "worldChanged" tag to indicate a world change
+                    }
                 }
             }
         }
@@ -175,6 +181,12 @@ namespace ArtifactsPlus
 
                 string minionName = go.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
                 Patches.Logger.Log($"[MinionConfig] Minion '{minionName}' spawned.");
+
+                var prefabId = go.GetComponent<KPrefabID>();
+                if (prefabId != null)
+                {
+                    prefabId.AddTag("worldChanged"); // Add the "worldChanged" tag to indicate the minion was freshly spawned
+                }
             }
         }
     }
@@ -405,17 +417,17 @@ namespace ArtifactsPlus
             return ArtifactEffectTracker.ActiveAndInScope(minion, artifact);
         }
 
-        public static void UpdateArtifactState(GameObject artifact)
+        public static bool UpdateArtifactState(GameObject artifact)
         {
             if (artifact == null)
             {
                 Patches.Logger.Log("[ERROR] UpdateArtifactState called with a null artifact.");
-                return;
+                return false;
             }
 
             int id = artifact.GetInstanceID();
 
-            if (!ArtifactStates.TryGetValue(id, out var state)) // checking this artifact state for first time.
+            if (!ArtifactStates.TryGetValue(id, out var state)) // Initialize state if not already tracked
             {
                 state = new ArtifactState();
                 state.IsActive = false;
@@ -429,27 +441,21 @@ namespace ArtifactsPlus
             if (config == null)
             {
                 Patches.Logger.Log($"[WARN] No config found for artifact '{internalName}'");
-                return;
+                return false;
             }
 
             var criteria = EvaluateArtifactCriteria(artifact, config);
             state.IsActive = criteria.MeetsAll;
-            if (!criteria.MeetsAll)
-            {
-                //LogArtifactShortCircuitIssue(artifact, criteria);
-            }
 
-            string displayName = artifact.GetComponent<KSelectable>()?.GetProperName()
-                    ?? artifact.GetComponent<KPrefabID>()?.PrefabTag.Name
-                    ?? internalName;
+            bool stateChanged = wasActive != state.IsActive; // Determine if the state changed
 
-            if (wasActive != state.IsActive)
+            if (stateChanged)
             {
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
-                    $"Artifact '{displayName}' {stateText}",
+                    $"Artifact '{internalName}' {stateText}",
                     artifact.transform,
                     new Vector3(0, 0, 0),
                     2f,
@@ -457,9 +463,9 @@ namespace ArtifactsPlus
                 );
             }
 
-            // Commented out the log line as requested
-            // Patches.Logger.Log($"Artifact '{internalName}' ({artifact.GetInstanceID()})  WasActive={wasActive} to IsActive={state.IsActive}.");
             ApplyGlowEffect(artifact, state.IsActive);
+
+            return stateChanged; // Return whether the state changed
         }
 
         public static bool TryGetArtifactAttributes(string artifactId, out Dictionary<string, float> attributes)
@@ -626,8 +632,10 @@ namespace ArtifactsPlus
         }
 
         // need to run through all artifacts because things around them could have changed.
-        public static void PollAllArtifacts()
+        public static bool PollAllArtifacts()
         {
+            bool anyStateChanged = false; // Flag to track if any artifact state changed
+
             var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Artifact"))
                 .Select(kp => kp.gameObject)
@@ -636,44 +644,55 @@ namespace ArtifactsPlus
             foreach (var artifact in allArtifacts)
             {
                 if (artifact == null) continue;
-                UpdateArtifactState(artifact);
+
+                // Update the artifact state and check if it changed
+                if (UpdateArtifactState(artifact))
+                {
+                    anyStateChanged = true; // Set flag if any artifact state changed
+                    string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
+                    Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifactName}' state changed.");
+                }
             }
+
+            return anyStateChanged; // Return whether any state changed
         }
 
-        public static void UpdateMinions()
+        public static void UpdateMinions(IEnumerable<GameObject> allArtifacts)
         {
             var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Minion"))
                 .Select(kp => kp.gameObject)
                 .ToArray(); // Use ToArray to avoid multiple enumerations.
 
-            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Artifact"))
-                .Select(kp => kp.gameObject)
-                .ToArray(); // Use ToArray to avoid multiple enumerations.
-
             foreach (var minion in allMinions)
             {
-                foreach (var artifact in allArtifacts)
+                UpdateMinion(minion, allArtifacts);
+            }
+        }
+
+        public static void UpdateMinion(GameObject minion, IEnumerable<GameObject> allArtifacts)
+        {
+            if (minion == null) return;
+
+            foreach (var artifact in allArtifacts)
+            {
+                if (artifact == null) continue;
+
+                ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
+
+                int artifactId = artifact.GetInstanceID();
+                if (ArtifactStates.TryGetValue(artifactId, out var state) && state.IsActive)
                 {
-                    if (artifact == null) continue;
+                    var config = GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
+                    if (config == null) continue;
 
-                    ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
+                    bool inScope = config.Scope == "All" ||
+                                   (config.Scope == "InRoom" && GetMinionsInSameRoom(artifact).Contains(minion)) ||
+                                   (config.Scope == "InWorld" && GetMinionsInSameWorld(artifact).Contains(minion));
 
-                    int artifactId = artifact.GetInstanceID();
-                    if (ArtifactStates.TryGetValue(artifactId, out var state) && state.IsActive)
+                    if (inScope)
                     {
-                        var config = GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
-                        if (config == null) continue;
-
-                        bool inScope = config.Scope == "All" ||
-                                       (config.Scope == "InRoom" && GetMinionsInSameRoom(artifact).Contains(minion)) ||
-                                       (config.Scope == "InWorld" && GetMinionsInSameWorld(artifact).Contains(minion));
-
-                        if (inScope)
-                        {
-                            ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
-                        }
+                        ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
                     }
                 }
             }
@@ -706,11 +725,52 @@ namespace ArtifactsPlus
         {
             tickCounter++;
 
-            if (tickCounter >= pollInterval*60)
+            if (tickCounter >= pollInterval * 60)
             {
+                //Patches.Logger.Log($"[ArtifactsPlus] PollInterval triggered.");
+
                 tickCounter = 0;
-                ArtifactStateTracker.PollAllArtifacts();
-                ArtifactStateTracker.UpdateMinions();
+
+                // Poll all artifacts
+                var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                    .Where(kp => kp != null && kp.HasTag("Artifact"))
+                    .Select(kp => kp.gameObject)
+                    .ToArray(); // Use ToArray to avoid multiple enumerations.
+
+                var anyArtifactChanged = ArtifactStateTracker.PollAllArtifacts();
+                //Patches.Logger.Log($"[ArtifactsPlus] Any Artifacts changed state '{anyArtifactChanged}'.");
+
+                // Update minions
+
+                // Iterate through all minions and check for the 'worldChanged' flag
+                var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                    .Where(kp => kp != null && kp.HasTag("Minion"))
+                    .Select(kp => kp.gameObject)
+                    .ToArray();
+
+                foreach (var minion in allMinions)
+                {
+                    bool worldChanged = false;
+                    string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+                    var prefabId = minion.GetComponent<KPrefabID>();
+                    if (prefabId != null && prefabId.HasTag("worldChanged"))
+                    {
+                        //Patches.Logger.Log($"[ArtifactsPlus] Minion '{minionName}' has the 'worldChanged' flag set.");
+                        prefabId.RemoveTag("worldChanged"); // Reset the flag after logging
+                        worldChanged = true;
+                    }
+
+                    if (anyArtifactChanged || worldChanged)
+                    {
+                        //Patches.Logger.Log($"[ArtifactsPlus] Minion '{minionName}' updating.");
+
+                        ArtifactStateTracker.UpdateMinion(minion, allArtifacts);
+                    }
+                    else
+                    {
+                        //Patches.Logger.Log($"[ArtifactsPlus] Minion '{minionName}' SKIPPING updating.");
+                    }
+                }
             }
 
             hotkeyListener?.Update();
