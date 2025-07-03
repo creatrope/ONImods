@@ -881,7 +881,7 @@ namespace ArtifactsPlus
         {
             EnableCustomLog = true;
             ArtifactConfigFile = "ArtifactsConfig.json";
-            ArtifactPollingInterval = 15; // Default value, 15 seconds
+            ArtifactPollingInterval = 30; // Default value, 30 seconds
         }
 
         public override string ToString()

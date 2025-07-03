@@ -2,7 +2,7 @@
 
 ArtifactsPlus is an ONI mod that allows artifacts to a be "activated" with user-customizable effects.  An artifact is activated when it meets certain criteria: on a pedestal, decor minimum, room size, etc.  When an artifact is activated it can have a variety of "actions". Actions can include a positive (or negative) modifier to attributes.
 
-An activated artifact "glows"(*).  If you click on a dupe, you can see the active actions its in bio tab. You can also click on an activated artifact to see it's actions.
+An activated artifact "glows"(*).  If you click on a dupe, you can see the active actions its in bio tab. You can also click on a artifact to see it's modifiers.
 
 The ArtifactsPlus release comes with a simple ArtifactsConfig.json. By editing this file, you can customize the actions & defaults (I would love to hear your suggestions!).
 
@@ -32,12 +32,7 @@ Supported Attributes are:
 
 AirConsumptionRate, Art, Athletics, BionicBatteryCountCapacity, BionicBoosterSlots, Botanist, Caring, CarryAmount, Construction, Cooking, Decor, DecorExpectation, Digging, DiseaseCureSpeed, DoctoredLevel, FarmTinker, FoodExpectation, FoodQuality, GeneratorOutput, GermResistance, Immunity, Insulation, Learning, LifeSupport, Luminescence, Machinery, MachinerySpeed, MaxUnderwaterTravelCost, PowerTinker, QualityOfLife, QualityOfLifeExpectation, RadiationRecovery, RadiationResistance, Ranching, RoomTemperaturePreference, ScaldingThreshold, ScoldingThreshold, Sneezyness, SpaceNavigation, Strength, ThermalConductivityBarrier, ToiletEfficiency, Toggle, TransitTubeTravelSpeed
 
-Important notes:
-
-Artifact modifiers are reapplied when an artifact becomes "active" or a dupe enters into the appropriate scope. E.g. if a dupe teleports into a world with an "inWorld" scoped artifact, the actions will be reapplied.
-
-Internal names for attributes and effects are used. Note that many of these names are modified for the user facing UI we see while playing the game, via in interface called "AttributeConverter".  The exact interactions are weighted and can be unintuitive.
-
+# Important notes:
 # On Customizing ArtifactsConfig.json in 1.0.0
 
 1. Copy ArtifactsConfig.json to a new custom file (e.g MyCfg.json) in the mod directory (e.g. Mods/ArtifactsPlus/).
@@ -49,10 +44,15 @@ Internal names for attributes and effects are used. Note that many of these name
 
 # 1.0.0 Release
 
-If you believe an artifact should be active, but it is not, wait a few seconds!
+Artifact modifiers are reapplied when an artifact becomes "active" or a dupe enters into the appropriate scope. E.g. if a dupe teleports into a world with an "inWorld" scoped artifact, the modifiers will be reapplied.
 
-The only currently support scope is "inWorld". This means that the artifact will only affect dupes in the same world as the activated artifact.  If you want to have an artifact that affects dupes in a specific room, you can set the scope to "inRoom" and then set the room size minimum and maximum to be the same.
+Internal names for attributes are used in the JSON. Note that many of these names are modified for the user facing UI we see while playing the game, via in interface called "AttributeConverter".  The exact interactions are weighted and can be unintuitive.
 
+
+The only currently supported scope is "inWorld". This means that the artifact will affect all dupes in the same world as the activated artifact. If you want to have an artifact that only affects dupes in a specific room, you can use the "RoomSizeMinimum" and "RoomSizeMaximum" settings to limit the scope.
+
+The polling interval (settable in the mod options) for checking if an artifact is active, and updating the minion status  is set to 30 seconds by default.
+If you believe an artifact should be active, but the dupe is not showing the effects, wait a few seconds!
 Note there may be performance implications/stuttering for setting polling interval  too low.
 
 Status Effects have been removed. I will add them back in in a future release.
