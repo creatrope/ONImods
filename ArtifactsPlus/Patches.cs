@@ -73,6 +73,8 @@ namespace ArtifactsPlus
                 {
                     Patches.Logger.Reset(); // Reset the log file at the start of the game
                 }
+
+                // starting a game with automatically trigger occupant changed so artifacts will register
             }
             catch (Exception ex)
             {
@@ -311,24 +313,13 @@ namespace ArtifactsPlus
 
         private static bool CheckOnPedestal(GameObject artifact, ref ArtifactCriteriaResult result)
         {
-            result.OnPedestal = false; // Adjusted case to match ArtifactCriteriaResult
-            foreach (var pedestal in UnityEngine.Object.FindObjectsOfType<ItemPedestal>())
-            {
-                var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
-                var receptacle = receptacleField?.GetValue(pedestal) as SingleEntityReceptacle;
-                if (receptacle?.Occupant == artifact)
-                {
-                    result.OnPedestal = true; // Adjusted case to match ArtifactCriteriaResult
-                    return true;
-                }
-            }
+            result.OnPedestal = ArtifactStateTracker.ArtifactsOnPedestals.Contains(artifact);
+            result.ShortCircuited = result.OnPedestal ? null : "OnPedestal";
             return result.OnPedestal;
         }
 
         private static bool CheckAnalyzed(GameObject artifact, ref ArtifactCriteriaResult result)
         {
-            result.IsAnalyzed = false;
-
             var artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name;
             result.IsAnalyzed = !string.IsNullOrEmpty(artifactId) && ArtifactSelector.Instance?.GetAnalyzedArtifactIDs().Contains(artifactId) == true;
             result.ShortCircuited = result.IsAnalyzed ? null : "isAnalyzed";
@@ -337,7 +328,6 @@ namespace ArtifactsPlus
 
         private static bool CheckFree(GameObject artifact, ref ArtifactCriteriaResult result) // not entombed
         {
-            result.isFree = false;
             int cell = Grid.PosToCell(artifact.transform.position);
             result.isFree = Grid.Element[cell].id != SimHashes.Unobtanium;
             result.ShortCircuited = result.isFree ? null : "isFree";
@@ -403,14 +393,13 @@ namespace ArtifactsPlus
             return result.MeetsDecor;
         }
 
-        public static List<GameObject> InitializeAllMinions()
+        public static void InitializeAllMinions()
         {
-            return UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+            allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Minion"))
                 .Select(kp => kp.gameObject)
-                .ToList();
+                .ToArray();
         }
-
 
         private static List<GameObject> GetMinionsInSameWorld(GameObject artifact)
         {
@@ -729,6 +718,24 @@ namespace ArtifactsPlus
                 }
             }
         }
+
+        public static void RegisterArtifactOnPedestal(GameObject artifact)
+        {
+            if (artifact != null && !ArtifactsOnPedestals.Contains(artifact))
+            {
+                ArtifactsOnPedestals.Add(artifact);
+                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact"}' registered on pedestal.");
+            }
+        }
+
+        public static void UnregisterArtifactOnPedestal(GameObject artifact)
+        {
+            if (artifact != null && ArtifactsOnPedestals.Contains(artifact))
+            {
+                ArtifactsOnPedestals.Remove(artifact);
+                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact"}' unregistered from pedestal.");
+            }
+        }
     }
 
     public class ArtifactStatePoller : MonoBehaviour
@@ -910,7 +917,66 @@ namespace ArtifactsPlus
     {
         public static void Postfix(ItemPedestal __instance, object data)
         {
+            Patches.Logger.Log("[ArtifactsPlus] OnOccupantChanged triggered.");
 
+            var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (receptacleField == null)
+            {
+                Patches.Logger.Log("[ArtifactsPlus] Failed to find 'receptacle' field in ItemPedestal.");
+                return;
+            }
+
+            var receptacle = receptacleField.GetValue(__instance) as SingleEntityReceptacle;
+            if (receptacle == null)
+            {
+                Patches.Logger.Log("[ArtifactsPlus] 'receptacle' is null.");
+                return;
+            }
+
+            GameObject occupant = receptacle.Occupant;
+            if (occupant == null)
+            {
+                Patches.Logger.Log("[ArtifactsPlus] Occupant is null. This was likely a removal.");
+                return; // This was a removal, ignore it, handled elsewhere
+            }
+
+            Patches.Logger.Log($"[ArtifactsPlus] Occupant found: {occupant.name}");
+
+            var prefabID = occupant.GetComponent<KPrefabID>();
+            if (prefabID == null)
+            {
+                Patches.Logger.Log("[ArtifactsPlus] Occupant does not have a KPrefabID component.");
+                return;
+            }
+
+            if (!prefabID.HasTag("Artifact"))
+            {
+                Patches.Logger.Log($"[ArtifactsPlus] Occupant '{occupant.name}' does not have the 'Artifact' tag.");
+                return;
+            }
+
+            string artifactName = prefabID.PrefabTag.Name ?? "Unknown Artifact";
+            Patches.Logger.Log($"[ArtifactsPlus] Registering artifact '{artifactName}' on pedestal.");
+
+            ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
+        }
+    }
+
+    [HarmonyPatch(typeof(SingleEntityReceptacle), "ClearOccupant")]
+    public static class SingleEntityReceptacle_ClearOccupant_Patch
+    {
+        public static void Prefix(SingleEntityReceptacle __instance)
+        {
+            GameObject removedOccupant = __instance.Occupant;
+
+            if (removedOccupant != null && removedOccupant.GetComponent<KPrefabID>()?.HasTag("Artifact") == true)
+            {
+                string occupantName = removedOccupant.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
+                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{occupantName}' is being removed from SingleEntityReceptacle.");
+
+                // Call the unregister function to remove the artifact from the pedestal tracking
+                ArtifactStateTracker.UnregisterArtifactOnPedestal(removedOccupant);
+            }
         }
     }
 

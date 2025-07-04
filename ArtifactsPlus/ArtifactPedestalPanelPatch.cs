@@ -6,11 +6,22 @@ using System.Linq;
 
 namespace ArtifactsPlus
 {
+    public static class ArtifactPedestalPanel_Debug
+    {
+        // Global flag to enable or disable updates
+        public static bool EnableUpdates = false; // Set to false to disable updates
+    }
+
     [HarmonyPatch(typeof(DetailsScreen), "Refresh", new[] { typeof(GameObject) })]
     public static class ArtifactPedestalPanelPatch
     {
         static void Postfix(DetailsScreen __instance)
         {
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            {
+                return; // Skip updates if disabled
+            }
+
             // No logic needed here for the sidescreen, handled by SideScreenContent
         }
     }
@@ -22,6 +33,11 @@ namespace ArtifactsPlus
 
         public static void Postfix()
         {
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            {
+                return; // Skip registration if updates are disabled
+            }
+
             if (registered) return;
             registered = true;
             PUIUtils.AddSideScreenContent<ArtifactPedestalSimpleLabelScreen>();
@@ -37,6 +53,11 @@ namespace ArtifactsPlus
 
         private string ArtifactInfo(GameObject target)
         {
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            {
+                return string.Empty; // Return empty string if updates are disabled
+            }
+
             var pedestal = target?.GetComponent<ItemPedestal>();
             var receptacle = pedestal?.GetType()
                 .GetField("receptacle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
@@ -89,12 +110,22 @@ namespace ArtifactsPlus
 
         public override bool IsValidForTarget(GameObject target)
         {
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            {
+                return false; // Return false if updates are disabled
+            }
+
             bool valid = target != null && target.GetComponent<ItemPedestal>() != null;
             return valid;
         }
 
         public override void SetTarget(GameObject target)
         {
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            {
+                return; // Skip setting the target if updates are disabled
+            }
+
             lastTarget = target;
             // Update label text when the target changes
             if (labelLocText != null)
@@ -103,6 +134,11 @@ namespace ArtifactsPlus
 
         protected override void OnPrefabInit()
         {
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            {
+                return; // Skip initialization if updates are disabled
+            }
+
             if (root == null)
             {
                 var layout = new PPanel("ArtifactPanel")
@@ -143,6 +179,12 @@ namespace ArtifactsPlus
         public override string GetTitle() => "Artifact Effects";
         public override float GetSortKey() => 100f;
 
-        public override void ClearTarget() { }
+        public override void ClearTarget()
+        {
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            {
+                return; // Skip clearing the target if updates are disabled
+            }
+        }
     }
 }
