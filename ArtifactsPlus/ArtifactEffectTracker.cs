@@ -133,11 +133,26 @@ namespace ArtifactsPlus
                     var attrInstance = minionModifiers.attributes?.Get(attribute);
                     if (attrInstance != null)
                     {
-                        // Create a unique identifier for the modifier
-                        var modifier = new AttributeModifier(attribute.Id, modValue, "Skill Level");
-                        modifier.DescriptionCB = () => artifactInstanceId.ToString(); // Convert int to string for callback
-                      
-                        attrInstance.Add(modifier);
+                        // Check if the modifier from this artifact already exists
+                        bool modifierExists = false;
+                        for (int i = 0; i < attrInstance.Modifiers.size; i++)
+                        {
+                            var mod = attrInstance.Modifiers[i];
+                            if (mod.DescriptionCB?.Invoke() == artifactInstanceId.ToString())
+                            {
+                                modifierExists = true;
+                                break;
+                            }
+                        }
+
+                        if (!modifierExists)
+                        {
+                            // Create a unique identifier for the modifier
+                            var modifier = new AttributeModifier(attribute.Id, modValue, "Skill Level");
+                            modifier.DescriptionCB = () => artifactInstanceId.ToString(); // Convert int to string for callback
+
+                            attrInstance.Add(modifier);
+                        }
                     }
                 }
             }

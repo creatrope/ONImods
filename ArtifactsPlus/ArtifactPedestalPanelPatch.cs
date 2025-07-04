@@ -65,7 +65,7 @@ namespace ArtifactsPlus
                 {
                     lines.AddRange(modifiers.Select(kv =>
                     {
-                        string sign = kv.Value > 0 ? "+" : (kv.Value < 0 ? "-" : "");
+                        string sign = kv.Value > 0 ? "+" : "";
                         return $"{kv.Key}: {sign}{kv.Value}";
                     }));
                 }
