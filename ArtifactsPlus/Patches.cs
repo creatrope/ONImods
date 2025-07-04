@@ -917,7 +917,7 @@ namespace ArtifactsPlus
     {
         public static void Postfix(ItemPedestal __instance, object data)
         {
-            Patches.Logger.Log("[ArtifactsPlus] OnOccupantChanged triggered.");
+            //Patches.Logger.Log("[ArtifactsPlus] OnOccupantChanged triggered.");
 
             var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
             if (receptacleField == null)
@@ -956,7 +956,7 @@ namespace ArtifactsPlus
             }
 
             string artifactName = prefabID.PrefabTag.Name ?? "Unknown Artifact";
-            Patches.Logger.Log($"[ArtifactsPlus] Registering artifact '{artifactName}' on pedestal.");
+            //Patches.Logger.Log($"[ArtifactsPlus] Registering artifact '{artifactName}' on pedestal.");
 
             ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
         }
@@ -972,7 +972,7 @@ namespace ArtifactsPlus
             if (removedOccupant != null && removedOccupant.GetComponent<KPrefabID>()?.HasTag("Artifact") == true)
             {
                 string occupantName = removedOccupant.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{occupantName}' is being removed from SingleEntityReceptacle.");
+                //Patches.Logger.Log($"[ArtifactsPlus] Artifact '{occupantName}' is being removed from SingleEntityReceptacle.");
 
                 // Call the unregister function to remove the artifact from the pedestal tracking
                 ArtifactStateTracker.UnregisterArtifactOnPedestal(removedOccupant);
