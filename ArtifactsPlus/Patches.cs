@@ -801,10 +801,6 @@ namespace ArtifactsPlus
                     }
                 }
 
-                // temporarily turn off world change logic for performance reasons.
-                if (false)
-                {
-
                     Patches.Logger.Log($"[ArtifactsPlus] Updating minions who have changed worlds.");
 
                     var minionsWithWorldChangedFlag = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -814,9 +810,13 @@ namespace ArtifactsPlus
 
                     foreach (var minion in minionsWithWorldChangedFlag)
                     {
-                        var prefabId = minion.GetComponent<KPrefabID>();
-                        var worldChangedTag = prefabId.Tags.FirstOrDefault(tag => tag.Name.StartsWith("worldChanged"));
+                        string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+                        Patches.Logger.Log($"[ArtifactsPlus] Processing world change for minion: {minionName}");
 
+                        var prefabId = minion.GetComponent<KPrefabID>();
+
+                        // get oldworld name
+                        var worldChangedTag = prefabId.Tags.FirstOrDefault(tag => tag.Name.StartsWith("worldChanged"));
                         var worldChangedTagName = worldChangedTag.Name; // Extract the name property of the Tag
                         var parts = worldChangedTagName.Split('-'); // Perform the Split operation on the string
 
@@ -827,7 +827,13 @@ namespace ArtifactsPlus
                         }
                         prefabId.RemoveTag(worldChangedTag);
 
-                        if (oldWorldId > 0)
+                        // get new world id
+                        int cell = Grid.PosToCell(minion.transform.position);
+                        int newWorldId = Grid.WorldIdx[cell];
+
+                        Patches.Logger.Log($"[ArtifactsPlus] Processing world change for minion: {minionName} (OldWorldId: {oldWorldId}, NewWorldId: {newWorldId})");
+
+                        if (oldWorldId >= 0)
                         {// find all the artifacts from the oldworld
                             Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) Removing Minions Artifacts From Previous World");
 
@@ -839,33 +845,30 @@ namespace ArtifactsPlus
 
                             foreach (var artifact in artifactsInPreviousWorld)
                             {
-                                string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
                                 string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                                Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) updating Minion '{minionName}' Artifact '{artifactName}'.");
+                                Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) RemoveArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
                                 ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
                             }
                         }
 
                         Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) Applying Minions Artifacts From Previous World");
 
-                        int cell = Grid.PosToCell(minion.transform.position);
-                        int worldId = Grid.WorldIdx[cell];
+                        int ncell = Grid.PosToCell(minion.transform.position);
+                        int worldId = Grid.WorldIdx[ncell];
 
-                        var artifactsInWorld = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                        var artifactsInNewWorld = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                             .Where(kp => kp != null && kp.HasTag("Artifact"))
                             .Select(kp => kp.gameObject)
                             .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == worldId)
                             .ToList();
 
-                        foreach (var artifact in artifactsInWorld)
+                        foreach (var artifact in artifactsInNewWorld)
                         {
-                            string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
                             string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                            Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) updating Minion '{minionName}' Artifact '{artifactName}'.");
+                            Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) ApplyArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
                             ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
                         }
                     }
-                }
             }
 
             hotkeyListener?.Update();
