@@ -9,7 +9,7 @@ namespace ArtifactsPlus
     public static class ArtifactPedestalPanel_Debug
     {
         // Global flag to enable or disable updates
-        public static bool EnableUpdates = false; // Set to false to disable updates
+        public static bool EnableUpdates = true; // Set to false to disable updates
     }
 
     [HarmonyPatch(typeof(DetailsScreen), "Refresh", new[] { typeof(GameObject) })]
@@ -17,9 +17,9 @@ namespace ArtifactsPlus
     {
         static void Postfix(DetailsScreen __instance)
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates || !__instance.gameObject.activeInHierarchy)
             {
-                return; // Skip updates if disabled
+                return; // Skip updates if disabled or panel is not visible
             }
 
             // No logic needed here for the sidescreen, handled by SideScreenContent
@@ -53,9 +53,9 @@ namespace ArtifactsPlus
 
         private string ArtifactInfo(GameObject target)
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates || (root != null && !root.activeInHierarchy))
             {
-                return string.Empty; // Return empty string if updates are disabled
+                return string.Empty; // Return empty string if updates are disabled or panel is not visible
             }
 
             var pedestal = target?.GetComponent<ItemPedestal>();
@@ -121,9 +121,9 @@ namespace ArtifactsPlus
 
         public override void SetTarget(GameObject target)
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            if (!ArtifactPedestalPanel_Debug.EnableUpdates || (root != null && !root.activeInHierarchy))
             {
-                return; // Skip setting the target if updates are disabled
+                return; // Skip setting the target if updates are disabled or panel is not visible
             }
 
             lastTarget = target;

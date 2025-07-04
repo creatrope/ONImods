@@ -7,7 +7,7 @@ namespace ArtifactsPlus
     public static class MinionPersonalityPanel_Debug
     {
         // Global flag to enable or disable updates
-        public static bool EnableUpdates = false; // Set to false to disable updates
+        public static bool EnableUpdates = true; // Set to false to disable updates
     }
 
     [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
@@ -19,7 +19,6 @@ namespace ArtifactsPlus
         {
             if (!MinionPersonalityPanel_Debug.EnableUpdates)
             {
-                Patches.Logger.Log("[ArtifactsPlus] Minion Personality Panel updates are disabled.");
                 return;
             }
 
@@ -37,9 +36,10 @@ namespace ArtifactsPlus
     {
         static void Postfix(MinionPersonalityPanel __instance)
         {
-            if (!MinionPersonalityPanel_Debug.EnableUpdates)
+            // Ensure updates are enabled and the panel is visible
+            if (!MinionPersonalityPanel_Debug.EnableUpdates || !__instance.gameObject.activeInHierarchy)
             {
-                return;
+                return; // Skip updates if disabled or panel is not visible
             }
 
             if (MinionPersonalityPanel_OnPrefabInit_Patch.artifactPanel != null)
@@ -50,7 +50,7 @@ namespace ArtifactsPlus
 
                 // Use the new summary method
                 string summary = selectedTarget != null
-                    ? ArtifactEffectTracker.GetMinionArtifactInfusions(selectedTarget) // Updated method
+                    ? ArtifactEffectTracker.GetMinionArtifactInfusions(selectedTarget)
                     : "No minion selected.";
 
                 MinionPersonalityPanel_OnPrefabInit_Patch.artifactPanel.SetLabel("artifact_summary", summary, "Summary of artifact effects currently applied to this minion.");
