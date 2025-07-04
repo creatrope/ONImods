@@ -658,7 +658,7 @@ namespace ArtifactsPlus
                 {
                     anyStateChanged = true; // Set flag if any artifact state changed
                     string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                    Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifactName}' state changed.");
+                    //Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifactName}' state changed.");
                 }
             }
 
@@ -757,18 +757,12 @@ namespace ArtifactsPlus
 
                 bool anyStateChanged = ArtifactStateTracker.PollAllArtifacts(minionsPerWorld);
 
-                if (anyStateChanged)
-                {
-                    Patches.Logger.Log("[ArtifactsPlus] Artifact states updated. Some states have changed.");
-                }
-                // optimizaton do an early out if no state changed.
-
                 var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                     .Where(kp => kp != null && kp.HasTag("Artifact"))
                     .Select(kp => kp.gameObject)
                     .ToArray();
 
-                Patches.Logger.Log($"[ArtifactsPlus] Updating Minions affected by state-changed Artifacts.");
+                //Patches.Logger.Log($"[ArtifactsPlus] Updating Minions affected by state-changed Artifacts.");
 
                 foreach (var artifact in allArtifacts)
                 {
@@ -801,7 +795,7 @@ namespace ArtifactsPlus
                     }
                 }
 
-                    Patches.Logger.Log($"[ArtifactsPlus] Updating minions who have changed worlds.");
+                    //Patches.Logger.Log($"[ArtifactsPlus] Updating minions who have changed worlds.");
 
                     var minionsWithWorldChangedFlag = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                         .Where(kp => kp != null && kp.HasTag("Minion") && kp.Tags.Any(tag => tag.Name.StartsWith("worldChanged")))
@@ -811,7 +805,6 @@ namespace ArtifactsPlus
                     foreach (var minion in minionsWithWorldChangedFlag)
                     {
                         string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
-                        Patches.Logger.Log($"[ArtifactsPlus] Processing world change for minion: {minionName}");
 
                         var prefabId = minion.GetComponent<KPrefabID>();
 
