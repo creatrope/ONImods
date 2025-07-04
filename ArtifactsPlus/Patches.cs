@@ -161,7 +161,7 @@ namespace ArtifactsPlus
                     string oldWorldName = ClusterManager.Instance.GetWorld(oldWorldId)?.GetProperName() ?? $"World_{oldWorldId}";
                     string newWorldName = ClusterManager.Instance.GetWorld(newWorldId)?.GetProperName() ?? $"World_{newWorldId}";
 
-                    Patches.Logger.Log($"[MinionMigration] Minion '{minionName}' migrated from '{oldWorldName}' to '{newWorldName}'.");
+                    Patches.Logger.Log($"[ArtifactsPlus] Minion '{minionName}' migrated from '{oldWorldName}' to '{newWorldName}'.");
 
                     var prefabId = minionGo.GetComponent<KPrefabID>();
                     if (prefabId != null)
@@ -180,6 +180,9 @@ namespace ArtifactsPlus
                 if (go == null)
                     return;
 
+                // Recalculate the allMinions list
+                ArtifactStateTracker.InitializeAllMinions();
+
                 string minionName = go.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
                 Patches.Logger.Log($"[MinionConfig] Minion '{minionName}' spawned.");
 
@@ -188,6 +191,7 @@ namespace ArtifactsPlus
                 {
                     prefabId.AddTag("worldChanged"); // Add the "worldChanged" tag to indicate the minion was freshly spawned
                 }
+
             }
         }
     }
@@ -237,6 +241,9 @@ namespace ArtifactsPlus
         private static readonly string GlowChildName = "ArtifactGlowFX";
 
         private static Dictionary<string, ArtifactConfig> artifactConfigMap;
+
+        private static GameObject[] allArtifacts; // Cache for all artifacts
+        private static GameObject[] allMinions; // Cache for all minions
 
         public struct ArtifactCriteriaResult
         {
@@ -396,7 +403,7 @@ namespace ArtifactsPlus
             return result.MeetsDecor;
         }
 
-        private static List<GameObject> GetAllMinions()
+        public static List<GameObject> InitializeAllMinions()
         {
             return UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Minion"))
@@ -451,7 +458,7 @@ namespace ArtifactsPlus
             {
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
 
-                Patches.Logger.Log($"[DEBUG] Artifact '{internalName}' ({id}) {stateText}");
+                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{internalName}' ({id}) {stateText}");
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
@@ -630,17 +637,37 @@ namespace ArtifactsPlus
             return count;
         }
 
-        // need to run through all artifacts because things around them could have changed.
-        public static bool PollAllArtifacts(Dictionary<int, List<GameObject>> minionsPerWorld)
+        public static void InitializeAllArtifacts()
         {
-            bool anyStateChanged = false; // Flag to track if any artifact state changed
-
-            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+            allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Artifact"))
                 .Select(kp => kp.gameObject)
-                .ToArray(); // Use ToArray to avoid multiple enumerations.
+                .ToArray();
+        }
 
-            foreach (var artifact in allArtifacts)
+        public static GameObject[] GetAllArtifacts()
+        {
+            if (allArtifacts == null)
+            {
+                InitializeAllArtifacts();
+            }
+            return allArtifacts;
+        }
+
+        public static GameObject[] GetAllMinions()
+        {
+            if (allMinions == null)
+            {
+                InitializeAllMinions();
+            }
+            return allMinions;
+        }
+
+        public static bool PollAllArtifacts(Dictionary<int, List<GameObject>> minionsPerWorld)
+        {
+            bool anyStateChanged = false;
+
+            foreach (var artifact in GetAllArtifacts())
             {
                 if (artifact == null) continue;
 
@@ -649,30 +676,29 @@ namespace ArtifactsPlus
 
                 if (!minionsPerWorld.TryGetValue(worldId, out var minions) || minions.Count == 0)
                 {
-                    //Patches.Logger.Log($"[ArtifactsPlus] Skipping unoccupied world {worldId}.");
                     continue;
                 }
 
-                // Update the artifact state and check if it changed
                 if (UpdateArtifactState(artifact))
                 {
-                    anyStateChanged = true; // Set flag if any artifact state changed
-                    string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                    //Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifactName}' state changed.");
+                    anyStateChanged = true;
                 }
             }
 
-            return anyStateChanged; // Return whether any state changed
+            return anyStateChanged;
+        }
+
+        public static void UpdateMinions()
+        {
+            foreach (var minion in GetAllMinions())
+            {
+                UpdateMinion(minion, GetAllArtifacts());
+            }
         }
 
         public static void UpdateMinions(IEnumerable<GameObject> allArtifacts)
         {
-            var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Minion"))
-                .Select(kp => kp.gameObject)
-                .ToArray(); // Use ToArray to avoid multiple enumerations.
-
-            foreach (var minion in allMinions)
+            foreach (var minion in GetAllMinions())
             {
                 UpdateMinion(minion, allArtifacts);
             }
@@ -757,10 +783,7 @@ namespace ArtifactsPlus
 
                 bool anyStateChanged = ArtifactStateTracker.PollAllArtifacts(minionsPerWorld);
 
-                var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                    .Where(kp => kp != null && kp.HasTag("Artifact"))
-                    .Select(kp => kp.gameObject)
-                    .ToArray();
+                var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
 
                 //Patches.Logger.Log($"[ArtifactsPlus] Updating Minions affected by state-changed Artifacts.");
 
@@ -830,9 +853,7 @@ namespace ArtifactsPlus
                         {// find all the artifacts from the oldworld
                             Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) Removing Minions Artifacts From Previous World");
 
-                            var artifactsInPreviousWorld = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                                .Where(kp => kp != null && kp.HasTag("Artifact"))
-                                .Select(kp => kp.gameObject)
+                            var artifactsInPreviousWorld = ArtifactStateTracker.GetAllArtifacts()
                                 .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == oldWorldId)
                                 .ToList();
 
@@ -844,14 +865,12 @@ namespace ArtifactsPlus
                             }
                         }
 
-                        Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) Applying Minions Artifacts From Previous World");
+                        Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) Applying Minions Artifacts From New World");
 
                         int ncell = Grid.PosToCell(minion.transform.position);
                         int worldId = Grid.WorldIdx[ncell];
 
-                        var artifactsInNewWorld = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                            .Where(kp => kp != null && kp.HasTag("Artifact"))
-                            .Select(kp => kp.gameObject)
+                        var artifactsInNewWorld = ArtifactStateTracker.GetAllArtifacts()
                             .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == worldId)
                             .ToList();
 

@@ -61,15 +61,6 @@ namespace ArtifactsPlus
             return ArtifactStateTracker.TryGetArtifactAttributes(artifactId, out modifiers);
         }
 
-        private static IEnumerable<GameObject> GetAllMinions()
-        {
-            foreach (var minion in UnityEngine.Object.FindObjectsOfType<KPrefabID>())
-            {
-                if (minion != null && minion.HasTag("Minion"))
-                    yield return minion.gameObject;
-            }
-        }
-
         public static List<GameObject> GetMinionsInSameWorld(GameObject artifact)
         {
             var minionsInWorld = new List<GameObject>();
