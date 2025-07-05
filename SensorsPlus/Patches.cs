@@ -14,6 +14,7 @@ using System.Collections.Generic; // For List<>
 using System.Runtime.CompilerServices;
 using TUNING; // Or the correct namespace for LogicPressureSensorConfig
 using UnityEngine;
+using static Rendering.BlockTileRenderer;
 using static SensorMathUtils;
 
 namespace SensorsPlus
@@ -115,12 +116,12 @@ namespace SensorsPlus
         [Option("Moving Average Window", "Number of samples for the moving average of the derivative (minimum 1).")]
         [Limit(1, 32)]
         [JsonProperty] // Add JSON property for serialization
-        public int MovingAverageWindow { get; set; } = 3;
+        public int MovingAverageWindow { get; set; } = 5;
 
         [Option("Sampling Interval (seconds)", "How often sensors sample values (in seconds). Default is 1.0.")]
         [Limit(0.05, 10.0)]
         [JsonProperty] // Add JSON property for serialization
-        public float SamplingIntervalSeconds { get; set; } = 1.0f;
+        public float SamplingIntervalSeconds { get; set; } = 2.0f;
     }
 
     public class Mod : UserMod2
@@ -225,9 +226,20 @@ namespace SensorsPlus
             var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
             float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
 
+            bool above = __instance.ActivateAboveThreshold; // Corrected property name
             bool bit0 = __instance.IsSwitchedOn;
-            bool bit1 = smoothedDerivative > threshold;
-            bool bit2 = smoothedDerivative < -threshold;
+            bool p = bit0; // above or below target pressure
+            bool f = Math.Abs(smoothedDerivative) > Math.Abs(threshold); // fast change flag
+            bool d = smoothedDerivative > 0; // direction flag (positive or negative change)
+
+            bool bit1 = (!p) && !(d && f); // signal falling fast, turn on source
+            bool bit2 = p && d && f; // signal rising fast, turn on vent
+
+            bit1 = above ? bit1 : !bit1;
+            bit2 = above ? bit2 : !bit2;
+
+
+            Patches.Logger.Log($"[SensorsPlus]: p={p} d={d} f={f}");
 
             int ribbonSignal = (bit0 ? 1 : 0)
                              | (bit1 ? (1 << 1) : 0)
@@ -235,13 +247,7 @@ namespace SensorsPlus
 
             if (Patches.ribbonDebugEnabled)
             {
-                Patches.Logger.Log(
-                    $"[DEBUG] RibbonSignal calculation for {__instance.name}:\n" +
-                    $"  bit0 (IsSwitchedOn): {bit0}\n" +
-                    $"  bit1 (smoothed dP/dt > +threshold): {bit1} (smoothedDerivative={smoothedDerivative:0.###}, threshold={threshold})\n" +
-                    $"  bit2 (smoothed dP/dt < -threshold): {bit2} (smoothedDerivative={smoothedDerivative:0.###}, -threshold={-threshold})\n" +
-                    $"  ribbonSignal (binary): {Convert.ToString(ribbonSignal, 2).PadLeft(4, '0')} (decimal {ribbonSignal})"
-                );
+
             }
             ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
         }
@@ -253,32 +259,63 @@ namespace SensorsPlus
         private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
 
         [HarmonyPostfix]
-        public static void Postfix(GameObject go)
+        static void Postfix(LogicPressureSensor __instance)
         {
-            if (go == null) return;
+            var ports = __instance.GetComponent<LogicPorts>();
+            if (!SensorMathUtils.HasRibbonPort(ports, RIBBON_PORT_ID))
+                return;
 
-            var logicPorts = go.AddOrGet<LogicPorts>();
-            var newPort = new LogicPorts.Port(
-                RIBBON_PORT_ID,
-                new CellOffset(0, 0),
-                "Ribbon Output (Test)",
-                "Ribbon Output Active",
-                "Ribbon Output Inactive",
-                true,
-                LogicPortSpriteType.RibbonOutput
-            );
+            if (_lastSampleTimes == null)
+                _lastSampleTimes = new System.Collections.Generic.Dictionary<LogicPressureSensor, float>();
+            float now = Time.time;
+            float lastSampleTime = -1f;
+            _lastSampleTimes.TryGetValue(__instance, out lastSampleTime);
 
-            if (logicPorts.outputPortInfo == null)
+            // Only add a new sample if time has advanced  
+            if (now > lastSampleTime)
             {
-                logicPorts.outputPortInfo = new[] { newPort };
+                float value = __instance.CurrentValue;
+                // Use the dynamic interval  
+                SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, SensorMathUtils.SamplingIntervalSeconds);
+                _lastSampleTimes[__instance] = now;
             }
-            else
+
+            float smoothedDerivative = 0.0f;
+            if (DerivativeStates.TryGetValue(__instance, out var state))
+                smoothedDerivative = state.ComputeMovingAverageFirstDerivative(SensorMathUtils.MovingAverageWindow);
+
+            var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
+            float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
+
+            bool above = __instance.ActivateAboveThreshold; // Corrected property name  
+            bool bit0 = __instance.IsSwitchedOn;
+            bool p = bit0; // above or below target pressure  
+            bool f = Math.Abs(smoothedDerivative) > Math.Abs(threshold); // fast change flag  
+            bool d = smoothedDerivative > 0; // direction flag (positive or negative change)  
+
+            bool bit1 = (!p) && !(d && f); // signal falling fast, turn on source  
+            bool bit2 = p && d && f; // signal rising fast, turn on vent  
+
+            bit1 = above ? bit1 : !bit1;
+            bit2 = above ? bit2 : !bit2;
+
+            // Log error if both bit1 and bit2 are on simultaneously  
+            if (bit1 && bit2)
             {
-                var ports = new List<LogicPorts.Port>(logicPorts.outputPortInfo);
-                if (!ports.Exists(p => p.id == RIBBON_PORT_ID))
-                    ports.Add(newPort);
-                logicPorts.outputPortInfo = ports.ToArray();
+                Patches.Logger.Log("[SensorsPlus]: Error - bit1 and bit2 are both ON simultaneously.");
             }
+
+            Patches.Logger.Log($"[SensorsPlus]: p={p} d={d} f={f}");
+
+            int ribbonSignal = (bit0 ? 1 : 0)
+                             | (bit1 ? (1 << 1) : 0)
+                             | (bit2 ? (1 << 2) : 0);
+
+            if (Patches.ribbonDebugEnabled)
+            {
+
+            }
+            ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
         }
     }
 
@@ -400,8 +437,8 @@ namespace SensorsPlus
                 threshold = inputValueComponent.parsedValue;
 
             bool bit0 = __instance.IsSwitchedOn;
-            bool bit1 = smoothedDerivative > threshold;
-            bool bit2 = smoothedDerivative < -threshold;
+            bool bit1 = bit0 && (smoothedDerivative > threshold); // Green if bit0 is positive and smoothed derivative is positive
+            bool bit2 = !bit0 && (smoothedDerivative < -threshold); // Green if bit0 is negative and smoothed derivative is negative
 
             int ribbonSignal = (bit0 ? 1 : 0)
                              | (bit1 ? (1 << 1) : 0)

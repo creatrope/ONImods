@@ -77,19 +77,19 @@ namespace SensorsPlus
             // Add text fields for sensor output information
             var bit0Label = new PLabel("Bit0Label")
             {
-                Text = "bit 0: default sensor output (use above)",
+                Text = "bit 0: default sensor output",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
             };
 
             var bit1Label = new PLabel("Bit1Label")
             {
-                Text = "bit 1: bit 0 exceeds +threshold",
+                Text = "bit 1: falling fast, connect to source",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
             };
 
             var bit2Label = new PLabel("Bit2Label")
             {
-                Text = "bit 2: bit 0 exceeds -threshold",
+                Text = "bit 2: rising fast, connect to vent",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
             };
 
