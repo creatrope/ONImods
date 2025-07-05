@@ -858,7 +858,7 @@ namespace ArtifactsPlus
 
                         if (oldWorldId >= 0)
                         {// find all the artifacts from the oldworld
-                            Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) Removing Minions Artifacts From Previous World");
+                            //Patches.Logger.Log($"[ArtifactsPlus] Removing Minions Artifacts From Previous World");
 
                             var artifactsInPreviousWorld = ArtifactStateTracker.GetAllArtifacts()
                                 .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == oldWorldId)
@@ -867,12 +867,12 @@ namespace ArtifactsPlus
                             foreach (var artifact in artifactsInPreviousWorld)
                             {
                                 string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                                Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) RemoveArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
+                                Patches.Logger.Log($"[ArtifactsPlus] RemoveArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
                                 ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
                             }
                         }
 
-                        Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) Applying Minions Artifacts From New World");
+                       // Patches.Logger.Log($"[ArtifactsPlus] Applying Minions Artifacts From New World");
 
                         int ncell = Grid.PosToCell(minion.transform.position);
                         int worldId = Grid.WorldIdx[ncell];
@@ -884,7 +884,7 @@ namespace ArtifactsPlus
                         foreach (var artifact in artifactsInNewWorld)
                         {
                             string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                            Patches.Logger.Log($"[ArtifactsPlus] (WorldChange) ApplyArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
+                            Patches.Logger.Log($"[ArtifactsPlus] ApplyArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
                             ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
                         }
                     }
@@ -936,11 +936,11 @@ namespace ArtifactsPlus
             GameObject occupant = receptacle.Occupant;
             if (occupant == null)
             {
-                Patches.Logger.Log("[ArtifactsPlus] Occupant is null. This was likely a removal.");
+                //Patches.Logger.Log("[ArtifactsPlus] Occupant is null. This was likely a removal.");
                 return; // This was a removal, ignore it, handled elsewhere
             }
 
-            Patches.Logger.Log($"[ArtifactsPlus] Occupant found: {occupant.name}");
+           //Patches.Logger.Log($"[ArtifactsPlus] Occupant found: {occupant.name}");
 
             var prefabID = occupant.GetComponent<KPrefabID>();
             if (prefabID == null)
@@ -951,7 +951,7 @@ namespace ArtifactsPlus
 
             if (!prefabID.HasTag("Artifact"))
             {
-                Patches.Logger.Log($"[ArtifactsPlus] Occupant '{occupant.name}' does not have the 'Artifact' tag.");
+                //Patches.Logger.Log($"[ArtifactsPlus] Occupant '{occupant.name}' does not have the 'Artifact' tag.");
                 return;
             }
 

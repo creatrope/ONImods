@@ -6,23 +6,20 @@ using System.Linq;
 
 namespace ArtifactsPlus
 {
-    public static class ArtifactPedestalPanel_Debug
-    {
-        // Global flag to enable or disable updates
-        public static bool EnableUpdates = true; // Set to false to disable updates
-    }
-
     [HarmonyPatch(typeof(DetailsScreen), "Refresh", new[] { typeof(GameObject) })]
     public static class ArtifactPedestalPanelPatch
     {
         static void Postfix(DetailsScreen __instance)
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates || !__instance.gameObject.activeInHierarchy)
+            Patches.Logger.Log("[ArtifactPedestalPanelPatch] Refresh called.");
+
+            if (!__instance.gameObject.activeInHierarchy)
             {
+                Patches.Logger.Log("[ArtifactPedestalPanelPatch] Panel is not active in hierarchy. Skipping update.");
                 return; // Skip updates if disabled or panel is not visible
             }
 
-            // No logic needed here for the sidescreen, handled by SideScreenContent
+            Patches.Logger.Log("[ArtifactPedestalPanelPatch] Panel is active. Refresh logic executed.");
         }
     }
 
@@ -33,13 +30,16 @@ namespace ArtifactsPlus
 
         public static void Postfix()
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
+            Patches.Logger.Log("[ArtifactPedestalPanelRegister] OnPrefabInit called.");
+
+            if (registered)
             {
-                return; // Skip registration if updates are disabled
+                Patches.Logger.Log("[ArtifactPedestalPanelRegister] Already registered. Skipping.");
+                return;
             }
 
-            if (registered) return;
             registered = true;
+            Patches.Logger.Log("[ArtifactPedestalPanelRegister] Registering ArtifactPedestalSimpleLabelScreen.");
             PUIUtils.AddSideScreenContent<ArtifactPedestalSimpleLabelScreen>();
         }
     }
@@ -53,37 +53,56 @@ namespace ArtifactsPlus
 
         private string ArtifactInfo(GameObject target)
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates || (root != null && !root.activeInHierarchy))
-            {
-                return string.Empty; // Return empty string if updates are disabled or panel is not visible
-            }
+            Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] ArtifactInfo called.");
 
             var pedestal = target?.GetComponent<ItemPedestal>();
+            Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] Pedestal found: {pedestal != null}");
+
             var receptacle = pedestal?.GetType()
                 .GetField("receptacle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(pedestal) as SingleEntityReceptacle;
+            Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] Receptacle found: {receptacle != null}");
 
-            string artifactId = receptacle?.Occupant?.PrefabID().ToString() ?? null;
+            GameObject artifact = receptacle?.Occupant;
+            int? artifactId = artifact?.GetInstanceID();
+             
+            Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] Artifact found: {artifact != null}, ID: {artifactId}");
 
-            if (!string.IsNullOrEmpty(artifactId))
+            if (artifact != null)
             {
+                Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] Pedestal displaying stats for artifact ID: {artifactId}");
+            }
+            else
+            {
+                Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] No artifact found in the pedestal.");
+            }
+
+            if (artifact == null || !artifactId.HasValue)
+            {
+                Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] No artifact found or artifact ID is null.");
+                return "No artifact placed.";
+            }
+
                 var lines = new System.Collections.Generic.List<string>();
 
-                // Check if the artifact is active
-                if (ArtifactStateTracker.ArtifactStates.TryGetValue(receptacle.Occupant.GetInstanceID(), out var state))
+                if (ArtifactStateTracker.ArtifactStates.TryGetValue(artifactId.Value, out var state))
                 {
                     string status = state.IsActive ? "Active" : "Inactive";
                     lines.Add($"Status: {status}");
+                    Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] Artifact state retrieved: {status}");
                 }
                 else
                 {
                     lines.Add("Status: Unknown");
+                    Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] Artifact state unknown.");
                 }
-                // Add artifact instance ID
-                lines.Add($"Instance ID: {receptacle.Occupant.GetInstanceID()}");
-                // Add modifiers
-                if (ArtifactEffectTracker.TryGetArtifactModifiers(artifactId, out var modifiers) && modifiers.Count > 0)
+
+                lines.Add($"Instance ID: {artifactId.Value}");
+                string artifactName = artifact?.name;
+
+            if (ArtifactEffectTracker.TryGetArtifactModifiers(artifactName, out var modifiers) && modifiers.Count > 0)
                 {
+                    Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] Artifact modifiers found: {modifiers.Count}");
                     lines.AddRange(modifiers.Select(kv =>
                     {
                         string sign = kv.Value > 0 ? "+" : "";
@@ -91,56 +110,51 @@ namespace ArtifactsPlus
                     }));
                 }
 
-                // Add effects
-                var config = ArtifactStateTracker.GetArtifactConfig(artifactId);
-                if (config != null && config.Effects != null && config.Effects.Count > 0)
-                {
-                    lines.AddRange(config.Effects.Keys);
-                }
-
-                if (lines.Count == 0)
-                    return "No artifact effects available.";
                 return string.Join("\n", lines);
-            }
-            else
-            {
-                return "No artifact placed.";
-            }
-        }
+             }
 
         public override bool IsValidForTarget(GameObject target)
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
-            {
-                return false; // Return false if updates are disabled
-            }
-
+            Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] IsValidForTarget called.");
             bool valid = target != null && target.GetComponent<ItemPedestal>() != null;
+            Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] Target valid: {valid}");
             return valid;
         }
 
         public override void SetTarget(GameObject target)
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates || (root != null && !root.activeInHierarchy))
+            Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] SetTarget called.");
+
+            if (root == null)
             {
-                return; // Skip setting the target if updates are disabled or panel is not visible
+                Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] Root is null. Ensure OnPrefabInit is called.");
+                return;
+            }
+
+            if (!root.activeInHierarchy)
+            {
+                Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] Root is not active in hierarchy. Activating root.");
+                root.SetActive(true); // Activate the root object
             }
 
             lastTarget = target;
-            // Update label text when the target changes
+            Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] Target set: {target?.name}");
+
             if (labelLocText != null)
+            {
                 labelLocText.text = ArtifactInfo(target);
+                Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] Label text updated.");
+            }
         }
 
         protected override void OnPrefabInit()
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
-            {
-                return; // Skip initialization if updates are disabled
-            }
+            Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] OnPrefabInit called.");
 
             if (root == null)
             {
+                Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] Initializing root layout.");
+
                 var layout = new PPanel("ArtifactPanel")
                 {
                     Direction = PanelDirection.Vertical,
@@ -152,13 +166,15 @@ namespace ArtifactsPlus
 
                 label = new PLabel("ArtifactLabel")
                 {
-                    Text = ArtifactInfo(lastTarget), // Use the new function here
+                    Text = ArtifactInfo(lastTarget),
                     TextStyle = PUITuning.Fonts.TextDarkStyle,
                     FlexSize = new Vector2(320, -1),
                     ToolTip = "Displays artifact effects and modifiers."
                 }.AddOnRealize(go =>
                 {
                     labelLocText = go.GetComponent<LocText>() ?? go.GetComponentInChildren<LocText>(true);
+                    Patches.Logger.Log($"[ArtifactPedestalSimpleLabelScreen] LabelLocText initialized: {labelLocText != null}");
+
                     if (labelLocText != null)
                         labelLocText.text = ArtifactInfo(lastTarget);
                 });
@@ -168,23 +184,31 @@ namespace ArtifactsPlus
                 if (base.ContentContainer != null)
                 {
                     root = layout.AddTo(base.ContentContainer, -1);
+                    Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] Root added to ContentContainer.");
                 }
                 else
                 {
                     root = layout.AddTo(gameObject, -1);
+                    Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] Root added to GameObject.");
                 }
             }
         }
 
-        public override string GetTitle() => "Artifact Effects";
-        public override float GetSortKey() => 100f;
+        public override string GetTitle()
+        {
+            Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] GetTitle called.");
+            return "Artifact Effects";
+        }
+
+        public override float GetSortKey()
+        {
+            Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] GetSortKey called.");
+            return 100f;
+        }
 
         public override void ClearTarget()
         {
-            if (!ArtifactPedestalPanel_Debug.EnableUpdates)
-            {
-                return; // Skip clearing the target if updates are disabled
-            }
+            Patches.Logger.Log("[ArtifactPedestalSimpleLabelScreen] ClearTarget called.");
         }
     }
 }
