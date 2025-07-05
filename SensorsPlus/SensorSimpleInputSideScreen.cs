@@ -25,7 +25,6 @@ namespace SensorsPlus
             bool hasPressure = target != null && target.GetComponent<LogicPressureSensor>() != null;
             bool hasTemperature = target != null && target.GetComponent<LogicTemperatureSensor>() != null;
             bool valid = hasPressure || hasTemperature;
-            Patches.Logger.Log($"[SideScreen] IsValidForTarget: target={target?.name}, hasPressure={hasPressure}, hasTemperature={hasTemperature}, valid={valid}");
             return valid;
         }
 

@@ -10,8 +10,8 @@ using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.UI;
 using System;
-using System.Collections.Generic; // For List<>
-using System.Runtime.CompilerServices;
+using System.Collections.Generic; // For List<> and Dictionary<>
+using System.Runtime.CompilerServices; // For ConditionalWeakTable
 using TUNING; // Or the correct namespace for LogicPressureSensorConfig
 using UnityEngine;
 using static Rendering.BlockTileRenderer;
@@ -21,6 +21,9 @@ namespace SensorsPlus
 {
     public class Patches
     {
+        // Define the missing RIBBON_PORT_ID constant
+        public static readonly HashedString RIBBON_PORT_ID = new HashedString("RibbonPort");
+
         // Change from private to public so HotkeyListenerUpdater can access it
         public static HLib.HotkeyListener hotkeyListener;
 
@@ -62,6 +65,30 @@ namespace SensorsPlus
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
             Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
 
+        }
+
+        // Utility method to add or update a ribbon port
+        public static void AddOrUpdateRibbonPort(LogicPorts logicPorts, LogicPorts.Port newPort, string logContext)
+        {
+            if (logicPorts.outputPortInfo == null)
+            {
+                logicPorts.outputPortInfo = new[] { newPort };
+                Patches.Logger.Log($"[{logContext}] Created ribbon port: {newPort.id}");
+            }
+            else
+            {
+                var ports = new List<LogicPorts.Port>(logicPorts.outputPortInfo);
+                if (!ports.Exists(p => p.id == newPort.id))
+                {
+                    ports.Add(newPort);
+                    Patches.Logger.Log($"[{logContext}] Added ribbon port: {newPort.id}");
+                }
+                else
+                {
+                    Patches.Logger.Log($"[{logContext}] Ribbon port already exists: {newPort.id}");
+                }
+                logicPorts.outputPortInfo = ports.ToArray();
+            }
         }
 
         [HarmonyPatch(typeof(Db), "Initialize")]
@@ -189,168 +216,177 @@ namespace SensorsPlus
     }   
 
     [HarmonyPatch(typeof(LogicPressureSensor), "Sim200ms")]
-    public static class LogicPressureSensor_Sim200ms_Patch // <-- Renamed from LogicPressureSensor_Sim200ms_Paatch
+    public static class LogicPressureSensor_Sim200ms_Patch
     {
         public static readonly ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>> DerivativeStates =
             new ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>>();
 
-        private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
-
-        private static System.Collections.Generic.Dictionary<LogicPressureSensor, float> _lastSampleTimes;
+        private static Dictionary<LogicPressureSensor, float> _lastSampleTimes;
 
         static void Postfix(LogicPressureSensor __instance)
         {
+            //Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] Processing sensor: {__instance.name}");
+            //Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] CurrentValue: {__instance.CurrentValue}, IsSwitchedOn: {__instance.IsSwitchedOn}, ActivateAboveThreshold: {__instance.ActivateAboveThreshold}");
+
             var ports = __instance.GetComponent<LogicPorts>();
-            if (!SensorMathUtils.HasRibbonPort(ports, RIBBON_PORT_ID))
-                return;
 
-            if (_lastSampleTimes == null)
-                _lastSampleTimes = new System.Collections.Generic.Dictionary<LogicPressureSensor, float>();
-            float now = Time.time;
-            float lastSampleTime = -1f;
-            _lastSampleTimes.TryGetValue(__instance, out lastSampleTime);
-
-            // Only add a new sample if time has advanced
-            if (now > lastSampleTime)
+            // Check if the port has a ribbon cable or a single automation connected
+            var outputType = SensorOutputManager.GetOutputType(__instance);
+            if (outputType == SensorOutputType.RibbonCable)
             {
-                float value = __instance.CurrentValue;
-                // Use the dynamic interval
-                SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, SensorMathUtils.SamplingIntervalSeconds);
-                _lastSampleTimes[__instance] = now;
+                Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] Ribbon cable detected for sensor: {__instance.name}");
+            }
+            else if (outputType == SensorOutputType.Single)
+            {
+                Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] Single automation detected for sensor: {__instance.name}");
+            }
+            else
+            {
+                Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] Unknown output type for sensor: {__instance.name}");
             }
 
-            float smoothedDerivative = 0.0f;
-            if (DerivativeStates.TryGetValue(__instance, out var state))
-                smoothedDerivative = state.ComputeMovingAverageFirstDerivative(SensorMathUtils.MovingAverageWindow);
+            int ribbonSignal = SensorMathUtils.ProcessSensorData(
+                __instance,
+                DerivativeStates,
+                ref _lastSampleTimes,
+                Patches.RIBBON_PORT_ID,
+                SensorMathUtils.SamplingIntervalSeconds,
+                SensorMathUtils.MovingAverageWindow,
+                sensor => sensor.CurrentValue,
+                sensor => sensor.IsSwitchedOn,
+                sensor => sensor.ActivateAboveThreshold,
+                sensor =>
+                {
+                    var inputValueComponent = sensor.GetComponent<SensorInputValueComponent>();
+                    return inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
+                },
+                sensor => sensor.GetComponent<LogicPorts>()
+            );
 
-            var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
-            float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
+            ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal); // Directly use the hardcoded port ID
+        }
+    }
 
-            bool above = __instance.ActivateAboveThreshold; // Corrected property name
-            bool bit0 = __instance.IsSwitchedOn;
-            bool p = bit0; // above or below target pressure
-            bool f = Math.Abs(smoothedDerivative) > Math.Abs(threshold); // fast change flag
-            bool d = smoothedDerivative > 0; // direction flag (positive or negative change)
+    [HarmonyPatch(typeof(LogicTemperatureSensor), "Sim200ms")]
+    public static class LogicTemperatureSensor_Sim200ms_Patch
+    {
+        public static readonly ConditionalWeakTable<LogicTemperatureSensor, SensorMathUtils.DerivativeState<LogicTemperatureSensor>> DerivativeStates =
+            new ConditionalWeakTable<LogicTemperatureSensor, SensorMathUtils.DerivativeState<LogicTemperatureSensor>>();
 
-            bool bit1 = (!p) && !(d && f); // signal falling fast, turn on source
-            bool bit2 = p && d && f; // signal rising fast, turn on vent
+        private static Dictionary<LogicTemperatureSensor, float> _lastSampleTimes;
 
-            bit1 = above ? bit1 : !bit1;
-            bit2 = above ? bit2 : !bit2;
+        static void Postfix(LogicTemperatureSensor __instance)
+        {
+            //Patches.Logger.Log($"[LogicTemperatureSensor_Sim200ms_Patch] Processing sensor: {__instance.name}");
+            //Patches.Logger.Log($"[LogicTemperatureSensor_Sim200ms_Patch] CurrentValue: {__instance.CurrentValue}, IsSwitchedOn: {__instance.IsSwitchedOn}, ActivateAboveThreshold: {__instance.ActivateAboveThreshold}");
 
+            var ports = __instance.GetComponent<LogicPorts>();
+            int ribbonSignal = SensorMathUtils.ProcessSensorData(
+                __instance,
+                DerivativeStates,
+                ref _lastSampleTimes,
+                Patches.RIBBON_PORT_ID,
+                SensorMathUtils.SamplingIntervalSeconds,
+                SensorMathUtils.MovingAverageWindow,
+                sensor => sensor.CurrentValue,
+                sensor => sensor.IsSwitchedOn,
+                sensor => sensor.ActivateAboveThreshold,
+                sensor =>
+                {
+                    var inputValueComponent = sensor.GetComponent<SensorInputValueComponent>();
+                    return inputValueComponent != null ? inputValueComponent.parsedValue : 0.1f;
+                },
+                sensor => sensor.GetComponent<LogicPorts>()
+            );
 
-            Patches.Logger.Log($"[SensorsPlus]: p={p} d={d} f={f}");
-
-            int ribbonSignal = (bit0 ? 1 : 0)
-                             | (bit1 ? (1 << 1) : 0)
-                             | (bit2 ? (1 << 2) : 0);
-
-            if (Patches.ribbonDebugEnabled)
-            {
-
-            }
-            ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
+            ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal); // Directly use the hardcoded port ID
         }
     }
 
     [HarmonyPatch(typeof(LogicPressureSensorGasConfig), "DoPostConfigureComplete")]
-    public static class LogicPressureGasConfig_DoPostConfigureComplete_Patch
+    public static class LogicPressureSensorGasConfig_DoPostConfigureComplete_Patch
     {
-        private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
-
-        [HarmonyPostfix]
-        static void Postfix(LogicPressureSensor __instance)
-        {
-            var ports = __instance.GetComponent<LogicPorts>();
-            if (!SensorMathUtils.HasRibbonPort(ports, RIBBON_PORT_ID))
-                return;
-
-            if (_lastSampleTimes == null)
-                _lastSampleTimes = new System.Collections.Generic.Dictionary<LogicPressureSensor, float>();
-            float now = Time.time;
-            float lastSampleTime = -1f;
-            _lastSampleTimes.TryGetValue(__instance, out lastSampleTime);
-
-            // Only add a new sample if time has advanced  
-            if (now > lastSampleTime)
-            {
-                float value = __instance.CurrentValue;
-                // Use the dynamic interval  
-                SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, SensorMathUtils.SamplingIntervalSeconds);
-                _lastSampleTimes[__instance] = now;
-            }
-
-            float smoothedDerivative = 0.0f;
-            if (DerivativeStates.TryGetValue(__instance, out var state))
-                smoothedDerivative = state.ComputeMovingAverageFirstDerivative(SensorMathUtils.MovingAverageWindow);
-
-            var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
-            float threshold = inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
-
-            bool above = __instance.ActivateAboveThreshold; // Corrected property name  
-            bool bit0 = __instance.IsSwitchedOn;
-            bool p = bit0; // above or below target pressure  
-            bool f = Math.Abs(smoothedDerivative) > Math.Abs(threshold); // fast change flag  
-            bool d = smoothedDerivative > 0; // direction flag (positive or negative change)  
-
-            bool bit1 = (!p) && !(d && f); // signal falling fast, turn on source  
-            bool bit2 = p && d && f; // signal rising fast, turn on vent  
-
-            bit1 = above ? bit1 : !bit1;
-            bit2 = above ? bit2 : !bit2;
-
-            // Log error if both bit1 and bit2 are on simultaneously  
-            if (bit1 && bit2)
-            {
-                Patches.Logger.Log("[SensorsPlus]: Error - bit1 and bit2 are both ON simultaneously.");
-            }
-
-            Patches.Logger.Log($"[SensorsPlus]: p={p} d={d} f={f}");
-
-            int ribbonSignal = (bit0 ? 1 : 0)
-                             | (bit1 ? (1 << 1) : 0)
-                             | (bit2 ? (1 << 2) : 0);
-
-            if (Patches.ribbonDebugEnabled)
-            {
-
-            }
-            ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
-        }
-    }
-
-    [HarmonyPatch(typeof(LogicPressureSensorLiquidConfig), "DoPostConfigureComplete")]
-    public static class LogicPressureLiquidConfig_DoPostConfigureComplete_Patch
-    {
-        private static readonly HashedString RIBBON_PORT_ID = new HashedString("LogicPressureSensorRibbon");
-
         [HarmonyPostfix]
         public static void Postfix(GameObject go)
         {
-            if (go == null) return;
+            if (go == null)
+            {
+                Patches.Logger.Log("[LogicPressureSensorGasConfig] GameObject is null. Exiting.");
+                return;
+            }
 
             var logicPorts = go.AddOrGet<LogicPorts>();
+            Patches.Logger.Log("[LogicPressureSensorGasConfig] LogicPorts component added or retrieved.");
+
             var newPort = new LogicPorts.Port(
-                RIBBON_PORT_ID,
+                Patches.RIBBON_PORT_ID,
                 new CellOffset(0, 0),
-                "Ribbon Output (Test)",
+                $"Ribbon Output (Gas) - Sensor {go.GetInstanceID()}",
                 "Ribbon Output Active",
                 "Ribbon Output Inactive",
                 true,
                 LogicPortSpriteType.RibbonOutput
             );
 
-            if (logicPorts.outputPortInfo == null)
+            Patches.AddOrUpdateRibbonPort(logicPorts, newPort, "LogicPressureSensorGasConfig");
+        }
+    }
+
+    [HarmonyPatch(typeof(LogicPressureSensorLiquidConfig), "DoPostConfigureComplete")]
+    public static class LogicPressureSensorLiquidConfig_DoPostConfigureComplete_Patch
+    {
+        [HarmonyPostfix]
+        public static void Postfix(GameObject go)
+        {
+            if (go == null)
             {
-                logicPorts.outputPortInfo = new[] { newPort };
+                Patches.Logger.Log("[LogicPressureSensorLiquidConfig] GameObject is null. Exiting.");
+                return;
             }
-            else
+
+            var logicPorts = go.AddOrGet<LogicPorts>();
+            Patches.Logger.Log("[LogicPressureSensorLiquidConfig] LogicPorts component added or retrieved.");
+
+            var newPort = new LogicPorts.Port(
+                Patches.RIBBON_PORT_ID,
+                new CellOffset(0, 0),
+                $"Ribbon Output (Liquid) - Sensor {go.GetInstanceID()}",
+                "Ribbon Output Active",
+                "Ribbon Output Inactive",
+                true,
+                LogicPortSpriteType.RibbonOutput
+            );
+
+            Patches.AddOrUpdateRibbonPort(logicPorts, newPort, "LogicPressureSensorLiquidConfig");
+        }
+    }
+
+    [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
+    public static class LogicTemperatureSensorConfig_DoPostConfigureComplete_Patch
+    {
+        [HarmonyPostfix]
+        public static void Postfix(GameObject go)
+        {
+            if (go == null)
             {
-                var ports = new List<LogicPorts.Port>(logicPorts.outputPortInfo);
-                if (!ports.Exists(p => p.id == RIBBON_PORT_ID))
-                    ports.Add(newPort);
-                logicPorts.outputPortInfo = ports.ToArray();
+                Patches.Logger.Log("[LogicTemperatureSensorConfig] GameObject is null. Exiting.");
+                return;
             }
+
+            var logicPorts = go.AddOrGet<LogicPorts>();
+            Patches.Logger.Log("[LogicTemperatureSensorConfig] LogicPorts component added or retrieved.");
+
+            var newPort = new LogicPorts.Port(
+                Patches.RIBBON_PORT_ID,
+                new CellOffset(0, 0),
+                $"Ribbon Output (Temperature) - Sensor {go.GetInstanceID()}",
+                "Ribbon Output Active",
+                "Ribbon Output Inactive",
+                true,
+                LogicPortSpriteType.RibbonOutput
+            );
+
+            Patches.AddOrUpdateRibbonPort(logicPorts, newPort, "LogicTemperatureSensorConfig");
         }
     }
 
@@ -401,80 +437,6 @@ namespace SensorsPlus
             Patches.Logger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
             // Register the side screen for both pressure and temperature sensors
             PUIUtils.AddSideScreenContent<SensorSimpleInputSideScreen>();
-        }
-    }
-
-    [HarmonyPatch(typeof(LogicTemperatureSensor), "Sim200ms")]
-    public static class LogicTemperatureSensor_Sim200ms_Patch
-    {
-        public static readonly ConditionalWeakTable<LogicTemperatureSensor, SensorMathUtils.DerivativeState<LogicTemperatureSensor>> DerivativeStates =
-            new ConditionalWeakTable<LogicTemperatureSensor, SensorMathUtils.DerivativeState<LogicTemperatureSensor>>();
-
-        private static readonly HashedString RIBBON_PORT_ID = new HashedString("ThermoSensorPlusRibbonOutput");
-
-        static void Postfix(LogicTemperatureSensor __instance)
-        {
-            var ports = __instance.GetComponent<LogicPorts>();
-            if (ports == null)
-                return;
-
-            float now = Time.time;
-            float value = __instance.CurrentValue;
-
-            // Use the dynamic interval
-            float firstDerivative = SensorMathUtils.UpdateAndGetFirstDerivative(DerivativeStates, __instance, now, value, SensorMathUtils.SamplingIntervalSeconds);
-
-            float smoothedDerivative = 0.0f;
-            if (DerivativeStates.TryGetValue(__instance, out var derivativeState))
-            {
-                var samples = derivativeState.Samples.ToArray();
-                smoothedDerivative = derivativeState.ComputeMovingAverageFirstDerivative(SensorMathUtils.MovingAverageWindow);
-            }
-
-            float threshold = 0.1f;
-            var inputValueComponent = __instance.GetComponent<SensorInputValueComponent>();
-            if (inputValueComponent != null)
-                threshold = inputValueComponent.parsedValue;
-
-            bool bit0 = __instance.IsSwitchedOn;
-            bool bit1 = bit0 && (smoothedDerivative > threshold); // Green if bit0 is positive and smoothed derivative is positive
-            bool bit2 = !bit0 && (smoothedDerivative < -threshold); // Green if bit0 is negative and smoothed derivative is negative
-
-            int ribbonSignal = (bit0 ? 1 : 0)
-                             | (bit1 ? (1 << 1) : 0)
-                             | (bit2 ? (1 << 2) : 0);
-
-            ports.SendSignal(RIBBON_PORT_ID, ribbonSignal);
-        }
-    }
-
-    [HarmonyPatch(typeof(LogicTemperatureSensorConfig), "DoPostConfigureComplete")]
-    public static class ThermoSensorPatchNew
-    {
-        [HarmonyPostfix]
-        public static void Postfix(GameObject go)
-        {
-            // Add ribbon port if needed (implement as in your pressure sensor logic)
-            var logicPorts = go.AddOrGet<LogicPorts>();
-            var portId = new HashedString("ThermoSensorPlusRibbonOutput");
-            var newPort = new LogicPorts.Port(
-                portId,
-                new CellOffset(0, 0),
-                "Ribbon Output (Temp)",
-                "Ribbon Output Active",
-                "Ribbon Output Inactive",
-                true,
-                LogicPortSpriteType.RibbonOutput
-            );
-            if (logicPorts.outputPortInfo == null)
-                logicPorts.outputPortInfo = new[] { newPort };
-            else
-            {
-                var ports = new List<LogicPorts.Port>(logicPorts.outputPortInfo);
-                if (!ports.Exists(p => p.id == portId))
-                    ports.Add(newPort);
-                logicPorts.outputPortInfo = ports.ToArray();
-            }
         }
     }
 }
