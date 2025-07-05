@@ -86,7 +86,7 @@ namespace HLib
         }
 
         /// <summary>
-        /// Resets the log file by overwriting it with a reset message.
+        /// Resets the log file by truncating its contents.
         /// </summary>
         public void Reset()
         {
@@ -95,7 +95,10 @@ namespace HLib
 
             try
             {
-                File.WriteAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Log reset.\n");
+                using (var fs = new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                {
+                    fs.SetLength(0); // Truncate the file
+                }
             }
             catch
             {

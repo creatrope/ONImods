@@ -34,7 +34,7 @@ namespace ArtifactsPlus
                 try
                 {
                     var config = ArtifactsPlusConfig.Instance; // Access the configuration using PLib's SingletonOptions
-                    Patches.Logger.Log($"[ArtifactsPlus] Config object: {JsonConvert.SerializeObject(config, Formatting.Indented)}");
+                    //Patches.Logger.Log($"[ArtifactsPlus] Config object: {JsonConvert.SerializeObject(config, Formatting.Indented)}");
 
                     var configFile = config.ArtifactConfigFile;
                     var fullPath = Path.Combine(
@@ -140,8 +140,7 @@ namespace ArtifactsPlus
         {
             public static void Postfix()
             {
-                // Example of localization logic
-                Patches.Logger.Log("[ArtifactsPlus] Localization initialized.");
+                // Removed log message: "[ArtifactsPlus] Localization initialized."
             }
         }
 
@@ -478,7 +477,6 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                Patches.Logger.Log("[ERROR] ApplyGlowEffect called with a null artifact.");
                 return;
             }
 
@@ -903,7 +901,7 @@ namespace ArtifactsPlus
 
             if (harmony == null)
             {
-                Patches.Logger.Log("[ArtifactsPlus] Harmony instance is null.");
+                Debug.Log("[ArtifactsPlus] Harmony instance is null.");
                 return;
             }
 
