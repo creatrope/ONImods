@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace ArtifactsPlus
 {
-    public static class MinionPersonalityPanel_Debug
-    {
-        public static bool EnableUpdates = true; // Set to false to disable updates
-    }
-
     [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
     public static class MinionPersonalityPanel_OnPrefabInit_Patch
     {
@@ -16,11 +11,6 @@ namespace ArtifactsPlus
 
         private static void Postfix(MinionPersonalityPanel __instance)
         {
-            if (!MinionPersonalityPanel_Debug.EnableUpdates)
-            {
-                return;
-            }
-
             var createCollapsableSectionMethod = typeof(DetailScreenTab).GetMethod("CreateCollapsableSection", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             if (createCollapsableSectionMethod != null)
             {
@@ -34,7 +24,7 @@ namespace ArtifactsPlus
     {
         private static void Postfix(MinionPersonalityPanel __instance, GameObject target)
         {
-            if (!MinionPersonalityPanel_Debug.EnableUpdates || target == null || MinionPersonalityPanel_OnPrefabInit_Patch.artifactPanel == null)
+            if (target == null || MinionPersonalityPanel_OnPrefabInit_Patch.artifactPanel == null)
             {
                 return;
             }
