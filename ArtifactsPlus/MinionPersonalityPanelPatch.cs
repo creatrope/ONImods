@@ -7,14 +7,14 @@ namespace ArtifactsPlus
     [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
     public static class MinionPersonalityPanel_OnPrefabInit_Patch
     {
-        internal static CollapsibleDetailContentPanel artifactPanel; // Changed to internal
+        internal static CollapsibleDetailContentPanel modifiers; // Changed to internal
 
         private static void Postfix(MinionPersonalityPanel __instance)
         {
             var createCollapsableSectionMethod = typeof(DetailScreenTab).GetMethod("CreateCollapsableSection", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             if (createCollapsableSectionMethod != null)
             {
-                artifactPanel = (CollapsibleDetailContentPanel)createCollapsableSectionMethod.Invoke(__instance, new object[] { "Artifact Effects" });
+                modifiers = (CollapsibleDetailContentPanel)createCollapsableSectionMethod.Invoke(__instance, new object[] { "Artifact Effects" });
             }
         }
     }
@@ -24,7 +24,7 @@ namespace ArtifactsPlus
     {
         private static void Postfix(MinionPersonalityPanel __instance, GameObject target)
         {
-            if (target == null || MinionPersonalityPanel_OnPrefabInit_Patch.artifactPanel == null)
+            if (target == null || MinionPersonalityPanel_OnPrefabInit_Patch.modifiers == null)
             {
                 return;
             }
@@ -32,8 +32,8 @@ namespace ArtifactsPlus
             string summary = target != null
                 ? ArtifactEffectTracker.GetMinionArtifactInfusions(target)
                 : "No minion selected.";
-            MinionPersonalityPanel_OnPrefabInit_Patch.artifactPanel.SetLabel("artifact_summary", summary, "Summary of artifact modifiers currently applied to this minion.");
-            MinionPersonalityPanel_OnPrefabInit_Patch.artifactPanel.Commit();
+            MinionPersonalityPanel_OnPrefabInit_Patch.modifiers.SetLabel("artifact_summary", summary, "Summary of artifact modifiers currently applied to this minion.");
+            MinionPersonalityPanel_OnPrefabInit_Patch.modifiers.Commit();
         }
     }
 

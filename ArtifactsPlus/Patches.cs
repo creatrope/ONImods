@@ -18,6 +18,7 @@ using System.Text; // <-- Add this for StringBuilder
 using UnityEngine;
 using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
 using Object = UnityEngine.Object; // Explicitly alias UnityEngine.Object to avoid ambiguity
+using static ArtifactsPlus.ArtifactStateTracker; // Add this import to bring PerformIntegrityCheck into context
 
 namespace ArtifactsPlus
 {
@@ -56,8 +57,6 @@ namespace ArtifactsPlus
         {
             try
             {
-                ArtifactStateTracker.LoadArtifactConfig();
-
                 // Initialize and register hotkeys
                 hotkeyListener = new HotkeyListener();
 
@@ -68,6 +67,7 @@ namespace ArtifactsPlus
 
                 var config = ArtifactsPlusConfig.Instance; // Access the configuration using PLib's SingletonOptions
                 Patches.Logger.SetLoggingEnabled(config.EnableCustomLog);
+                ArtifactStateTracker.LoadArtifactConfig();
 
                 if (config.EnableCustomLog)
                 {
@@ -243,7 +243,7 @@ namespace ArtifactsPlus
 
         private static Dictionary<string, ArtifactConfig> artifactConfigMap;
 
-        private static GameObject[] allArtifacts; // Cache for all artifacts
+            private static GameObject[] GlobalAllArtifacts; // Renamed from allArtifacts
         private static GameObject[] allMinions; // Cache for all minions
 
         public struct ArtifactCriteriaResult
@@ -284,7 +284,6 @@ namespace ArtifactsPlus
 
             // 1. Check if the artifact is on a pedestal
             if (!CheckOnPedestal(artifact, ref result)) return result;
-
             // 2. Check if the artifact is analyzed
             if (!CheckAnalyzed(artifact, ref result)) return result;
 
@@ -626,19 +625,21 @@ namespace ArtifactsPlus
 
         public static void InitializeAllArtifacts()
         {
-            allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Artifact"))
+            GlobalAllArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Artifact") && kp.gameObject != null)
                 .Select(kp => kp.gameObject)
+                .Where(artifact => artifact != null) // Ensure null artifacts are excluded
                 .ToArray();
+            Patches.Logger.Log($"GlobalAllArtifacts length: {GlobalAllArtifacts?.Length ?? 0}");
         }
 
         public static GameObject[] GetAllArtifacts()
         {
-            if (allArtifacts == null)
+            if (GlobalAllArtifacts == null)
             {
                 InitializeAllArtifacts();
             }
-            return allArtifacts;
+            return GlobalAllArtifacts;
         }
 
         public static GameObject[] GetAllMinions()
@@ -734,6 +735,65 @@ namespace ArtifactsPlus
                 Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact"}' unregistered from pedestal.");
             }
         }
+
+        public static void PerformIntegrityCheck()
+        {
+            Patches.Logger.Log("[ArtifactStateTracker] Performing integrity check on artifacts.");
+
+            // Store the initial count of artifacts
+            if (GlobalAllArtifacts == null)
+            {
+                Patches.Logger.Log("[ArtifactStateTracker] GlobalAllArtifacts null.");
+                return;
+            }
+
+            int initialCount = GlobalAllArtifacts.Length;
+
+            // Remove null artifacts
+            GlobalAllArtifacts = ArtifactStateTracker.GetAllArtifacts();
+            int cleanedCount = GlobalAllArtifacts?.Length ?? 0;
+
+            // Log counts only if they are different
+            if (initialCount != cleanedCount)
+            {
+                Patches.Logger.Log($"[ArtifactStateTracker] Artifact count before cleanup: {initialCount}");
+                Patches.Logger.Log($"[ArtifactStateTracker] Artifact count after cleanup: {cleanedCount}");
+            }
+
+            foreach (var artifact in GlobalAllArtifacts)
+            {
+                if (artifact == null)
+                {
+                    Patches.Logger.Log("[ArtifactStateTracker] Skipping null artifact.");
+                    continue;
+                }
+
+                // Validate artifact state
+                int artifactId = artifact.GetInstanceID();
+                if (!ArtifactStateTracker.ArtifactStates.TryGetValue(artifactId, out var state))
+                {
+                    state = new ArtifactState();
+                    ArtifactStateTracker.ArtifactStates[artifactId] = state;
+                    Patches.Logger.Log($"[ArtifactStateTracker] Initialized state for artifact ID: {artifactId}");
+                }
+
+                // Validate artifact components
+                var prefabId = artifact.GetComponent<KPrefabID>();
+                if (prefabId == null)
+                {
+                    Patches.Logger.Log($"[ArtifactStateTracker] Artifact ID: {artifactId} is missing KPrefabID. Skipping.");
+                    continue;
+                }
+
+                // Validate artifact configuration
+                string artifactName = prefabId.PrefabTag.Name ?? "Unknown Artifact";
+                var config = ArtifactStateTracker.GetArtifactConfig(artifactName);
+                if (config == null)
+                {
+                    Patches.Logger.Log($"[ArtifactStateTracker] No configuration found for artifact '{artifactName}' (ID: {artifactId}).");
+                }
+            }
+        }
     }
 
     public class ArtifactStatePoller : MonoBehaviour
@@ -765,12 +825,15 @@ namespace ArtifactsPlus
             if (tickCounter >= pollInterval * 60)
             {
                 tickCounter = 0;
+                var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
+
+                PerformIntegrityCheck();
 
                 var minionsPerWorld = new Dictionary<int, List<GameObject>>();
 
                 var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                     .Where(kp => kp != null && kp.HasTag("Minion"))
-                    .Select(kp => kp.gameObject);
+                    .Select(kp => kp.gameObject); 
                 // get an updated list of all minions per world.
 
                 foreach (var minion in allMinions)
@@ -788,7 +851,6 @@ namespace ArtifactsPlus
 
                 bool anyStateChanged = ArtifactStateTracker.PollAllArtifacts(minionsPerWorld);
 
-                var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
 
                 //Patches.Logger.Log($"[ArtifactsPlus] Updating Minions affected by state-changed Artifacts.");
 
