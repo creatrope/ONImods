@@ -15,6 +15,9 @@ namespace OverheatControl
         // Declare the panel variable
         private PPanel panel;
 
+        // Declare the text field for displaying instance ID
+        private TMP_Text idLocText;
+
         public override bool IsValidForTarget(GameObject target)
         {
             return true;
@@ -22,6 +25,26 @@ namespace OverheatControl
 
         public override void SetTarget(GameObject target)
         {
+            var building = target?.GetComponent<Building>();
+            if (building != null)
+            {
+                int instanceID = building.GetInstanceID();
+                Patches.Logger.Log($"[SideScreen] Displaying Instance ID: {instanceID} for {building.name}");
+
+                var kSelectable = building.gameObject.GetComponent<KSelectable>();
+                string name = kSelectable != null ? kSelectable.GetProperName() : building.Def.Name;
+
+                // Update the UI with the instance ID
+                if (idLocText != null)
+                {
+                    idLocText.text = $"Instance ID: {instanceID}";
+                    Patches.Logger.Log($"[SideScreen] idLocText updated with Instance ID: {idLocText.text}");
+                }
+            }
+            else
+            {
+                Patches.Logger.Log("[SideScreen] Target is not a valid building.");
+            }
         }
 
         public override string GetTitle() => "SideScreen";
@@ -60,11 +83,21 @@ namespace OverheatControl
             };
 
             panel.AddChild(testlabel);
+
+            // Add a text field for displaying instance ID
+            var idLabel = new PLabel("InstanceIDLabel")
+            {
+                Text = "Building: N/A, Instance ID: N/A",
+                TextStyle = PUITuning.Fonts.TextDarkStyle
+            };
+
+            // Correctly initialize idLocText using TMP_Text directly
+            idLocText = idLabel.Build().GetComponentInChildren<TMP_Text>();
+            panel.AddChild(idLabel);
+
             var panelgo = panel.Build();
             panelgo.transform.SetParent(container.transform, false);
             panelgo.transform.SetAsFirstSibling();
-
-            //Patches.Logger.Log("[SensorSimpleInputSideScreen] Added text fields, threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
         }
 
         private void Update()
