@@ -67,8 +67,8 @@ namespace SensorsPlus
             Patches.Logger.Reset();
 
             // Set global variables for all options
-            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 3;
-            SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds > 0.01f ? options.SamplingIntervalSeconds : 1.0f;
+            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 5;
+            SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds > 0.01f ? options.SamplingIntervalSeconds : 2.0f;
 
             // Log all options to the custom logger
             Patches.Logger.Log($"[ModOptions] EnableCustomLog: {options.EnableCustomLog}");
@@ -82,7 +82,7 @@ namespace SensorsPlus
             if (logicPorts.outputPortInfo == null)
             {
                 logicPorts.outputPortInfo = new[] { newPort };
-                Patches.Logger.Log($"[{logContext}] Created ribbon port: {newPort.id}");
+                Patches.Logger.Log($"[{logContext}] Created ribbon port: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
             }
             else
             {
@@ -90,11 +90,11 @@ namespace SensorsPlus
                 if (!ports.Exists(p => p.id == newPort.id))
                 {
                     ports.Add(newPort);
-                    Patches.Logger.Log($"[{logContext}] Added ribbon port: {newPort.id}");
+                    Patches.Logger.Log($"[{logContext}] Added ribbon port: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
                 }
                 else
                 {
-                    Patches.Logger.Log($"[{logContext}] Ribbon port already exists: {newPort.id}");
+                    Patches.Logger.Log($"[{logContext}] Ribbon port already exists: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
                 }
                 logicPorts.outputPortInfo = ports.ToArray();
             }
@@ -203,6 +203,19 @@ namespace SensorsPlus
 
         static void Postfix(LogicPressureSensor __instance)
         {
+            var globalFrame = Time.frameCount;
+            var go = SensorMathUtils.SamplingIntervalSeconds * 30;
+            var calculationResult = globalFrame % go;
+
+            // Log the values to the custom logger  
+            Patches.Logger.Log($"[LogicPressureSensor] globalFrame: {globalFrame}, go: {go}, globalFrame % go: {calculationResult}");
+
+            if (calculationResult != 0)
+            {
+                Patches.Logger.Log($"[LogicPressureSensor] ");
+                return;
+            }
+
             var ports = __instance.GetComponent<LogicPorts>();
 
             int ribbonSignal = SensorMathUtils.ProcessSensorData(
@@ -237,6 +250,13 @@ namespace SensorsPlus
 
         static void Postfix(LogicTemperatureSensor __instance)
         {
+            var globalFrame = Time.frameCount;
+            var go = SensorMathUtils.SamplingIntervalSeconds * 30;
+            if ((globalFrame % go) != 0)
+            {
+                return;
+            }
+
             var ports = __instance.GetComponent<LogicPorts>();
 
             int ribbonSignal = SensorMathUtils.ProcessSensorData(
@@ -274,7 +294,7 @@ namespace SensorsPlus
             }
 
             var logicPorts = go.AddOrGet<LogicPorts>();
-            Patches.Logger.Log("[LogicPressureSensorGasConfig] LogicPorts component added or retrieved.");
+            //Patches.Logger.Log("[LogicPressureSensorGasConfig] LogicPorts component added or retrieved.");
 
             var newPort = new LogicPorts.Port(
                 Patches.RIBBON_PORT_ID,
@@ -303,7 +323,7 @@ namespace SensorsPlus
             }
 
             var logicPorts = go.AddOrGet<LogicPorts>();
-            Patches.Logger.Log("[LogicPressureSensorLiquidConfig] LogicPorts component added or retrieved.");
+            //Patches.Logger.Log("[LogicPressureSensorLiquidConfig] LogicPorts component added or retrieved.");
 
             var newPort = new LogicPorts.Port(
                 Patches.RIBBON_PORT_ID,
@@ -392,7 +412,7 @@ namespace SensorsPlus
         {
             if (registered) return;
             registered = true;
-            Patches.Logger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
+            //Patches.Logger.Log("[SensorSimpleInputSideScreenRegister] Registering SensorSimpleInputSideScreen.");
             // Register the side screen for both pressure and temperature sensors
             PUIUtils.AddSideScreenContent<SensorSimpleInputSideScreen>();
         }

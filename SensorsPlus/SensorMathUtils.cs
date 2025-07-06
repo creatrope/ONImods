@@ -140,7 +140,7 @@ public static class SensorMathUtils
         if (now > lastSampleTime)
         {
             float value = getCurrentValue(sensor);
-            Patches.Logger.Log($"[ProcessSensorData] Adding new sample. Value: {value}");
+            //Patches.Logger.Log($"[ProcessSensorData] Adding new sample. Value: {value}");
             UpdateAndGetFirstDerivative(derivativeStates, sensor, now, value, samplingIntervalSeconds);
             lastSampleTimes[sensor] = now;
         }
@@ -167,8 +167,7 @@ public static class SensorMathUtils
         bit1 = above ? bit1 : !bit1;
         bit2 = above ? bit2 : !bit2;
 
-        //Patches.Logger.Log($"[ProcessSensorData] Bit1: {bit1}, Bit2: {bit2}");
-
+        Patches.Logger.Log($"[ProcessSensorData] p: {p}, d: {d}, f: {f} => {bit0} {bit1} {bit2}");
         int result = (bit0 ? 1 : 0)
                    | (bit1 ? (1 << 1) : 0)
                    | (bit2 ? (1 << 2) : 0);

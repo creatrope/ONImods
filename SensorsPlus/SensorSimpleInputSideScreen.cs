@@ -50,7 +50,7 @@ namespace SensorsPlus
 
         protected override void OnPrefabInit()
         {
-            Patches.Logger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
+            //Patches.Logger.Log("[SensorSimpleInputSideScreen] OnPrefabInit called.");
             base.OnPrefabInit();
         }
 
@@ -157,7 +157,7 @@ namespace SensorsPlus
                     derivativeText = textChild.GetComponent<TMP_Text>();
                     if (derivativeText != null)
                     {
-                        Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: TMP_Text assigned.");
+                        //Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: TMP_Text assigned.");
                         derivativeText.alignment = TMPro.TextAlignmentOptions.Left;
                     }
                     else
@@ -177,7 +177,7 @@ namespace SensorsPlus
             rowGO.transform.SetParent(container.transform, false);
             rowGO.transform.SetAsLastSibling();
 
-            Patches.Logger.Log("[SensorSimpleInputSideScreen] Added text fields, threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
+            //Patches.Logger.Log("[SensorSimpleInputSideScreen] Added text fields, threshold label, input field, derivative label, and output field below default UI (OnSpawn).");
         }
 
         private void UpdateDerivativeLabel()

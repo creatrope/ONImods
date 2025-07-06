@@ -85,6 +85,7 @@
     <Compile Include="SensorInputValueComponent.cs" />
     <Compile Include="SensorMathUtils.cs" />
     <Compile Include="SensorSimpleInputSideScreen.cs" />
+    <Compile Include="SensorState.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
