@@ -65,12 +65,11 @@ namespace SensorsPlus
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
             Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
             Patches.Logger.Reset();
-            var optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
-            Patches.Logger.Log($"[ModOptions Debug] Options JSON: {optionsJson}");
+
 
             // Set global variables for all options
-            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 3;
-            SensorMathUtils.SamplingIntervalSeconds = (options.SamplingIntervalSeconds > 0.01f) ? options.SamplingIntervalSeconds : 3.0f;
+            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow;
+            SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds;
 
             // Log all options to the custom logger
             Patches.Logger.Log($"[ModOptions] EnableCustomLog: {options.EnableCustomLog}");
@@ -155,12 +154,12 @@ namespace SensorsPlus
         [Option("Moving Average Window", "Number of samples for the moving average of the derivative.")]
         [Limit(1, 32)]
         [JsonProperty] // Add JSON property for serialization
-        public int MovingAverageWindow { get; set; } = 2;
+        public int MovingAverageWindow { get; set; } = 3;
 
         [Option("Sampling Interval (seconds)", "How often sensors sample values (in seconds).")]
         [Limit(0.5, 30.0)]
         [JsonProperty] // Add JSON property for serialization
-        public float SamplingIntervalSeconds { get; set; } = 2.0f;
+        public float SamplingIntervalSeconds { get; set; } = 3.0f;
     }
 
     public class Mod : UserMod2
