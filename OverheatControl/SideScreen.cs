@@ -89,10 +89,12 @@ namespace OverheatControl
             {
                 Text = "Building: N/A, Instance ID: N/A",
                 TextStyle = PUITuning.Fonts.TextDarkStyle
-            };
+            }.AddOnRealize(go =>
+            {
+                idLocText = go.transform.Find("Text")?.GetComponent<TMP_Text>();
+                Patches.Logger.Log($"[SimpleSideScreen] OnRealize: idLocText assigned? {idLocText != null}");
+            });
 
-            // Correctly initialize idLocText using TMP_Text directly
-            idLocText = idLabel.Build().GetComponentInChildren<TMP_Text>();
             panel.AddChild(idLabel);
 
             var panelgo = panel.Build();

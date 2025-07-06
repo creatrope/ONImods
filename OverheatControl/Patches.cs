@@ -30,6 +30,10 @@ namespace OverheatControl
         // Change Logger field to public static
         public static readonly CustomLogger Logger = new CustomLogger("OverheatControl");
 
+        // Add static variables to store the settings
+        public static float ShutdownPercent { get; private set; }
+        public static float RestorePercent { get; private set; }
+
         static Patches()
         {
             if (staticInitialized)
@@ -58,6 +62,14 @@ namespace OverheatControl
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
             Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
             Patches.Logger.Reset();
+
+            // Read settings and store them in static variables for global access
+            ShutdownPercent = options.ShutdownPercent;
+            RestorePercent = options.RestorePercent;
+
+            // Serialize options to JSON and log them
+            string optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
+            Patches.Logger.Log($"[OverheatControl] Settings loaded:\n{optionsJson}");
         }
 
         // Add a method to log cycle changes
@@ -155,14 +167,14 @@ namespace OverheatControl
         [JsonProperty] // Add JSON property for serialization
         public bool EnableCustomLog { get; set; } = false;
 
-        [Option("Max %", "Turn Off % of Overheat Temp")]
+        [Option("Max %", "Shutdown @ % of Overheat Temp")]
         [Limit(5, 100)]
         [JsonProperty] // Add JSON property for serialization
-        public float MaxPercent { get; set; } = 90.0f;
-        [Option("Min %", "Turn Back On % of Overheat Temp")]
+        public float ShutdownPercent { get; set; } = 50.0f;
+        [Option("Min %", "Restore % of Overheat Temp")]
         [Limit(5, 100)]
         [JsonProperty] // Add JSON property for serialization
-        public float MinPercent { get; set; } = 80.0f;
+        public float RestorePercent { get; set; } = 40.0f;
     }
 
     public class Mod : UserMod2
@@ -245,12 +257,12 @@ namespace OverheatControl
                 if (primaryElement != null)
                 {
                     float overheat = def.OverheatTemperature - 273.15f; // Convert Kelvin to Celsius
-                    float shutdownThreshold = overheat * 0.5f;
-                    float restoreThreshold = overheat * 0.4f;
+                    float shutdownThreshold = overheat * (Patches.ShutdownPercent / 100f);
+                    float restoreThreshold = overheat * (Patches.RestorePercent / 100f);
 
                     float currentTemperature = primaryElement.Temperature - 273.15f; // Convert Kelvin to Celsius
 
-                    Patches.Logger.Log($"[Building] Checking Instance: {name}({instanceId}), {currentTemperature} vs overheat@{overheat}");
+                    //Patches.Logger.Log($"[Building] Checking Instance: {name}({instanceId}), {currentTemperature} vs overheat@{overheat}");
 
                     if (state == "active" && currentTemperature >= shutdownThreshold)
                     {
