@@ -65,10 +65,12 @@ namespace SensorsPlus
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
             Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
             Patches.Logger.Reset();
+            var optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
+            Patches.Logger.Log($"[ModOptions Debug] Options JSON: {optionsJson}");
 
             // Set global variables for all options
-            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 5;
-            SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds > 0.01f ? options.SamplingIntervalSeconds : 2.0f;
+            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 3;
+            SensorMathUtils.SamplingIntervalSeconds = (options.SamplingIntervalSeconds > 0.01f) ? options.SamplingIntervalSeconds : 3.0f;
 
             // Log all options to the custom logger
             Patches.Logger.Log($"[ModOptions] EnableCustomLog: {options.EnableCustomLog}");
@@ -143,19 +145,20 @@ namespace SensorsPlus
             }
         }
     }
+
     public class ModOptions
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         [JsonProperty] // Add JSON property for serialization
-        public bool EnableCustomLog { get; set; } = true;
+        public bool EnableCustomLog { get; set; } = false;
 
-        [Option("Moving Average Window", "Number of samples for the moving average of the derivative (minimum 1).")]
+        [Option("Moving Average Window", "Number of samples for the moving average of the derivative.")]
         [Limit(1, 32)]
         [JsonProperty] // Add JSON property for serialization
-        public int MovingAverageWindow { get; set; } = 5;
+        public int MovingAverageWindow { get; set; } = 2;
 
-        [Option("Sampling Interval (seconds)", "How often sensors sample values (in seconds). Default is 1.0.")]
-        [Limit(0.05, 10.0)]
+        [Option("Sampling Interval (seconds)", "How often sensors sample values (in seconds).")]
+        [Limit(0.5, 30.0)]
         [JsonProperty] // Add JSON property for serialization
         public float SamplingIntervalSeconds { get; set; } = 2.0f;
     }
@@ -166,24 +169,8 @@ namespace SensorsPlus
 
         public override void OnLoad(Harmony harmony)
         {
-            // Load options and set logger enabled flag
-            var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
-
-            // Set the moving average window globally
-            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 3;
-
-            // Set the sampling interval globally
-            SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds > 0.01f ? options.SamplingIntervalSeconds : 1.0f;
-
             onLoadCount++;
-            var uniqueId = Guid.NewGuid();
-            var timestamp = System.DateTime.Now.ToString("O");
-            var domain = AppDomain.CurrentDomain.FriendlyName;
-            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            Patches.Logger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount} | {timestamp} | {uniqueId} | Domain: {domain} | Thread: {threadId}");
-
-            Patches.Logger.Log("SensorsPlus: Mod.OnLoad called.");
-
+            Patches.Logger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount}");
             SensorsPlus.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
             base.OnLoad(harmony);
 
@@ -199,42 +186,63 @@ namespace SensorsPlus
         public static readonly ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>> DerivativeStates =
             new ConditionalWeakTable<LogicPressureSensor, SensorMathUtils.DerivativeState<LogicPressureSensor>>();
 
-        private static Dictionary<LogicPressureSensor, float> _lastSampleTimes;
+        private static Dictionary<LogicPressureSensor, float> _lastSampleTimes = new Dictionary<LogicPressureSensor, float>();
 
         static void Postfix(LogicPressureSensor __instance)
         {
-            var globalFrame = Time.frameCount;
-            var go = SensorMathUtils.SamplingIntervalSeconds * 30;
-            var calculationResult = globalFrame % go;
+            var id = __instance.gameObject.GetInstanceID();
+            //Patches.Logger.Log("$[Sim200ms] Processing {id}.");
 
-            // Log the values to the custom logger  
-            Patches.Logger.Log($"[LogicPressureSensor] globalFrame: {globalFrame}, go: {go}, globalFrame % go: {calculationResult}");
-
-            if (calculationResult != 0)
+            var counterComponent = __instance.GetComponent<SensorCounterComponent>();
+            if (counterComponent == null)
             {
-                Patches.Logger.Log($"[LogicPressureSensor] ");
-                return;
+                //Patches.Logger.Log($"[Sim200ms] {id} SensorCounterComponent is null. Skipping processing.");
+                return; // Exit early to avoid NullReferenceException
             }
 
+            // Initialize if needed
+            if (counterComponent.Init == 0)
+            {
+                counterComponent.Init = 1;
+                counterComponent.Target = (int)(SensorMathUtils.SamplingIntervalSeconds / 0.2);
+                Patches.Logger.Log($"[LogicPressureSensor] {id} target {counterComponent.Target}");
+
+            }
+            int incr = counterComponent.Increment();
+            int target = counterComponent.Target;
+            //Patches.Logger.Log($"[LogicPressureSensor] {id} count={incr}, target={target}");
+            if (incr < target)
+            {
+                //Patches.Logger.Log($"[LogicPressureSensor] {incr}<{target}, Skipping processing.");
+                return;
+            }
+            counterComponent.Reset();
+            // proceeding
+
             var ports = __instance.GetComponent<LogicPorts>();
+            if (ports == null)
+            {
+                Patches.Logger.Log("[LogicPressureSensor] LogicPorts is null. Skipping processing.");
+                return; // Exit early to avoid NullReferenceException
+            }
 
             int ribbonSignal = SensorMathUtils.ProcessSensorData(
-                __instance,
-                DerivativeStates,
-                ref _lastSampleTimes,
-                Patches.RIBBON_PORT_ID,
-                SensorMathUtils.SamplingIntervalSeconds,
-                SensorMathUtils.MovingAverageWindow,
-                sensor => sensor.CurrentValue,
-                sensor => sensor.IsSwitchedOn,
-                sensor => sensor.ActivateAboveThreshold,
-                sensor =>
-                {
-                    var inputValueComponent = sensor.GetComponent<SensorInputValueComponent>();
-                    return inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
-                },
-                sensor => sensor.GetComponent<LogicPorts>()
-            );
+                    __instance,
+                    DerivativeStates,
+                    ref _lastSampleTimes,
+                    Patches.RIBBON_PORT_ID,
+                    SensorMathUtils.SamplingIntervalSeconds,
+                    SensorMathUtils.MovingAverageWindow,
+                    sensor => sensor.CurrentValue,
+                    sensor => sensor.IsSwitchedOn,
+                    sensor => sensor.ActivateAboveThreshold,
+                    sensor =>
+                    {
+                        var inputValueComponent = sensor.GetComponent<SensorInputValueComponent>();
+                        return inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
+                    },
+                    sensor => sensor.GetComponent<LogicPorts>()
+                );
 
             ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal);
         }
@@ -250,13 +258,9 @@ namespace SensorsPlus
 
         static void Postfix(LogicTemperatureSensor __instance)
         {
-            var globalFrame = Time.frameCount;
-            var go = SensorMathUtils.SamplingIntervalSeconds * 30;
-            if ((globalFrame % go) != 0)
-            {
-                return;
-            }
+            //var id = __instance.gameObject.GetInstanceID();
 
+            // proceeding  
             var ports = __instance.GetComponent<LogicPorts>();
 
             int ribbonSignal = SensorMathUtils.ProcessSensorData(
@@ -293,8 +297,11 @@ namespace SensorsPlus
                 return;
             }
 
+            // Log GameObject InstanceID for debugging
+            Patches.Logger.Log($"[LogicPressureSensorGasConfig] GameObject InstanceID: {go.GetInstanceID()}");
+
             var logicPorts = go.AddOrGet<LogicPorts>();
-            //Patches.Logger.Log("[LogicPressureSensorGasConfig] LogicPorts component added or retrieved.");
+            var counterComponent = go.AddOrGet<SensorCounterComponent>();
 
             var newPort = new LogicPorts.Port(
                 Patches.RIBBON_PORT_ID,
@@ -323,7 +330,7 @@ namespace SensorsPlus
             }
 
             var logicPorts = go.AddOrGet<LogicPorts>();
-            //Patches.Logger.Log("[LogicPressureSensorLiquidConfig] LogicPorts component added or retrieved.");
+            var counterComponent = go.AddOrGet<SensorCounterComponent>();
 
             var newPort = new LogicPorts.Port(
                 Patches.RIBBON_PORT_ID,
@@ -352,7 +359,7 @@ namespace SensorsPlus
             }
 
             var logicPorts = go.AddOrGet<LogicPorts>();
-            Patches.Logger.Log("[LogicTemperatureSensorConfig] LogicPorts component added or retrieved.");
+            var counterComponent = go.AddOrGet<SensorCounterComponent>(); // Attach the counter component
 
             var newPort = new LogicPorts.Port(
                 Patches.RIBBON_PORT_ID,
@@ -416,5 +423,28 @@ namespace SensorsPlus
             // Register the side screen for both pressure and temperature sensors
             PUIUtils.AddSideScreenContent<SensorSimpleInputSideScreen>();
         }
+    }
+}
+
+// Define a reusable component for the counter  
+public class SensorCounterComponent : MonoBehaviour
+{
+    public int Init { get; set; } = 0;
+
+    private int _counter;
+    public int Target { get; set; } = 6;
+
+    public int Counter
+    {
+        get => _counter;
+        set => _counter = value;
+    }
+
+    public void Reset() => Counter = 0; // Use the property to reset
+
+    public int Increment()
+    {
+        Counter++; // Increment the property instead of the field
+        return Counter;
     }
 }

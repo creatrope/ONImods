@@ -82,6 +82,7 @@
     <Compile Include="ModOptions.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SensorCounterComponent.cs" />
     <Compile Include="SensorInputValueComponent.cs" />
     <Compile Include="SensorMathUtils.cs" />
     <Compile Include="SensorSimpleInputSideScreen.cs" />

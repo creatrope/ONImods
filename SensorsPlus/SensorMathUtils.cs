@@ -120,6 +120,8 @@ public static class SensorMathUtils
         Func<TSensor, LogicPorts> getLogicPorts // Added parameter
     ) where TSensor : class
     {
+        //Patches.Logger.Log($"[ProcessSensorData] ProcessSensorData for {id}");
+
         var ports = getLogicPorts(sensor); // Use the provided function to get LogicPorts
         if (!HasRibbonPort(ports, ribbonPortId))
         {
