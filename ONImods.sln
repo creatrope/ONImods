@@ -4,12 +4,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.13.35828.75
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
-	ProjectSection(SolutionItems) = preProject
-		SensorsPlus\IThresholdSwitchState.cs = SensorsPlus\IThresholdSwitchState.cs
-		MinionTodoSideScreen.cs = MinionTodoSideScreen.cs
-		SensorsPlus\MyThresholdSwitch.cs = SensorsPlus\MyThresholdSwitch.cs
-		SensorsPlus\ThresholdSwitchStateComponentBase.cs = SensorsPlus\ThresholdSwitchStateComponentBase.cs
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSweeperTempFilter", "AutoSweeperTempFilter\AutoSweeperTempFilter.csproj", "{E0FC33A2-DD84-4A98-AB3D-C9C715DA1384}"
 EndProject
@@ -33,6 +27,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HLib", "HLib\HLib.csproj", "{F446A1C4-7859-4B1A-A508-32997511C3BF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SensorsPlus", "SensorsPlus\SensorsPlus.csproj", "{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OverheatControl", "OverheatControl\OverheatControl.csproj", "{BCC262A4-88E4-40E2-B17C-ED775AFD016C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -60,6 +56,10 @@ Global
 		{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCC262A4-88E4-40E2-B17C-ED775AFD016C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCC262A4-88E4-40E2-B17C-ED775AFD016C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCC262A4-88E4-40E2-B17C-ED775AFD016C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCC262A4-88E4-40E2-B17C-ED775AFD016C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
