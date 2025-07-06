@@ -64,7 +64,16 @@ namespace SensorsPlus
         {
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
             Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
+            Patches.Logger.Reset();
 
+            // Set global variables for all options
+            SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow > 0 ? options.MovingAverageWindow : 3;
+            SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds > 0.01f ? options.SamplingIntervalSeconds : 1.0f;
+
+            // Log all options to the custom logger
+            Patches.Logger.Log($"[ModOptions] EnableCustomLog: {options.EnableCustomLog}");
+            Patches.Logger.Log($"[ModOptions] MovingAverageWindow: {SensorMathUtils.MovingAverageWindow}");
+            Patches.Logger.Log($"[ModOptions] SamplingIntervalSeconds: {SensorMathUtils.SamplingIntervalSeconds}");
         }
 
         // Utility method to add or update a ribbon port
@@ -184,37 +193,6 @@ namespace SensorsPlus
         }
     }
 
-    public class SensorOutputType
-    {
-        public static readonly SensorOutputType Single = new SensorOutputType("Single");
-        public static readonly SensorOutputType RibbonCable = new SensorOutputType("RibbonCable");
-
-        public string Name { get; }
-
-        private SensorOutputType(string name) { Name = name; }
-
-        public override string ToString() => Name;
-    } 
-
-    public static class SensorOutputManager
-    {
-        private static readonly ConditionalWeakTable<object, SensorOutputType> OutputTypes =
-            new ConditionalWeakTable<object, SensorOutputType>();
-
-        public static SensorOutputType GetOutputType(object sensor)
-        {
-            if (OutputTypes.TryGetValue(sensor, out var type))
-                return type;
-            return SensorOutputType.Single;
-        }
-
-        public static void SetOutputType(object sensor, SensorOutputType type)
-        {
-            OutputTypes.Remove(sensor);
-            OutputTypes.Add(sensor, type);
-        }
-    }   
-
     [HarmonyPatch(typeof(LogicPressureSensor), "Sim200ms")]
     public static class LogicPressureSensor_Sim200ms_Patch
     {
@@ -225,25 +203,7 @@ namespace SensorsPlus
 
         static void Postfix(LogicPressureSensor __instance)
         {
-            //Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] Processing sensor: {__instance.name}");
-            //Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] CurrentValue: {__instance.CurrentValue}, IsSwitchedOn: {__instance.IsSwitchedOn}, ActivateAboveThreshold: {__instance.ActivateAboveThreshold}");
-
             var ports = __instance.GetComponent<LogicPorts>();
-
-            // Check if the port has a ribbon cable or a single automation connected
-            var outputType = SensorOutputManager.GetOutputType(__instance);
-            if (outputType == SensorOutputType.RibbonCable)
-            {
-                Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] Ribbon cable detected for sensor: {__instance.name}");
-            }
-            else if (outputType == SensorOutputType.Single)
-            {
-                Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] Single automation detected for sensor: {__instance.name}");
-            }
-            else
-            {
-                Patches.Logger.Log($"[LogicPressureSensor_Sim200ms_Patch] Unknown output type for sensor: {__instance.name}");
-            }
 
             int ribbonSignal = SensorMathUtils.ProcessSensorData(
                 __instance,
@@ -263,7 +223,7 @@ namespace SensorsPlus
                 sensor => sensor.GetComponent<LogicPorts>()
             );
 
-            ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal); // Directly use the hardcoded port ID
+            ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal);
         }
     }
 
@@ -277,10 +237,8 @@ namespace SensorsPlus
 
         static void Postfix(LogicTemperatureSensor __instance)
         {
-            //Patches.Logger.Log($"[LogicTemperatureSensor_Sim200ms_Patch] Processing sensor: {__instance.name}");
-            //Patches.Logger.Log($"[LogicTemperatureSensor_Sim200ms_Patch] CurrentValue: {__instance.CurrentValue}, IsSwitchedOn: {__instance.IsSwitchedOn}, ActivateAboveThreshold: {__instance.ActivateAboveThreshold}");
-
             var ports = __instance.GetComponent<LogicPorts>();
+
             int ribbonSignal = SensorMathUtils.ProcessSensorData(
                 __instance,
                 DerivativeStates,
@@ -299,7 +257,7 @@ namespace SensorsPlus
                 sensor => sensor.GetComponent<LogicPorts>()
             );
 
-            ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal); // Directly use the hardcoded port ID
+            ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal);
         }
     }
 
