@@ -117,15 +117,16 @@ public static class SensorMathUtils
         Func<TSensor, bool> isSwitchedOn,
         Func<TSensor, bool> activateAboveThreshold,
         Func<TSensor, float> getThreshold,
-        Func<TSensor, LogicPorts> getLogicPorts // Added parameter
+        Func<TSensor, LogicPorts> getLogicPorts, // Added parameter
+        int instanceId // New parameter
     ) where TSensor : class
     {
-        //Patches.Logger.Log($"[ProcessSensorData] ProcessSensorData for {id}");
+        Patches.Logger.Log($"[ProcessSensorData] Processing sensor with Instance ID: {instanceId}");
 
         var ports = getLogicPorts(sensor); // Use the provided function to get LogicPorts
         if (!HasRibbonPort(ports, ribbonPortId))
         {
-            Patches.Logger.Log($"[ProcessSensorData] Sensor {sensor} does not have ribbon port {ribbonPortId}.");
+            Patches.Logger.Log($"[ProcessSensorData] Sensor {sensor} (Instance ID: {instanceId}) does not have ribbon port {ribbonPortId}.");
             return 0;
         }
 
@@ -136,13 +137,11 @@ public static class SensorMathUtils
         float lastSampleTime = -1f;
         lastSampleTimes.TryGetValue(sensor, out lastSampleTime);
 
-        //Patches.Logger.Log($"[ProcessSensorData] Current time: {now}, Last sample time: {lastSampleTime}");
-
         // Only add a new sample if time has advanced
         if (now > lastSampleTime)
         {
             float value = getCurrentValue(sensor);
-            //Patches.Logger.Log($"[ProcessSensorData] Adding new sample. Value: {value}");
+            Patches.Logger.Log($"[ProcessSensorData] Adding new sample for sensor (Instance ID: {instanceId}). Value: {value}");
             UpdateAndGetFirstDerivative(derivativeStates, sensor, now, value, samplingIntervalSeconds);
             lastSampleTimes[sensor] = now;
         }
@@ -151,13 +150,12 @@ public static class SensorMathUtils
         if (derivativeStates.TryGetValue(sensor, out var state))
         {
             smoothedDerivative = state.ComputeMovingAverageFirstDerivative(movingAverageWindow);
-            //Patches.Logger.Log($"[ProcessSensorData] Smoothed derivative: {smoothedDerivative}");
+            Patches.Logger.Log($"[ProcessSensorData] Smoothed derivative for sensor (Instance ID: {instanceId}): {smoothedDerivative}");
         }
 
         float threshold = getThreshold(sensor);
         bool above = activateAboveThreshold(sensor);
         bool bit0 = isSwitchedOn(sensor);
-        //Patches.Logger.Log($"[ProcessSensorData] Threshold: {threshold}, Above: {above}, Bit0: {bit0}");
 
         bool p = bit0; // above or below target pressure
         bool f = Math.Abs(smoothedDerivative) > Math.Abs(threshold); // fast change flag
@@ -169,12 +167,12 @@ public static class SensorMathUtils
         bit1 = above ? bit1 : !bit1;
         bit2 = above ? bit2 : !bit2;
 
-        Patches.Logger.Log($"[ProcessSensorData] p: {p}, d: {d}, f: {f} => {bit0} {bit1} {bit2}");
+        Patches.Logger.Log($"[ProcessSensorData] Sensor (Instance ID: {instanceId}), p: {p}, d: {d}, f: {f} => {bit0} {bit1} {bit2}");
         int result = (bit0 ? 1 : 0)
                    | (bit1 ? (1 << 1) : 0)
                    | (bit2 ? (1 << 2) : 0);
 
-        //Patches.Logger.Log($"[ProcessSensorData] Final result: {result}");
+        Patches.Logger.Log($"[ProcessSensorData] Final result for sensor (Instance ID: {instanceId}): {result}");
         return result;
     }
 }

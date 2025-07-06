@@ -240,7 +240,8 @@ namespace SensorsPlus
                         var inputValueComponent = sensor.GetComponent<SensorInputValueComponent>();
                         return inputValueComponent != null ? inputValueComponent.parsedValue : 1.0f;
                     },
-                    sensor => sensor.GetComponent<LogicPorts>()
+                    sensor => sensor.GetComponent<LogicPorts>(),
+                    __instance.gameObject.GetInstanceID() // Pass instance ID
                 );
 
             ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal);
@@ -277,7 +278,8 @@ namespace SensorsPlus
                     var inputValueComponent = sensor.GetComponent<SensorInputValueComponent>();
                     return inputValueComponent != null ? inputValueComponent.parsedValue : 0.1f;
                 },
-                sensor => sensor.GetComponent<LogicPorts>()
+                sensor => sensor.GetComponent<LogicPorts>(),
+                __instance.gameObject.GetInstanceID() // Pass instance ID
             );
 
             ports.SendSignal(Patches.RIBBON_PORT_ID, ribbonSignal);
