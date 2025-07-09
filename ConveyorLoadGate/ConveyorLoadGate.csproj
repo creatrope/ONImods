@@ -2,13 +2,16 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
+    <ModName>ConveyorLoadGate</ModName>
+  </PropertyGroup>
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{80BEB3A4-19BF-4E7C-AA44-DE3280DA9D5B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ConveyorLoadGate</RootNamespace>
-    <AssemblyName>ConveyorLoadGate</AssemblyName>
+    <RootNamespace>$(ModName)</RootNamespace>
+    <AssemblyName>$(ModName)</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -41,7 +44,7 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>..\..\..\ONI\Assembly-CSharp\lib\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -54,6 +57,9 @@
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.UI.dll</HintPath>
@@ -70,10 +76,22 @@
     <None Include="mod_info.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
-  <!-- Run shared deploy script one directory up -->
-  <Target Name="RunDeploy" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(MSBuildProjectDirectory)\..\deploy.bat&quot; &quot;$(MSBuildProjectDirectory)&quot;" />
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Message Text="$(ModName) PostBuild target running!" Importance="high" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\$(ModName)\" OverwriteReadOnlyFiles="true" />
+  </Target>
+  <Target Name="CopyModYamlFiles" AfterTargets="Build">
+    <PropertyGroup>
+      <ONIModsDir>$(USERPROFILE)\Documents\Klei\OxygenNotIncluded\mods\local\$(ModName)</ONIModsDir>
+    </PropertyGroup>
+    <MakeDir Directories="$(ONIModsDir)" />
+    <ItemGroup>
+      <ModYamlFiles Include="mod.yaml" />
+      <ModYamlFiles Include="mod_info.yaml" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ModYamlFiles)" DestinationFolder="$(ONIModsDir)" SkipUnchangedFiles="true" />
   </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
