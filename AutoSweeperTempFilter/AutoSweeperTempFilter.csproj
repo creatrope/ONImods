@@ -95,10 +95,15 @@
     </ProjectReference>
   </ItemGroup>
   <!-- ILRepack and Deploy Targets -->
+  <ItemGroup>
+    <AnimFiles Include="anim\**\*" />
+    <AnimDir Include="anim\**\*" />
+  </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
     <Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
     <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+
   </Target>
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(Plib)&quot;" />
@@ -107,5 +112,17 @@
 		<Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
 		<Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).pdb" />
 	</Target>
+  <Target Name="CopyAnimDirectory" AfterTargets="Build">
+    <RemoveDir Directories="$(DeploymentBasePath)$(ProjectName)\anim" />
+    <MakeDir Directories="$(DeploymentBasePath)$(ProjectName)\anim" />
+    <Copy
+      SourceFiles="@(AnimFiles)"
+      DestinationFiles="@(AnimFiles->'$(DeploymentBasePath)$(ProjectName)\anim\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+      OverwriteReadOnlyFiles="true" />
+  </Target>
+  <ItemGroup>
+    <AnimFiles Include="anim\**\*" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
