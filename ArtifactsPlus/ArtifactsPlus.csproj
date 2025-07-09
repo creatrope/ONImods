@@ -112,8 +112,8 @@
   <!-- Example: Delete an unknown file after ILRepack -->
 </Target>
     <Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
-    <Delete Files="$(DeploymentBasePath)$(ProjectName)\ArtifactsPlus.dll.config" />
-    <Delete Files="$(DeploymentBasePath)$(ProjectName)\ArtifactsPlus.pdb" />
+		<Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
+		<Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).pdb" />
   </Target>
 	<Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
