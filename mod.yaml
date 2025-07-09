@@ -1,3 +1,0 @@
-# Ensure only the merged SensorsP.dll is referenced in your mod.yaml
-files:
-  - file: SensorsP.dll

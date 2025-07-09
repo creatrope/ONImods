@@ -14,15 +14,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Archive", "Archive", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Templates", "Templates", "{186AE015-10F6-41DD-8663-E7DB169DA089}"
-	ProjectSection(SolutionItems) = preProject
-		..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\mod.yaml = ..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\mod.yaml
-		..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\mod_info.yaml = ..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\mod_info.yaml
-		..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\MyTemplate.vstemplate = ..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\MyTemplate.vstemplate
-		..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\OM6.csproj = ..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\OM6.csproj
-		..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\packages.config = ..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\packages.config
-		..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\Patches.cs = ..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\Patches.cs
-		..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\__TemplateIcon.ico = ..\..\Visual Studio 2022\Templates\ProjectTemplates\OM6\__TemplateIcon.ico
-	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HLib", "HLib\HLib.csproj", "{F446A1C4-7859-4B1A-A508-32997511C3BF}"
 EndProject
