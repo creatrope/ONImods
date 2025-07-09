@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<PropertyGroup>
-		<!-- Single source of truth for ILRepack path -->
-		<ILRepackExe>$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe</ILRepackExe>
-		<!-- Define a reusable property for the project name -->
+		 <!-- Define a reusable property for the project name -->
 		<ProjectName>OverheatControl</ProjectName>
+		<Plib>C:\Users\sendh\Documents\Github\Sendhb-ONI\packages\PLib.4.17.1\lib\net471\PLib.dll</Plib>
+
 		<!-- Define a reusable property for the base deployment path -->
 		<DeploymentBasePath>C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\</DeploymentBasePath>
 	</PropertyGroup>
@@ -21,7 +21,6 @@
 		<FileAlignment>512</FileAlignment>
 		<Deterministic>true</Deterministic>
 		<TargetFrameworkProfile />
-		<MergedAssemblyName>$(OutputPath)$(ProjectName).Merged.dll</MergedAssemblyName>
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
 		<DebugSymbols>true</DebugSymbols>
@@ -104,13 +103,7 @@
 		<Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
 	</Target>
 	<Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-		<Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).Merged.dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(SolutionDir)lib\PLib.dll&quot;" />
-		<Copy SourceFiles="$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).Merged.dll" DestinationFiles="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll" OverwriteReadOnlyFiles="true" />
-	</Target>
-	<!-- Remove the merged file after deployment to avoid it being picked up by the next build -->
-	<Target Name="CleanMergedAfterDeploy" AfterTargets="RunDeploy" Condition="'$(Configuration)' == 'Release'">
-		<Delete Files="$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).Merged.dll" />
-		<Delete Files="$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).Merged.pdb" />
+		<Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(Plib)&quot;" />
 	</Target>
 	<Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
