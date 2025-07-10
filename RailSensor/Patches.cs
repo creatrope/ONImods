@@ -145,7 +145,6 @@ namespace RailSensor
     {
         public override void OnLoad(Harmony harmony)
         {
-            Patches.Logger.Log("Mod.OnLoad called.");
             RailSensor.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
             base.OnLoad(harmony);
 
@@ -163,90 +162,15 @@ namespace RailSensor
 
         public static void Postfix()
         {
-            Patches.Logger.Log("DetailsScreen.OnPrefabInit Postfix called.");
             if (registered)
             {
-                Patches.Logger.Log("SideScreenRegister: already registered, skipping.");
                 return;
             }
             registered = true; // This assignment is now valid
             PUIUtils.AddSideScreenContent<SimpleSideScreen>();
-            Patches.Logger.Log("SideScreenRegister: SimpleSideScreen registered.");
         }
     }
 
-    public class AnythingOnConduitSensor : ConduitSensor
-    {
-        protected override void OnSpawn()
-        {
-            base.OnSpawn();
-            Patches.Logger.Log($"AnythingOnConduitSensor.OnSpawn called for {gameObject?.name ?? "null"}.");
-        }
-
-        protected override void ConduitUpdate(float dt)
-        {
-            int cell = Grid.PosToCell((KMonoBehaviour)this);
-            bool hasAnything = GetHasAnything(cell);
-            Patches.Logger.Log($"AnythingOnConduitSensor.ConduitUpdate: hasAnything={hasAnything}, IsSwitchedOn={IsSwitchedOn}");
-
-            if (!this.IsSwitchedOn)
-            {
-                if (!hasAnything)
-                {
-                    Patches.Logger.Log("AnythingOnConduitSensor.ConduitUpdate: Nothing present, sensor remains OFF.");
-                    return;
-                }
-                this.Toggle();
-                Patches.Logger.Log("AnythingOnConduitSensor.ConduitUpdate: Detected item(s), toggling sensor ON.");
-            }
-            else
-            {
-                if (hasAnything)
-                {
-                    Patches.Logger.Log("AnythingOnConduitSensor.ConduitUpdate: Item(s) still present, sensor remains ON.");
-                    return;
-                }
-                this.Toggle();
-                Patches.Logger.Log("AnythingOnConduitSensor.ConduitUpdate: No items present, toggling sensor OFF.");
-            }
-        }
-
-        private bool GetHasAnything(int cell)
-        {
-            //Patches.Logger.Log($"AnythingOnConduitSensor.GetHasAnything: cell={cell}, conduitType={conduitType}");
-
-            if (this.conduitType == ConduitType.Liquid || this.conduitType == ConduitType.Gas)
-            {
-                var contents = Conduit.GetFlowManager(this.conduitType).GetContents(cell);
-                string elementName = contents.element != null ? contents.element.ToString() : "null";
-                Patches.Logger.Log($"[DEBUG] Liquid/Gas contents: element={elementName}, mass={contents.mass}, temperature={contents.temperature}");
-                bool result = contents.mass > 0.0f;
-                Patches.Logger.Log($"AnythingOnConduitSensor.GetHasAnything: Liquid/Gas mass={contents.mass}, result={result}");
-                return result;
-            }
-            else // Solid conduit (rail)
-            {
-                var flowManager = SolidConduit.GetFlowManager();
-                var solidContents = flowManager.GetContents(cell);
-                var handle = solidContents.pickupableHandle;
-                var pickupable = flowManager.GetPickupable(handle);
-                string pickupableInfo = pickupable != null
-                    ? $"name={pickupable.name}, element={pickupable.PrimaryElement?.Element?.tag}, mass={pickupable.PrimaryElement?.Mass}"
-                    : "null";
-                //Patches.Logger.Log($"[DEBUG] Solid contents: handle={handle}, pickupable={pickupableInfo}");
-
-                if (pickupable) {
-                    //Patches.Logger.Log($"*** Found {pickupable.ToString()} with filter {filterElement}");
-                    Patches.Logger.Log($"*** Found {pickupable.ToString()}");
-                    return true;
-                }
-                return false;
-       
-            }
-        }
-    }
-
-    // Harmony patch to handle "Anything" logic in ConduitElementSensor
     [HarmonyPatch(typeof(ConduitElementSensor), "ConduitUpdate")]
     public static class ConduitElementSensor_ConduitUpdate_Patch
     {
@@ -292,7 +216,6 @@ namespace RailSensor
                     {
                         element = pickupable.PrimaryElement != null ? pickupable.PrimaryElement.Element.tag : Tag.Invalid;
                         Tag at = Filterable_GetTagOptions_Patch.AnythingTag;
-                        Patches.Logger.Log($"->AnythingTag.hc: {at.GetHashCode()}, selectedTag.hc = {selectedTag.GetHashCode()}");
 
                         trigger = (element == selectedTag || selectedTag == at);
                         Patches.Logger.Log($"pickupable={element} {selectedTag} {trigger}");
