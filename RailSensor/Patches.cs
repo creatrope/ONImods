@@ -21,10 +21,7 @@ namespace RailSensor
 {
     public class Patches
     {
-        // Change from private to public so HotkeyListenerUpdater can access it
-        public static readonly HLib.HotkeyListener hotkeyListener;
 
-        // Add a guard to prevent double static initialization
         private static bool staticInitialized = false;
 
         // Change Logger field to public static
@@ -34,11 +31,9 @@ namespace RailSensor
         {
             Logger.SetLoggingEnabled(true); // Always enable logging at startup
             Logger.Reset();
-            Logger.Log("CustomLogger initialized and enabled for RailSensor.");
 
             if (staticInitialized)
             {
-                Logger.Log("Patches static constructor: already initialized, skipping.");
                 return;
             }
             staticInitialized = true;
@@ -47,98 +42,33 @@ namespace RailSensor
             var timestamp = System.DateTime.Now.ToString("O");
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            Logger.Log($"Patches static constructor: uniqueId={uniqueId}, timestamp={timestamp}, domain={domain}, threadId={threadId}");
-
-            // Initialize and register hotkeys
-            hotkeyListener = new HLib.HotkeyListener();
-            Logger.Log("HotkeyListener created.");
-
-            hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
-            {
-                Logger.Log("Hotkey Ctrl+F11 Pressed!");
-                Debug.Log("Hotkey Pressed!");
-            });
-
-            // Register for Unity update loop
-            HotkeyListenerUpdater.Create();
-            Logger.Log("HotkeyListenerUpdater.Create called from Patches static constructor.");
         }
 
         public static void OnLoad()
         {
-            Logger.Log("OnLoad called.");
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
-            Logger.Log($"ModOptions loaded: EnableCustomLog={options.EnableCustomLog}, MaxPercent={options.MaxPercent}, MinPercent={options.MinPercent}");
             Logger.SetLoggingEnabled(options.EnableCustomLog);
-            Logger.Log($"Logger.SetLoggingEnabled({options.EnableCustomLog}) called.");
             Logger.Reset();
-            Logger.Log("Logger.Reset() called.");
         }
-
 
         [HarmonyPatch(typeof(Db), "Initialize")]
         public class Db_Initialize_Patch
         {
             public static void Prefix()
             {
-                Logger.Log("Db.Initialize Prefix called.");
             }
 
             public static void Postfix()
             {
-                Logger.Log("Db.Initialize Postfix called.");
             }
         }
     }
-
-    // MonoBehaviour to call HotkeyListener.Update every frame
-    public class HotkeyListenerUpdater : KMonoBehaviour
-    {
-        private static HotkeyListenerUpdater _instance;
-
-        public static void Create()
-        {
-            if (_instance == null)
-            {
-                var go = new GameObject("HotKeyListenerUpdater");
-                UnityEngine.Object.DontDestroyOnLoad(go);
-                _instance = go.AddComponent<HotkeyListenerUpdater>();
-                Patches.Logger.Log("HotkeyListenerUpdater instance created and attached to GameObject.");
-            }
-            else
-            {
-                Patches.Logger.Log("HotkeyListenerUpdater.Create called but instance already exists.");
-            }
-        }
-
-        void Update()
-        {
-            if (Patches.hotkeyListener != null)
-            {
-                //Patches.Logger.Log("HotkeyListenerUpdater.Update: calling hotkeyListener.Update().");
-                Patches.hotkeyListener.Update();
-            }
-            else
-            {
-                Patches.Logger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
-            }
-        }
-    }
-
+      
     public class ModOptions
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         [JsonProperty] // Add JSON property for serialization
         public bool EnableCustomLog { get; set; } = true;
-
-        [Option("Max %", "Turn Off % of Overheat Temp")]
-        [Limit(5, 100)]
-        [JsonProperty] // Add JSON property for serialization
-        public float MaxPercent { get; set; } = 90.0f;
-        [Option("Min %", "Turn Back On % of Overheat Temp")]
-        [Limit(5, 100)]
-        [JsonProperty] // Add JSON property for serialization
-        public float MinPercent { get; set; } = 80.0f;
     }
 
     public class Mod : UserMod2
