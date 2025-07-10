@@ -86,23 +86,7 @@ namespace RailSensor
         }
     }
 
-    [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
-    public static class SideScreenRegister
-    {
-        private static bool registered = false; // Change from readonly to a regular static field
-
-        public static void Postfix()
-        {
-            if (registered)
-            {
-                return;
-            }
-            registered = true; // This assignment is now valid
-            PUIUtils.AddSideScreenContent<SimpleSideScreen>();
-        }
-    }
-
-    [HarmonyPatch(typeof(ConduitElementSensor), "ConduitUpdate")]
+      [HarmonyPatch(typeof(ConduitElementSensor), "ConduitUpdate")]
     public static class ConduitElementSensor_ConduitUpdate_Patch
     {
         public static bool Prefix(ConduitElementSensor __instance, float dt)
