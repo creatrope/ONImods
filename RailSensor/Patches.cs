@@ -15,6 +15,7 @@ using System.Runtime.CompilerServices; // For ConditionalWeakTable
 using TUNING;
 using UnityEngine;
 using static Rendering.BlockTileRenderer;
+using static STRINGS.ELEMENTS;
 
 namespace RailSensor
 {
@@ -212,7 +213,7 @@ namespace RailSensor
 
         private bool GetHasAnything(int cell)
         {
-            Patches.Logger.Log($"AnythingOnConduitSensor.GetHasAnything: cell={cell}, conduitType={conduitType}");
+            //Patches.Logger.Log($"AnythingOnConduitSensor.GetHasAnything: cell={cell}, conduitType={conduitType}");
 
             if (this.conduitType == ConduitType.Liquid || this.conduitType == ConduitType.Gas)
             {
@@ -232,10 +233,15 @@ namespace RailSensor
                 string pickupableInfo = pickupable != null
                     ? $"name={pickupable.name}, element={pickupable.PrimaryElement?.Element?.tag}, mass={pickupable.PrimaryElement?.Mass}"
                     : "null";
-                Patches.Logger.Log($"[DEBUG] Solid contents: handle={handle}, pickupable={pickupableInfo}");
-                bool result = pickupable != null && pickupable.PrimaryElement != null && pickupable.PrimaryElement.Mass > 0.0f;
-                Patches.Logger.Log($"AnythingOnConduitSensor.GetHasAnything: Solid handle={handle}, pickupable={(pickupable != null ? pickupable.ToString() : "null")}, result={result}");
-                return result;
+                //Patches.Logger.Log($"[DEBUG] Solid contents: handle={handle}, pickupable={pickupableInfo}");
+
+                if (pickupable) {
+                    //Patches.Logger.Log($"*** Found {pickupable.ToString()} with filter {filterElement}");
+                    Patches.Logger.Log($"*** Found {pickupable.ToString()}");
+                    return true;
+                }
+                return false;
+       
             }
         }
     }
@@ -246,9 +252,10 @@ namespace RailSensor
     {
         public static bool Prefix(ConduitElementSensor __instance, float dt)
         {
+            bool trigger = false;
+
             var filterable = Traverse.Create(__instance).Field("filterable").GetValue<Filterable>();
             Tag selectedTag = filterable != null ? filterable.SelectedTag : Tag.Invalid;
-            Patches.Logger.Log($"[FILTER] ConduitElementSensor_ConduitUpdate: SelectedTag={selectedTag}");
 
             // Replicate the original detection logic
             Tag element = GameTags.Void;
@@ -272,115 +279,54 @@ namespace RailSensor
 
             if (cellObj != null && conduitTypeObj != null)
             {
-                int debugCell = (cellObj is int) ? (int)cellObj : -1;
-                var debugConduitType = (ConduitType)conduitTypeObj;
-                Patches.Logger.Log($"[DEBUG] cell={debugCell}, conduitType={debugConduitType}");
+                int cell = (cellObj is int) ? (int)cellObj : -1;
+                var conduitType = (ConduitType)conduitTypeObj;
 
-                if (debugConduitType == ConduitType.Liquid || debugConduitType == ConduitType.Gas)
+                if (conduitType == ConduitType.Solid)
                 {
-                    var debugContents = Conduit.GetFlowManager(debugConduitType).GetContents(debugCell);
-                    string debugElementName = debugContents.element != null ? debugContents.element.ToString() : "null";
-                    Patches.Logger.Log($"[DEBUG] Liquid/Gas contents: element={debugElementName}, mass={debugContents.mass}, temperature={debugContents.temperature}");
+                    var flowManager = SolidConduit.GetFlowManager();
+                    var solidContents = flowManager.GetContents(cell);
+                    var handle = solidContents.pickupableHandle;
+                    var pickupable = flowManager.GetPickupable(handle);
+                    if (pickupable)
+                    {
+                        element = pickupable.PrimaryElement != null ? pickupable.PrimaryElement.Element.tag : Tag.Invalid;
+                        Tag at = Filterable_GetTagOptions_Patch.AnythingTag;
+                        Patches.Logger.Log($"->AnythingTag.hc: {at.GetHashCode()}, selectedTag.hc = {selectedTag.GetHashCode()}");
+
+                        trigger = (element == selectedTag || selectedTag == at);
+                        Patches.Logger.Log($"pickupable={element} {selectedTag} {trigger}");
+                    }
                 }
-                else if (debugConduitType == ConduitType.Solid)
-                {
-                    var debugFlowManager = SolidConduit.GetFlowManager();
-                    var debugSolidContents = debugFlowManager.GetContents(debugCell);
-                    var debugHandle = debugSolidContents.pickupableHandle;
-                    var debugPickupable = debugFlowManager.GetPickupable(debugHandle);
-                    string debugPickupableInfo = debugPickupable != null
-                        ? $"name={debugPickupable.name}, element={debugPickupable.PrimaryElement?.Element?.tag}, mass={debugPickupable.PrimaryElement?.Mass}"
-                        : "null";
-                    Patches.Logger.Log($"[DEBUG] Solid contents: handle={debugHandle}, pickupable={debugPickupableInfo}");
-                }
+            }
+
+            if (trigger)
+            {
+                Traverse.Create(__instance).Method("SetState", true).GetValue();
             }
             else
             {
-                Patches.Logger.Log($"[DEBUG] cellObj or conduitTypeObj is null. cellObj={cellObj}, conduitTypeObj={conduitTypeObj}");
+                Traverse.Create(__instance).Method("SetState", false).GetValue();
             }
 
-            // Only log when the automation state would change
-            if (!__instance.IsSwitchedOn)
-            {
-                if (element == selectedTag && hasMass)
-                    Patches.Logger.Log("[AUTOMATION] Detected element for automation ON");
-            }
-            else
-            {
-                if (element != selectedTag || !hasMass)
-                    Patches.Logger.Log("[AUTOMATION] Element missing or mass zero for automation OFF");
-            }
-
-            // "Anything" filter logic
-            // "Anything" filter logic with extensive debugging
-            if (filterable != null && selectedTag == new Tag("Anything"))
-            {
-                Patches.Logger.Log("[DEBUG] Entered Anything filter logic.");
-                bool anythingHasMass = hasMass;
-                Patches.Logger.Log($"[DEBUG] anythingHasMass={anythingHasMass}, __instance.IsSwitchedOn={__instance.IsSwitchedOn}");
-
-                // Log the current cell and conduit type
-                Patches.Logger.Log($"[DEBUG] cellObj={cellObj}, conduitTypeObj={conduitTypeObj}");
-                if (cellObj != null && conduitTypeObj != null)
-                {
-                    int debugCell = (int)cellObj;
-                    var debugConduitType = (ConduitType)conduitTypeObj;
-                    Patches.Logger.Log($"[DEBUG] cell={debugCell}, conduitType={debugConduitType}");
-
-                    if (debugConduitType == ConduitType.Liquid || debugConduitType == ConduitType.Gas)
-                    {
-                        var debugContents = Conduit.GetFlowManager(debugConduitType).GetContents(debugCell);
-                        string debugElementName = debugContents.element != null ? debugContents.element.ToString() : "null";
-                        Patches.Logger.Log($"[DEBUG] Liquid/Gas contents: element={debugElementName}, mass={debugContents.mass}, temperature={debugContents.temperature}");
-                    }
-                    else if (debugConduitType == ConduitType.Solid)
-                    {
-                        var debugFlowManager = SolidConduit.GetFlowManager();
-                        var debugSolidContents = debugFlowManager.GetContents(debugCell);
-                        var debugHandle = debugSolidContents.pickupableHandle;
-                        var debugPickupable = debugFlowManager.GetPickupable(debugHandle);
-                        string debugPickupableInfo = debugPickupable != null
-                            ? $"name={debugPickupable.name}, element={debugPickupable.PrimaryElement?.Element?.tag}, mass={debugPickupable.PrimaryElement?.Mass}"
-                            : "null";
-                        Patches.Logger.Log($"[DEBUG] Solid contents: handle={debugHandle}, pickupable={debugPickupableInfo}");
-                    }
-                }
-
-                if (!__instance.IsSwitchedOn)
-                {
-                    Patches.Logger.Log("[DEBUG] Sensor is OFF.");
-                    if (!anythingHasMass)
-                    {
-                        Patches.Logger.Log("[DEBUG] No mass detected, sensor remains OFF.");
-                        return false;
-                    }
-                    Patches.Logger.Log("[DEBUG] Mass detected, toggling sensor ON.");
-                    traverse.Method("SetState").GetValue(true);
-                }
-                else
-                {
-                    if (anythingHasMass)
-                        return false;
-                    traverse.Method("SetState").GetValue(false);
-                }
-                return false;
-            }
-            return true;
+            //Return false to skip the original method if you want to fully override it,
+            // or true to let the original run after this.
+            return false;
         }
 
-        // Remove all logging from Postfix
         public static void Postfix(ConduitElementSensor __instance) { }
     }
 
     [HarmonyPatch(typeof(Filterable), "GetTagOptions")]
     public static class Filterable_GetTagOptions_Patch
     {
+        // Make the "Anything" tag static for reuse and testing
+        public static readonly Tag AnythingTag = new Tag("Anything");
+
         public static void Postfix(Filterable __instance, ref Dictionary<Tag, HashSet<Tag>> __result)
         {
-            // Add a new category or add to an existing one
-            Tag anythingTag = new Tag("Anything");
-            if (!__result.ContainsKey(anythingTag))
-                __result.Add(anythingTag, new HashSet<Tag> { anythingTag });
+            if (!__result.ContainsKey(AnythingTag))
+                __result.Add(AnythingTag, new HashSet<Tag> { AnythingTag });
         }
     }
 }
