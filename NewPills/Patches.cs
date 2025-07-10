@@ -136,9 +136,9 @@ namespace NewPills
         }
     }
 
-    public class DuplicateRadPillConfig : IEntityConfig, IHasDlcRestrictions
+    public class FlatulencePillConfig : IEntityConfig, IHasDlcRestrictions
     {
-        public const string ID = "DuplicateRadPill";
+        public const string ID = "FlatulencePill";
         public static ComplexRecipe recipe;
 
         public string[] GetRequiredDlcIds() => DlcManager.EXPANSION1;
@@ -151,9 +151,9 @@ namespace NewPills
         public GameObject CreatePrefab()
         {
             GameObject looseEntity = EntityTemplates.CreateLooseEntity(
-                "DuplicateRadPill",
-                "DuplicateRadPill", // Use unique name
-                "My Duplicate Rad Pill", // Use unique desc
+                "FlatulencePill",
+                "FlatulencePill", // Use unique name
+                "A pill to help with flatulence.", // Use unique desc
                 1f,
                 true,
                 Assets.GetAnim((HashedString)"pill_radiation_kanim"),
@@ -164,8 +164,8 @@ namespace NewPills
                 0.4f,
                 true);
 
-            // Use a unique medicine info for DuplicateRadPill
-            EntityTemplates.ExtendEntityToMedicine(looseEntity, MEDICINE.DUPLICATERADPILL);
+            // Use a unique medicine info for FlatulencePill
+            EntityTemplates.ExtendEntityToMedicine(looseEntity, MEDICINE.FLATULENCEPILL);
 
             ComplexRecipe.RecipeElement[] recipeElementArray1 = new ComplexRecipe.RecipeElement[1]
             {
@@ -173,15 +173,15 @@ namespace NewPills
             };
             ComplexRecipe.RecipeElement[] recipeElementArray2 = new ComplexRecipe.RecipeElement[1]
             {
-                new ComplexRecipe.RecipeElement("DuplicateRadPill".ToTag(), 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature)
+                new ComplexRecipe.RecipeElement("FlatulencePill".ToTag(), 1f, ComplexRecipe.RecipeElement.TemperatureOperation.AverageTemperature)
             };
-            DuplicateRadPillConfig.recipe = new ComplexRecipe(
+            FlatulencePillConfig.recipe = new ComplexRecipe(
                 ComplexRecipeManager.MakeRecipeID("Apothecary", (IList<ComplexRecipe.RecipeElement>)recipeElementArray1, (IList<ComplexRecipe.RecipeElement>)recipeElementArray2),
                 recipeElementArray1,
                 recipeElementArray2)
             {
                 time = 50f,
-                description = "a recipe", // Use unique recipe desc
+                description = "Craft a pill to help with flatulence.", // Use unique recipe desc
                 nameDisplay = ComplexRecipe.RecipeNameDisplay.Result,
                 fabricators = new List<Tag>() { (Tag)"Apothecary" },
                 sortOrder = 11
@@ -274,11 +274,11 @@ namespace NewPills
     {
         public class PILLS
         {
-            public class DUPLICATERADPILL
+            public class FLATULENCEPILL
             {
-                public static LocString NAME = "Duplicate Radiation Pill";
-                public static LocString DESC = "A pill to reduce radiation exposure.";
-                public static LocString RECIPEDESC = "Craft a pill to reduce radiation exposure.";
+                public static LocString NAME = "Flatulence Pill";
+                public static LocString DESC = "A pill to help with flatulence.";
+                public static LocString RECIPEDESC = "Craft a pill to help with flatulence.";
             }
         }
     }
@@ -290,13 +290,13 @@ namespace NewPills
         public const float RECUPERATION_DOCTORED_DISEASE_MULTIPLIER = 1.2f;
         public const float WORK_TIME = 10;
 
-        // Add the missing definition for DUPLICATERADPILL
-        public static readonly MedicineInfo DUPLICATERADPILL = new MedicineInfo(
-            "DuplicateRadPill",                // id
-            null,                              // effect
+        // Add the missing definition for FLATULENCEPILL
+        public static readonly MedicineInfo FLATULENCEPILL = new MedicineInfo(
+            "FlatulencePill",                // id
+            null,                            // effect
             MedicineInfo.MedicineType.CureSpecific, // medicineType
-            null,                              // doctorStationId
-            new string[] { "RadiationSickness" } // curedDiseases: must not be null or empty!
+            null,                            // doctorStationId
+            new string[] { "Flatulence" }    // curedDiseases: must not be null or empty!
         );
     }
 }
