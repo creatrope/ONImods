@@ -173,13 +173,125 @@ namespace RailSensor
     [HarmonyPatch(typeof(Filterable), "GetTagOptions")]
     public static class Filterable_GetTagOptions_Patch
     {
-        // Make the "Anything" tag static for reuse and testing
         public static readonly Tag AnythingTag = new Tag("Anything");
 
         public static void Postfix(Filterable __instance, ref Dictionary<Tag, HashSet<Tag>> __result)
         {
-            if (!__result.ContainsKey(AnythingTag))
-                __result.Add(AnythingTag, new HashSet<Tag> { AnythingTag });
+            RailSensor.Patches.Logger.Log($"[GetTagOptions] Called for Filterable={__instance?.GetHashCode() ?? -1}");
+            var owner = FilterableOwnerTracker.GetOwner(__instance);
+            RailSensor.Patches.Logger.Log($"[GetTagOptions] Owner={owner?.GetType().FullName ?? "null"} for Filterable={__instance?.GetHashCode() ?? -1}");
+            if (owner is ConduitElementSensor /* || owner is ElementSensor, etc. */)
+            {
+                if (!__result.ContainsKey(AnythingTag))
+                {
+                    RailSensor.Patches.Logger.Log($"[GetTagOptions] Adding AnythingTag for Filterable={__instance?.GetHashCode() ?? -1}");
+                    __result.Add(AnythingTag, new HashSet<Tag> { AnythingTag });
+                }
+                else
+                {
+                    RailSensor.Patches.Logger.Log($"[GetTagOptions] AnythingTag already present for Filterable={__instance?.GetHashCode() ?? -1}");
+                }
+            }
+            else
+            {
+                RailSensor.Patches.Logger.Log($"[GetTagOptions] Owner is not a supported sensor for Filterable={__instance?.GetHashCode() ?? -1}");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Filterable), "OnPrefabInit")]
+    public static class Filterable_OnPrefabInit_Patch
+    {
+        public static void Postfix(Filterable __instance)
+        {
+            RailSensor.Patches.Logger.Log($"[Filterable.OnPrefabInit] Called for Filterable={__instance.GetHashCode()}");
+            // Try to find a ConduitElementSensor on the same GameObject
+            var sensor = __instance.GetComponent<ConduitElementSensor>();
+            if (sensor != null)
+            {
+                RailSensor.Patches.Logger.Log($"[Filterable.OnPrefabInit] Found ConduitElementSensor={sensor.GetHashCode()} for Filterable={__instance.GetHashCode()}");
+                RailSensor.FilterableOwnerTracker.SetOwner(__instance, sensor);
+            }
+            else
+            {
+                RailSensor.Patches.Logger.Log($"[Filterable.OnPrefabInit] No ConduitElementSensor found for Filterable={__instance.GetHashCode()}");
+            }
+        }
+    }
+
+    // Add debug logging to the owner tracker
+    public static class FilterableOwnerTracker
+    {
+        private static readonly ConditionalWeakTable<Filterable, object> Owners = new ConditionalWeakTable<Filterable, object>();
+
+        public static void SetOwner(Filterable filterable, object owner)
+        {
+            RailSensor.Patches.Logger.Log($"[SetOwner] Called with Filterable={filterable?.GetHashCode() ?? -1}, Owner={owner?.GetType().FullName ?? "null"}");
+            if (filterable != null && owner != null)
+            {
+                Owners.Remove(filterable);
+                Owners.Add(filterable, owner);
+                RailSensor.Patches.Logger.Log($"[SetOwner] Set owner for Filterable={filterable.GetHashCode()} to {owner.GetType().FullName}");
+            }
+            else
+            {
+                RailSensor.Patches.Logger.Log($"[SetOwner] Skipped: filterable or owner is null");
+            }
+        }
+
+        public static object GetOwner(Filterable filterable)
+        {
+            if (filterable == null)
+            {
+                RailSensor.Patches.Logger.Log("[GetOwner] filterable is null");
+                return null;
+            }
+            Owners.TryGetValue(filterable, out var owner);
+            RailSensor.Patches.Logger.Log($"[GetOwner] For Filterable={filterable.GetHashCode()} got Owner={owner?.GetType().FullName ?? "null"}");
+            return owner;
+        }
+    }
+
+    // Add debug logging to each config patch
+    [HarmonyPatch(typeof(GasConduitElementSensorConfig), "DoPostConfigureComplete")]
+    public static class GasConduitElementSensorConfig_DoPostConfigureComplete_Patch
+    {
+        public static void Postfix(GameObject go)
+        {
+            RailSensor.Patches.Logger.Log("[GasConduitElementSensorConfig] DoPostConfigureComplete called");
+            var filterable = go.GetComponent<Filterable>();
+            var sensor = go.GetComponent<ConduitElementSensor>();
+            RailSensor.Patches.Logger.Log($"[GasConduitElementSensorConfig] filterable={filterable?.GetHashCode() ?? -1}, sensor={sensor?.GetHashCode() ?? -1}");
+            if (filterable != null && sensor != null)
+                RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
+        }
+    }
+
+    [HarmonyPatch(typeof(SolidConduitElementSensorConfig), "DoPostConfigureComplete")]
+    public static class SolidConduitElementSensorConfig_DoPostConfigureComplete_Patch
+    {
+        public static void Postfix(GameObject go)
+        {
+            RailSensor.Patches.Logger.Log("[SolidConduitElementSensorConfig] DoPostConfigureComplete called");
+            var filterable = go.GetComponent<Filterable>();
+            var sensor = go.GetComponent<ConduitElementSensor>();
+            RailSensor.Patches.Logger.Log($"[SolidConduitElementSensorConfig] filterable={filterable?.GetHashCode() ?? -1}, sensor={sensor?.GetHashCode() ?? -1}");
+            if (filterable != null && sensor != null)
+                RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
+        }
+    }
+
+    [HarmonyPatch(typeof(LiquidConduitElementSensorConfig), "DoPostConfigureComplete")]
+    public static class LiquidConduitElementSensorConfig_DoPostConfigureComplete_Patch
+    {
+        public static void Postfix(GameObject go)
+        {
+            RailSensor.Patches.Logger.Log("[LiquidConduitElementSensorConfig] DoPostConfigureComplete called");
+            var filterable = go.GetComponent<Filterable>();
+            var sensor = go.GetComponent<ConduitElementSensor>();
+            RailSensor.Patches.Logger.Log($"[LiquidConduitElementSensorConfig] filterable={filterable?.GetHashCode() ?? -1}, sensor={sensor?.GetHashCode() ?? -1}");
+            if (filterable != null && sensor != null)
+                RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
         }
     }
 }
