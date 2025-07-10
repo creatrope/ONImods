@@ -15,6 +15,7 @@ using System.Runtime.CompilerServices; // For ConditionalWeakTable
 using TUNING;
 using UnityEngine;
 using static Rendering.BlockTileRenderer;
+using static STRINGS.BUILDINGS.PREFABS;
 using static STRINGS.ELEMENTS;
 
 namespace RailSensor
@@ -63,7 +64,7 @@ namespace RailSensor
             }
         }
     }
-      
+
     public class ModOptions
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
@@ -110,10 +111,7 @@ namespace RailSensor
 
             var filterable = Traverse.Create(__instance).Field("filterable").GetValue<Filterable>();
             Tag selectedTag = filterable != null ? filterable.SelectedTag : Tag.Invalid;
-
-            // Replicate the original detection logic
-            Tag element = GameTags.Void;
-            bool hasMass = false;
+            Tag anythingTag = Filterable_GetTagOptions_Patch.AnythingTag;
 
             // Try to get the cell and conduit type
             var traverse = Traverse.Create(__instance);
@@ -122,7 +120,6 @@ namespace RailSensor
                 cellObj = traverse.Field("conduitCell").GetValue();
             if (cellObj == null || (cellObj is int && (int)cellObj == 0))
                 cellObj = traverse.Field("cell").GetValue();
-            // Fallback: get cell from GameObject position if still null or zero
             if (cellObj == null || (cellObj is int && (int)cellObj == 0))
             {
                 var go = Traverse.Create(__instance).Property("gameObject").GetValue() as GameObject;
@@ -142,28 +139,30 @@ namespace RailSensor
                     var solidContents = flowManager.GetContents(cell);
                     var handle = solidContents.pickupableHandle;
                     var pickupable = flowManager.GetPickupable(handle);
-                    if (pickupable)
-                    {
-                        element = pickupable.PrimaryElement != null ? pickupable.PrimaryElement.Element.tag : Tag.Invalid;
-                        Tag at = Filterable_GetTagOptions_Patch.AnythingTag;
+                    Tag element = pickupable && pickupable.PrimaryElement != null
+                        ? pickupable.PrimaryElement.Element.tag
+                        : Tag.Invalid;
 
-                        trigger = (element == selectedTag || selectedTag == at);
-                        Patches.Logger.Log($"pickupable={element} {selectedTag} {trigger}");
+                    trigger = (element == selectedTag || selectedTag == anythingTag);
+                }
+                else if (conduitType == ConduitType.Liquid || conduitType == ConduitType.Gas)
+                {
+                    var flowManager = Conduit.GetFlowManager(conduitType);
+                    if (flowManager != null)
+                    {
+                        var contents = flowManager.GetContents(cell);
+                        Tag element = contents.element != SimHashes.Vacuum && contents.element != SimHashes.Void
+                            ? new Tag(contents.element.ToString())
+                            : Tag.Invalid;
+                        bool hasMass = contents.mass > 0.0f;
+
+                        // Sensing logic: trigger if the element matches or if "Anything" is selected and there is mass
+                        trigger = (hasMass && (selectedTag == anythingTag || element == selectedTag));
                     }
                 }
             }
 
-            if (trigger)
-            {
-                Traverse.Create(__instance).Method("SetState", true).GetValue();
-            }
-            else
-            {
-                Traverse.Create(__instance).Method("SetState", false).GetValue();
-            }
-
-            //Return false to skip the original method if you want to fully override it,
-            // or true to let the original run after this.
+            Traverse.Create(__instance).Method("SetState", trigger).GetValue();
             return false;
         }
 
@@ -177,24 +176,11 @@ namespace RailSensor
 
         public static void Postfix(Filterable __instance, ref Dictionary<Tag, HashSet<Tag>> __result)
         {
-            RailSensor.Patches.Logger.Log($"[GetTagOptions] Called for Filterable={__instance?.GetHashCode() ?? -1}");
             var owner = FilterableOwnerTracker.GetOwner(__instance);
-            RailSensor.Patches.Logger.Log($"[GetTagOptions] Owner={owner?.GetType().FullName ?? "null"} for Filterable={__instance?.GetHashCode() ?? -1}");
             if (owner is ConduitElementSensor /* || owner is ElementSensor, etc. */)
             {
                 if (!__result.ContainsKey(AnythingTag))
-                {
-                    RailSensor.Patches.Logger.Log($"[GetTagOptions] Adding AnythingTag for Filterable={__instance?.GetHashCode() ?? -1}");
                     __result.Add(AnythingTag, new HashSet<Tag> { AnythingTag });
-                }
-                else
-                {
-                    RailSensor.Patches.Logger.Log($"[GetTagOptions] AnythingTag already present for Filterable={__instance?.GetHashCode() ?? -1}");
-                }
-            }
-            else
-            {
-                RailSensor.Patches.Logger.Log($"[GetTagOptions] Owner is not a supported sensor for Filterable={__instance?.GetHashCode() ?? -1}");
             }
         }
     }
@@ -204,64 +190,41 @@ namespace RailSensor
     {
         public static void Postfix(Filterable __instance)
         {
-            RailSensor.Patches.Logger.Log($"[Filterable.OnPrefabInit] Called for Filterable={__instance.GetHashCode()}");
-            // Try to find a ConduitElementSensor on the same GameObject
             var sensor = __instance.GetComponent<ConduitElementSensor>();
             if (sensor != null)
-            {
-                RailSensor.Patches.Logger.Log($"[Filterable.OnPrefabInit] Found ConduitElementSensor={sensor.GetHashCode()} for Filterable={__instance.GetHashCode()}");
                 RailSensor.FilterableOwnerTracker.SetOwner(__instance, sensor);
-            }
-            else
-            {
-                RailSensor.Patches.Logger.Log($"[Filterable.OnPrefabInit] No ConduitElementSensor found for Filterable={__instance.GetHashCode()}");
-            }
         }
     }
 
-    // Add debug logging to the owner tracker
     public static class FilterableOwnerTracker
     {
         private static readonly ConditionalWeakTable<Filterable, object> Owners = new ConditionalWeakTable<Filterable, object>();
 
         public static void SetOwner(Filterable filterable, object owner)
         {
-            RailSensor.Patches.Logger.Log($"[SetOwner] Called with Filterable={filterable?.GetHashCode() ?? -1}, Owner={owner?.GetType().FullName ?? "null"}");
             if (filterable != null && owner != null)
             {
                 Owners.Remove(filterable);
                 Owners.Add(filterable, owner);
-                RailSensor.Patches.Logger.Log($"[SetOwner] Set owner for Filterable={filterable.GetHashCode()} to {owner.GetType().FullName}");
-            }
-            else
-            {
-                RailSensor.Patches.Logger.Log($"[SetOwner] Skipped: filterable or owner is null");
             }
         }
 
         public static object GetOwner(Filterable filterable)
         {
             if (filterable == null)
-            {
-                RailSensor.Patches.Logger.Log("[GetOwner] filterable is null");
                 return null;
-            }
             Owners.TryGetValue(filterable, out var owner);
-            RailSensor.Patches.Logger.Log($"[GetOwner] For Filterable={filterable.GetHashCode()} got Owner={owner?.GetType().FullName ?? "null"}");
             return owner;
         }
     }
 
-    // Add debug logging to each config patch
     [HarmonyPatch(typeof(GasConduitElementSensorConfig), "DoPostConfigureComplete")]
     public static class GasConduitElementSensorConfig_DoPostConfigureComplete_Patch
     {
         public static void Postfix(GameObject go)
         {
-            RailSensor.Patches.Logger.Log("[GasConduitElementSensorConfig] DoPostConfigureComplete called");
             var filterable = go.GetComponent<Filterable>();
             var sensor = go.GetComponent<ConduitElementSensor>();
-            RailSensor.Patches.Logger.Log($"[GasConduitElementSensorConfig] filterable={filterable?.GetHashCode() ?? -1}, sensor={sensor?.GetHashCode() ?? -1}");
             if (filterable != null && sensor != null)
                 RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
         }
@@ -272,10 +235,8 @@ namespace RailSensor
     {
         public static void Postfix(GameObject go)
         {
-            RailSensor.Patches.Logger.Log("[SolidConduitElementSensorConfig] DoPostConfigureComplete called");
             var filterable = go.GetComponent<Filterable>();
             var sensor = go.GetComponent<ConduitElementSensor>();
-            RailSensor.Patches.Logger.Log($"[SolidConduitElementSensorConfig] filterable={filterable?.GetHashCode() ?? -1}, sensor={sensor?.GetHashCode() ?? -1}");
             if (filterable != null && sensor != null)
                 RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
         }
@@ -286,10 +247,8 @@ namespace RailSensor
     {
         public static void Postfix(GameObject go)
         {
-            RailSensor.Patches.Logger.Log("[LiquidConduitElementSensorConfig] DoPostConfigureComplete called");
             var filterable = go.GetComponent<Filterable>();
             var sensor = go.GetComponent<ConduitElementSensor>();
-            RailSensor.Patches.Logger.Log($"[LiquidConduitElementSensorConfig] filterable={filterable?.GetHashCode() ?? -1}, sensor={sensor?.GetHashCode() ?? -1}");
             if (filterable != null && sensor != null)
                 RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
         }
