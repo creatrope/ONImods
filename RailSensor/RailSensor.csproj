@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Username>sendh</Username>
     <UserProfile>C:\Users\$(Username)</UserProfile>
-    <ProjectName>RailSensor</ProjectName>
+    <ProjectName>AnythingElementSensor</ProjectName>
     <ONIManaged>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</ONIManaged>
     <ONILib>$(UserProfile)\Documents\ONI\Assembly-CSharp\lib</ONILib>
     <PLibPath>$(UserProfile)\Documents\Github\Sendhb-ONI\packages\PLib.4.17.1\lib\net471</PLibPath>

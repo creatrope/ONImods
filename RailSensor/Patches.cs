@@ -80,7 +80,7 @@ namespace RailSensor
             base.OnLoad(harmony);
 
             PUtil.InitLibrary();
-            new POptions().RegisterOptions(this, typeof(ModOptions));
+            //new POptions().RegisterOptions(this, typeof(ModOptions));
             harmony.PatchAll();
             Patches.Logger.Log("Mod.OnLoad finished: PUtil.InitLibrary, options registered, harmony patched.");
         }
