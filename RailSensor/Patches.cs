@@ -69,7 +69,7 @@ namespace RailSensor
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         [JsonProperty] // Add JSON property for serialization
-        public bool EnableCustomLog { get; set; } = true;
+        public bool EnableCustomLog { get; set; } = false;
     }
 
     public class Mod : UserMod2
@@ -86,10 +86,10 @@ namespace RailSensor
         }
     }
 
-      [HarmonyPatch(typeof(ConduitElementSensor), "ConduitUpdate")]
+    [HarmonyPatch(typeof(ConduitElementSensor), "ConduitUpdate")]
     public static class ConduitElementSensor_ConduitUpdate_Patch
     {
-        public static bool Prefix(ConduitElementSensor __instance, float dt)
+        public static void Postfix(ConduitElementSensor __instance, float dt)
         {
             bool trigger = false;
 
@@ -123,11 +123,13 @@ namespace RailSensor
                     var solidContents = flowManager.GetContents(cell);
                     var handle = solidContents.pickupableHandle;
                     var pickupable = flowManager.GetPickupable(handle);
-                    Tag element = pickupable && pickupable.PrimaryElement != null
+                    Tag element = pickupable != null && pickupable.PrimaryElement != null
                         ? pickupable.PrimaryElement.Element.tag
                         : Tag.Invalid;
+                    bool hasMass = pickupable != null && pickupable.PrimaryElement != null && pickupable.PrimaryElement.Mass > 0.0f;
 
-                    trigger = (element == selectedTag || selectedTag == anythingTag);
+                    trigger = (hasMass && (selectedTag == anythingTag || element == selectedTag));
+                    Patches.Logger.Log($"[Solid] cell={cell}, hasMass={hasMass}, element={element}, selectedTag={selectedTag}, anythingTag={anythingTag}, trigger={trigger}");
                 }
                 else if (conduitType == ConduitType.Liquid || conduitType == ConduitType.Gas)
                 {
@@ -140,17 +142,20 @@ namespace RailSensor
                             : Tag.Invalid;
                         bool hasMass = contents.mass > 0.0f;
 
-                        // Sensing logic: trigger if the element matches or if "Anything" is selected and there is mass
                         trigger = (hasMass && (selectedTag == anythingTag || element == selectedTag));
+                        Patches.Logger.Log($"[{conduitType}] cell={cell}, hasMass={hasMass}, element={element}, selectedTag={selectedTag}, anythingTag={anythingTag}, trigger={trigger}");
                     }
                 }
             }
 
-            Traverse.Create(__instance).Method("SetState", trigger).GetValue();
-            return false;
+            // Only call SetState if the state actually changed
+            bool currentState = Traverse.Create(__instance).Field("isOn").GetValue<bool>();
+            if (currentState != trigger)
+            {
+                Patches.Logger.Log($"State Change {{trigger={trigger}, instanceID={__instance.GetInstanceID()}}}");
+                Traverse.Create(__instance).Method("SetState", trigger).GetValue();
+            }
         }
-
-        public static void Postfix(ConduitElementSensor __instance) { }
     }
 
     [HarmonyPatch(typeof(Filterable), "GetTagOptions")]
