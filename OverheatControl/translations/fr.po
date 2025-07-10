@@ -1,0 +1,58 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: OverheatControl\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Application: Oxygen Not Included\n"
+"X-Generator: Poedit 3.4.1\n"
+
+#. OverheatControl.STRINGS.HOTKEYS.CTRL_F11
+msgctxt "OverheatControl.STRINGS.HOTKEYS.CTRL_F11"
+msgid "Hotkey triggered on selected object!"
+msgstr "Raccourci déclenché sur l'objet sélectionné !"
+
+#. OverheatControl.STRINGS.HOTKEYS.CTRL_F2
+msgctxt "OverheatControl.STRINGS.HOTKEYS.CTRL_F2"
+msgid "Captured overheatable and powered building IDs."
+msgstr "Identifiants des bâtiments surchauffables et alimentés capturés."
+
+#. OverheatControl.STRINGS.HOTKEYS.CTRL_F3
+msgctxt "OverheatControl.STRINGS.HOTKEYS.CTRL_F3"
+msgid "Captured non-overheatable powered building IDs."
+msgstr "Identifiants des bâtiments alimentés non surchauffables capturés."
+
+#. OverheatControl.STRINGS.MESSAGES.THERMAL_SHUTDOWN_COOLING
+msgctxt "OverheatControl.STRINGS.MESSAGES.THERMAL_SHUTDOWN_COOLING"
+msgid "Thermal Shutdown: Cooling!"
+msgstr "Arrêt thermique : Refroidissement !"
+
+#. OverheatControl.STRINGS.MESSAGES.THERMAL_SHUTDOWN_RESTORED
+msgctxt "OverheatControl.STRINGS.MESSAGES.THERMAL_SHUTDOWN_RESTORED"
+msgid "Thermal Shutdown: Restored!"
+msgstr "Arrêt thermique : Restauré !"
+
+#. OverheatControl.STRINGS.SETTINGS.SHUTDOWN_PERCENT
+msgctxt "OverheatControl.STRINGS.SETTINGS.SHUTDOWN_PERCENT"
+msgid "Shutdown @ % of Overheat Temp"
+msgstr "Arrêt à % de la température de surchauffe"
+
+#. OverheatControl.STRINGS.SETTINGS.RESTORE_PERCENT
+msgctxt "OverheatControl.STRINGS.SETTINGS.RESTORE_PERCENT"
+msgid "Restore % of Overheat Temp"
+msgstr "Restauration à % de la température de surchauffe"
+
+#. OverheatControl.STRINGS.LOGS.SETTINGS_LOADED
+msgctxt "OverheatControl.STRINGS.LOGS.SETTINGS_LOADED"
+msgid "Settings loaded:"
+msgstr "Paramètres chargés :"
+
+#. OverheatControl.STRINGS.LOGS.NO_OBJECT_SELECTED
+msgctxt "OverheatControl.STRINGS.LOGS.NO_OBJECT_SELECTED"
+msgid "No object selected."
+msgstr "Aucun objet sélectionné."

@@ -1,17 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <!-- Define a reusable property for the project name -->
-    <ProjectName>OverheatControl</ProjectName>
-    <Plib>C:\Users\sendh\Documents\Github\Sendhb-ONI\packages\PLib.4.17.1\lib\net471\PLib.dll</Plib>
-    <!-- Define a reusable property for the base deployment path -->
-    <DeploymentBasePath>C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\</DeploymentBasePath>
+    <Username>sendh</Username>
+    <UserProfile>C:\Users\$(Username)</UserProfile>
+    <ProjectName>NewPills</ProjectName>
+    <ONIManaged>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</ONIManaged>
+    <ONILib>$(UserProfile)\Documents\ONI\Assembly-CSharp\lib</ONILib>
+    <PLibPath>$(UserProfile)\Documents\Github\Sendhb-ONI\packages\PLib.4.17.1\lib\net471</PLibPath>
+    <Plib>$(PLibPath)\PLib.dll</Plib>
+    <DeploymentBasePath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Local\</DeploymentBasePath>
+    <ILRepackExe>$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe</ILRepackExe>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{BCC262A4-88E4-40E2-B17C-ED775AFD016C}</ProjectGuid>
+    <ProjectGuid>{3204B137-1275-4C45-B538-119731ADA31D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>$(ProjectName)</RootNamespace>
@@ -42,19 +46,19 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>..\lib\0Harmony.dll</HintPath>
+      <HintPath>$(ONIManaged)\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\lib\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(ONIManaged)\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>..\lib\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>$(ONIManaged)\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <HintPath>$(ONIManaged)\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="PLib">
-      <HintPath>..\lib\PLib.dll</HintPath>
+      <HintPath>$(PLibPath)\PLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -63,19 +67,20 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="Unity.TextMeshPro">
-      <HintPath>..\lib\Unity.TextMeshPro.dll</HintPath>
+      <HintPath>$(ONILib)\Unity.TextMeshPro.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\lib\UnityEngine.dll</HintPath>
+      <HintPath>$(ONIManaged)\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\lib\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(ONIManaged)\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>..\lib\UnityEngine.UI.dll</HintPath>
+      <HintPath>$(ONIManaged)\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DoNothingPillConfig.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SideScreen.cs" />
@@ -88,9 +93,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
-    <None Include="ru.po" />
-    <None Include="translations\fr.po" />
-    <None Include="translations\ru.po" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HLib\HLib.csproj">
@@ -98,14 +100,13 @@
       <Name>CustomLogger</Name>
     </ProjectReference>
   </ItemGroup>
-  <!-- ILRepack and Deploy Targets -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
     <Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
     <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(Plib)&quot;" />
+    <Exec Command="&quot;$(ILRepackExe)&quot; /out:&quot;$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(Plib)&quot;" />
   </Target>
   <Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
     <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />

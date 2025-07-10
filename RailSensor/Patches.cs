@@ -129,7 +129,7 @@ namespace RailSensor
                     bool hasMass = pickupable != null && pickupable.PrimaryElement != null && pickupable.PrimaryElement.Mass > 0.0f;
 
                     trigger = (hasMass && (selectedTag == anythingTag || element == selectedTag));
-                    Patches.Logger.Log($"[Solid] cell={cell}, hasMass={hasMass}, element={element}, selectedTag={selectedTag}, anythingTag={anythingTag}, trigger={trigger}");
+                    //Patches.Logger.Log($"[Solid] cell={cell}, hasMass={hasMass}, element={element}, selectedTag={selectedTag}, anythingTag={anythingTag}, trigger={trigger}");
                 }
                 else if (conduitType == ConduitType.Liquid || conduitType == ConduitType.Gas)
                 {
@@ -143,7 +143,7 @@ namespace RailSensor
                         bool hasMass = contents.mass > 0.0f;
 
                         trigger = (hasMass && (selectedTag == anythingTag || element == selectedTag));
-                        Patches.Logger.Log($"[{conduitType}] cell={cell}, hasMass={hasMass}, element={element}, selectedTag={selectedTag}, anythingTag={anythingTag}, trigger={trigger}");
+                        //Patches.Logger.Log($"[{conduitType}] cell={cell}, hasMass={hasMass}, element={element}, selectedTag={selectedTag}, anythingTag={anythingTag}, trigger={trigger}");
                     }
                 }
             }
