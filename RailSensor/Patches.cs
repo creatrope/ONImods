@@ -30,7 +30,7 @@ namespace RailSensor
 
         static Patches()
         {
-            Logger.SetLoggingEnabled(true); // Always enable logging at startup
+            Logger.SetLoggingEnabled(false); 
             Logger.Reset();
 
             if (staticInitialized)
@@ -47,31 +47,10 @@ namespace RailSensor
 
         public static void OnLoad()
         {
-            var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
-            Logger.SetLoggingEnabled(options.EnableCustomLog);
+            Logger.SetLoggingEnabled(true);
             Logger.Reset();
         }
-
-        [HarmonyPatch(typeof(Db), "Initialize")]
-        public class Db_Initialize_Patch
-        {
-            public static void Prefix()
-            {
-            }
-
-            public static void Postfix()
-            {
-            }
-        }
     }
-
-    public class ModOptions
-    {
-        [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
-        [JsonProperty] // Add JSON property for serialization
-        public bool EnableCustomLog { get; set; } = false;
-    }
-
     public class Mod : UserMod2
     {
         public override void OnLoad(Harmony harmony)
@@ -80,7 +59,6 @@ namespace RailSensor
             base.OnLoad(harmony);
 
             PUtil.InitLibrary();
-            //new POptions().RegisterOptions(this, typeof(ModOptions));
             harmony.PatchAll();
             Patches.Logger.Log("Mod.OnLoad finished: PUtil.InitLibrary, options registered, harmony patched.");
         }
@@ -130,12 +108,11 @@ namespace RailSensor
             }
 
             // Only call SetState if the state actually changed
-            var traverse = Traverse.Create(__instance);
-            bool currentState = traverse.Field("isOn").GetValue<bool>();
+            bool currentState = __instance.IsSwitchedOn;
             if (currentState != trigger)
             {
                 Patches.Logger.Log($"State Change {{trigger={trigger}, instanceID={__instance.GetInstanceID()}}}");
-                traverse.Method("SetState", trigger).GetValue();
+                Traverse.Create(__instance).Method("SetState", trigger).GetValue();
             }
         }
     }
