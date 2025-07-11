@@ -168,8 +168,9 @@ namespace RailSensor
 
         public static void Postfix(Filterable __instance, ref Dictionary<Tag, HashSet<Tag>> __result)
         {
-            var owner = FilterableOwnerTracker.GetOwner(__instance);
-            if (owner is ConduitElementSensor /* || owner is ElementSensor, etc. */)
+            //var owner = FilterableOwnerTracker.GetOwner(__instance);
+     
+            if (__instance.GetComponent<ConduitElementSensor>() != null)
             {
                 if (!__result.ContainsKey(AnythingTag))
                     __result.Add(AnythingTag, new HashSet<Tag> { AnythingTag });
