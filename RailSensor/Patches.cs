@@ -89,11 +89,14 @@ namespace RailSensor
     [HarmonyPatch(typeof(ConduitElementSensor), "ConduitUpdate")]
     public static class ConduitElementSensor_ConduitUpdate_Patch
     {
-        public static void Postfix(ConduitElementSensor __instance, float dt)
+        //public static void Postfix(ConduitElementSensor __instance, float dt)
+        public static void Postfix(ConduitElementSensor __instance, Filterable ___filterable, float dt)
         {
             bool trigger = false;
 
-            var filterable = Traverse.Create(__instance).Field("filterable").GetValue<Filterable>();
+            //var filterable = Traverse.Create(__instance).Field("filterable").GetValue<Filterable>();
+            var filterable = ___filterable;
+
             Tag selectedTag = filterable != null ? filterable.SelectedTag : Tag.Invalid;
             Tag anythingTag = Filterable_GetTagOptions_Patch.AnythingTag;
 

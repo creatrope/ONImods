@@ -19,23 +19,6 @@ using static Rendering.BlockTileRenderer;
 
 namespace NewPills
 {
-    public class MyCustomPillWorkable : Workable
-    {
-        // Add your custom workable logic here
-        protected override void OnPrefabInit()
-        {
-            base.OnPrefabInit();
-            // Custom initialization logic
-        }
-
-        // Change the parameter type from Worker to WorkerBase
-        protected override void OnCompleteWork(WorkerBase worker)
-        {
-            base.OnCompleteWork(worker);
-            // Custom work completion logic
-        }
-    }
-
     public class Patches
     {
         // Change from private to public so HotkeyListenerUpdater can access it
@@ -152,8 +135,8 @@ namespace NewPills
         {
             GameObject looseEntity = EntityTemplates.CreateLooseEntity(
                 "FlatulencePill",
-                "FlatulencePill", // Use unique name
-                "A pill to help with flatulence.", // Use unique desc
+                "FlatulencePill",
+                "A pill to help with flatulence.",
                 1f,
                 true,
                 Assets.GetAnim((HashedString)"pill_radiation_kanim"),
@@ -164,7 +147,6 @@ namespace NewPills
                 0.4f,
                 true);
 
-            // Use a unique medicine info for FlatulencePill
             EntityTemplates.ExtendEntityToMedicine(looseEntity, MEDICINE.FLATULENCEPILL);
 
             ComplexRecipe.RecipeElement[] recipeElementArray1 = new ComplexRecipe.RecipeElement[1]
@@ -186,6 +168,7 @@ namespace NewPills
                 fabricators = new List<Tag>() { (Tag)"Apothecary" },
                 sortOrder = 11
             };
+
             return looseEntity;
         }
 
@@ -298,5 +281,147 @@ namespace NewPills
             null,                            // doctorStationId
             new string[] { "Flatulence" }    // curedDiseases: must not be null or empty!
         );
+    }
+
+    // Patch MinionIdentity.Sim1000ms to periodically assign a TakeMedicine chore for FlatulencePill
+    [HarmonyPatch(typeof(MinionIdentity), "Sim1000ms")]
+    public static class FlatulencePeriodicTreatmentChorePatch
+    {
+        private static float checkInterval = 10f; // seconds
+        private static Dictionary<MinionIdentity, float> lastCheckTimes = new Dictionary<MinionIdentity, float>();
+
+        public static void Postfix(MinionIdentity __instance)
+        {
+            //Patches.Logger.Log($"[FlatulencePeriodicTreatmentChorePatch] Postfix called for minion: {(__instance != null ? __instance.name : "null")}");
+
+            try
+            {
+                float now = Time.time;
+                if (!lastCheckTimes.TryGetValue(__instance, out float lastCheck))
+                    lastCheck = 0f;
+
+                if (now - lastCheck < checkInterval)
+                    return;
+                lastCheckTimes[__instance] = now;
+
+                var traits = __instance.GetComponent<Traits>();
+                var effects = __instance.GetComponent<Effects>();
+                if (traits == null || effects == null)
+                    return;
+
+                // First debug log: trait/effect check
+                if (!traits.HasTrait("Flatulence"))
+                {
+                    Patches.Logger.Log($"Minion {__instance.name} does not have the Flatulence trait, skipping pill chore.");
+                    return;
+                }
+                if (effects.HasEffect("NoFlatulenceEffect"))
+                {
+                    Patches.Logger.Log($"Minion {__instance.name} has NoFlatulenceEffect, skipping pill chore.");
+                    return;
+                }
+
+                var choreProvider = __instance.GetComponent<ChoreProvider>();
+                if (choreProvider == null)
+                    return;
+
+                // Check for existing TakeMedicine chore
+                foreach (var kvp in choreProvider.choreWorldMap)
+                {
+                    foreach (var chore in kvp.Value)
+                    {
+                        if (chore.choreType == Db.Get().ChoreTypes.TakeMedicine)
+                        {
+                            Patches.Logger.Log($"[FlatulencePeriodicTreatmentChorePatch] Found existing TakeMedicine chore for minion: {__instance.name}");
+                            return;
+                        }
+                        if (chore.choreType == Db.Get().ChoreTypes.TakeMedicine)
+                            return;
+                    }
+                }
+
+                // Find a Flatulence Pill in the world
+                GameObject pill = null;
+                foreach (var go in UnityEngine.Object.FindObjectsOfType<GameObject>())
+                {
+                    var prefabId = go != null ? go.GetComponent<KPrefabID>() : null;
+                    if (prefabId != null && prefabId.PrefabTag.Name == "FlatulencePill")
+                    {
+                        pill = go;
+                        break;
+                    }
+                }
+                if (pill == null)
+                    return;
+
+                var medicineWorkable = pill.GetComponent<MedicinalPillWorkable>();
+                if (medicineWorkable == null)
+                    return;
+
+                // With this line, assigning the proper type and variable declaration:
+                TakeMedicineChore newChore = new TakeMedicineChore(medicineWorkable);
+
+                // Print out the preconditions for newChore and whether the minion meets each one
+                if (newChore != null)
+                {
+                    var preconditions = newChore.GetPreconditions();
+                    if (preconditions != null)
+                    {
+                        foreach (var precondition in preconditions)
+                        {
+                            string id = precondition.condition.id ?? "(no id)";
+                            string desc = precondition.condition.description ?? "(no description)";
+                            bool met = false;
+                            try
+                            {
+                                var consumerState = __instance.GetComponent<ChoreConsumerState>();
+                                var context = new Chore.Precondition.Context();
+                                context.Set(newChore, consumerState, false);
+                                context.consumerState = consumerState;
+                                context.chore = newChore;
+                                context.data = precondition.data;
+                                // If you have access to ChoreDriver, set context.driver as well
+                                met = precondition.condition.fn != null && precondition.condition.fn(ref context, precondition.data);
+                            }
+                            catch (Exception ex)
+                            {
+                                Patches.Logger.Log($"TakeMedicineChore Precondition: id='{id}', description='{desc}', EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+                                continue;
+                            }
+                            Patches.Logger.Log($"TakeMedicineChore Precondition: id='{id}', description='{desc}', met={met}");
+                        }
+                    }
+                    else
+                    {
+                        Patches.Logger.Log("No preconditions found for TakeMedicineChore.");
+                    }
+                }
+
+                Patches.Logger.Log($"TakeMedicineChore created for minion: {__instance.name}, pill: {pill.name}");
+                // Log all chores in the minion's ChoreProvider after creation
+                 choreProvider = __instance.GetComponent<ChoreProvider>();
+                if (choreProvider != null)
+                {
+                    int totalChores = 0;
+                    foreach (var kvp in choreProvider.choreWorldMap)
+                    {
+                        foreach (var c in kvp.Value)
+                        {
+                            totalChores++;
+                            Patches.Logger.Log($"Chore: type={c.choreType?.Id ?? "null"}, target={c.target?.name ?? "null"}");
+                        }
+                    }
+                    Patches.Logger.Log($"Total chores for {__instance.name}: {totalChores}");
+                }
+                else
+                {
+                    Patches.Logger.Log($"No ChoreProvider found for {__instance.name}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Patches.Logger.Log($"[FlatulencePeriodicTreatmentChorePatch] Exception for minion {(__instance != null ? __instance.name : "null")}: {ex}");
+            }
+        }
     }
 }
