@@ -89,18 +89,14 @@ namespace RailSensor
     [HarmonyPatch(typeof(ConduitElementSensor), "ConduitUpdate")]
     public static class ConduitElementSensor_ConduitUpdate_Patch
     {
-        //public static void Postfix(ConduitElementSensor __instance, float dt)
-        public static void Postfix(ConduitElementSensor __instance, Filterable ___filterable, float dt)
+        public static void Postfix(ConduitElementSensor __instance, Filterable ___filterable, ConduitType ___conduitType, float dt)
         {
             bool trigger = false;
 
-            //var filterable = Traverse.Create(__instance).Field("filterable").GetValue<Filterable>();
-            var filterable = ___filterable;
-
-            Tag selectedTag = filterable != null ? filterable.SelectedTag : Tag.Invalid;
+            Tag selectedTag = ___filterable != null ? ___filterable.SelectedTag : Tag.Invalid;
             Tag anythingTag = Filterable_GetTagOptions_Patch.AnythingTag;
 
-            // Try to get the cell and conduit type
+            // Try to get the cell
             var traverse = Traverse.Create(__instance);
             object cellObj = traverse.Field("utilityCell").GetValue();
             if (cellObj == null || (cellObj is int && (int)cellObj == 0))
@@ -109,18 +105,17 @@ namespace RailSensor
                 cellObj = traverse.Field("cell").GetValue();
             if (cellObj == null || (cellObj is int && (int)cellObj == 0))
             {
-                var go = Traverse.Create(__instance).Property("gameObject").GetValue() as GameObject;
+                var go = traverse.Property("gameObject").GetValue() as GameObject;
                 if (go != null)
                     cellObj = Grid.PosToCell(go);
             }
-            object conduitTypeObj = traverse.Field("conduitType").GetValue();
 
-            if (cellObj != null && conduitTypeObj != null)
+            // conduitType is now injected and used first
+            if (cellObj != null)
             {
                 int cell = (cellObj is int) ? (int)cellObj : -1;
-                var conduitType = (ConduitType)conduitTypeObj;
 
-                if (conduitType == ConduitType.Solid)
+                if (___conduitType == ConduitType.Solid)
                 {
                     var flowManager = SolidConduit.GetFlowManager();
                     var solidContents = flowManager.GetContents(cell);
@@ -132,11 +127,10 @@ namespace RailSensor
                     bool hasMass = pickupable != null && pickupable.PrimaryElement != null && pickupable.PrimaryElement.Mass > 0.0f;
 
                     trigger = (hasMass && (selectedTag == anythingTag || element == selectedTag));
-                    //Patches.Logger.Log($"[Solid] cell={cell}, hasMass={hasMass}, element={element}, selectedTag={selectedTag}, anythingTag={anythingTag}, trigger={trigger}");
                 }
-                else if (conduitType == ConduitType.Liquid || conduitType == ConduitType.Gas)
+                else if (___conduitType == ConduitType.Liquid || ___conduitType == ConduitType.Gas)
                 {
-                    var flowManager = Conduit.GetFlowManager(conduitType);
+                    var flowManager = Conduit.GetFlowManager(___conduitType);
                     if (flowManager != null)
                     {
                         var contents = flowManager.GetContents(cell);
@@ -151,11 +145,11 @@ namespace RailSensor
             }
 
             // Only call SetState if the state actually changed
-            bool currentState = Traverse.Create(__instance).Field("isOn").GetValue<bool>();
+            bool currentState = traverse.Field("isOn").GetValue<bool>();
             if (currentState != trigger)
             {
                 Patches.Logger.Log($"State Change {{trigger={trigger}, instanceID={__instance.GetInstanceID()}}}");
-                Traverse.Create(__instance).Method("SetState", trigger).GetValue();
+                traverse.Method("SetState", trigger).GetValue();
             }
         }
     }
