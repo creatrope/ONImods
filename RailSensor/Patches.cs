@@ -96,25 +96,10 @@ namespace RailSensor
             Tag selectedTag = ___filterable != null ? ___filterable.SelectedTag : Tag.Invalid;
             Tag anythingTag = Filterable_GetTagOptions_Patch.AnythingTag;
 
-            // Try to get the cell
-            var traverse = Traverse.Create(__instance);
-            object cellObj = traverse.Field("utilityCell").GetValue();
-            if (cellObj == null || (cellObj is int && (int)cellObj == 0))
-                cellObj = traverse.Field("conduitCell").GetValue();
-            if (cellObj == null || (cellObj is int && (int)cellObj == 0))
-                cellObj = traverse.Field("cell").GetValue();
-            if (cellObj == null || (cellObj is int && (int)cellObj == 0))
-            {
-                var go = traverse.Property("gameObject").GetValue() as GameObject;
-                if (go != null)
-                    cellObj = Grid.PosToCell(go);
-            }
+            int cell = Grid.PosToCell(__instance.transform.position);
 
-            // conduitType is now injected and used first
-            if (cellObj != null)
+            if (cell != Grid.InvalidCell)
             {
-                int cell = (cellObj is int) ? (int)cellObj : -1;
-
                 if (___conduitType == ConduitType.Solid)
                 {
                     var flowManager = SolidConduit.GetFlowManager();
@@ -145,6 +130,7 @@ namespace RailSensor
             }
 
             // Only call SetState if the state actually changed
+            var traverse = Traverse.Create(__instance);
             bool currentState = traverse.Field("isOn").GetValue<bool>();
             if (currentState != trigger)
             {
