@@ -146,7 +146,6 @@ namespace RailSensor
                         bool hasMass = contents.mass > 0.0f;
 
                         trigger = (hasMass && (selectedTag == anythingTag || element == selectedTag));
-                        //Patches.Logger.Log($"[{conduitType}] cell={cell}, hasMass={hasMass}, element={element}, selectedTag={selectedTag}, anythingTag={anythingTag}, trigger={trigger}");
                     }
                 }
             }
@@ -168,82 +167,11 @@ namespace RailSensor
 
         public static void Postfix(Filterable __instance, ref Dictionary<Tag, HashSet<Tag>> __result)
         {
-            //var owner = FilterableOwnerTracker.GetOwner(__instance);
-     
             if (__instance.GetComponent<ConduitElementSensor>() != null)
             {
                 if (!__result.ContainsKey(AnythingTag))
                     __result.Add(AnythingTag, new HashSet<Tag> { AnythingTag });
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(Filterable), "OnPrefabInit")]
-    public static class Filterable_OnPrefabInit_Patch
-    {
-        public static void Postfix(Filterable __instance)
-        {
-            var sensor = __instance.GetComponent<ConduitElementSensor>();
-            if (sensor != null)
-                RailSensor.FilterableOwnerTracker.SetOwner(__instance, sensor);
-        }
-    }
-
-    public static class FilterableOwnerTracker
-    {
-        private static readonly ConditionalWeakTable<Filterable, object> Owners = new ConditionalWeakTable<Filterable, object>();
-
-        public static void SetOwner(Filterable filterable, object owner)
-        {
-            if (filterable != null && owner != null)
-            {
-                Owners.Remove(filterable);
-                Owners.Add(filterable, owner);
-            }
-        }
-
-        public static object GetOwner(Filterable filterable)
-        {
-            if (filterable == null)
-                return null;
-            Owners.TryGetValue(filterable, out var owner);
-            return owner;
-        }
-    }
-
-    [HarmonyPatch(typeof(GasConduitElementSensorConfig), "DoPostConfigureComplete")]
-    public static class GasConduitElementSensorConfig_DoPostConfigureComplete_Patch
-    {
-        public static void Postfix(GameObject go)
-        {
-            var filterable = go.GetComponent<Filterable>();
-            var sensor = go.GetComponent<ConduitElementSensor>();
-            if (filterable != null && sensor != null)
-                RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
-        }
-    }
-
-    [HarmonyPatch(typeof(SolidConduitElementSensorConfig), "DoPostConfigureComplete")]
-    public static class SolidConduitElementSensorConfig_DoPostConfigureComplete_Patch
-    {
-        public static void Postfix(GameObject go)
-        {
-            var filterable = go.GetComponent<Filterable>();
-            var sensor = go.GetComponent<ConduitElementSensor>();
-            if (filterable != null && sensor != null)
-                RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
-        }
-    }
-
-    [HarmonyPatch(typeof(LiquidConduitElementSensorConfig), "DoPostConfigureComplete")]
-    public static class LiquidConduitElementSensorConfig_DoPostConfigureComplete_Patch
-    {
-        public static void Postfix(GameObject go)
-        {
-            var filterable = go.GetComponent<Filterable>();
-            var sensor = go.GetComponent<ConduitElementSensor>();
-            if (filterable != null && sensor != null)
-                RailSensor.FilterableOwnerTracker.SetOwner(filterable, sensor);
         }
     }
 }
