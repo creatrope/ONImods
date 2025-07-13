@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RailSensor", "RailSensor\Ra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewPills", "NewPills\NewPills.csproj", "{3204B137-1275-4C45-B538-119731ADA31D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flatulence", "Flatulence\Flatulence.csproj", "{073527F8-EBD5-491E-8084-3A9B702C3C4C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,10 @@ Global
 		{3204B137-1275-4C45-B538-119731ADA31D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3204B137-1275-4C45-B538-119731ADA31D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3204B137-1275-4C45-B538-119731ADA31D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{073527F8-EBD5-491E-8084-3A9B702C3C4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{073527F8-EBD5-491E-8084-3A9B702C3C4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{073527F8-EBD5-491E-8084-3A9B702C3C4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{073527F8-EBD5-491E-8084-3A9B702C3C4C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
