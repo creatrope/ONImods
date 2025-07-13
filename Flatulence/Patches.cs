@@ -46,15 +46,52 @@ namespace FlatulenceMod
             var go = new GameObject("FlatulenceMod_PeriodicTest");
             go.AddComponent<PeriodicTest>();
             UnityEngine.Object.DontDestroyOnLoad(go);
+
+            // Ensure FlatulencePeriodic runs by attaching it to a GameObject
+            var flatulenceGo = new GameObject("FlatulenceMod_FlatulencePeriodic");
+            flatulenceGo.AddComponent<FlatulencePeriodic>();
+            UnityEngine.Object.DontDestroyOnLoad(flatulenceGo);
         }
 
-        public static void RunOnce()
+        /// <summary>
+        /// Adds FlatulenceSickness to a single minion, with logging.
+        /// </summary>
+        public static void AddFlatulenceSicknessToMinion(GameObject minionGo)
         {
-            Logger.Log("[Patches] Doing onetime stuff");
-            //Assets_OnPrefabInit_Patch.DumpPills();
-            PeriodicTest.AddFlatulenceEffectToMinions();
-            PeriodicTest.AddFlatulenceSicknessToMinions();
-            Logger.Log("[Patches] Exiting onetime stuff");
+            var minionIdentity = minionGo.GetComponent<MinionIdentity>();
+            if (minionIdentity == null)
+                return;
+
+            string dupeLabel = $"{minionIdentity.GetProperName()}({minionGo.GetInstanceID()})";
+
+            var modifiers = minionGo.GetComponent<Modifiers>();
+            if (modifiers == null)
+            {
+                Logger.Log($"[AddFlatulenceSicknessToMinion][TEST] Minion '{dupeLabel}' does NOT have Modifiers component.");
+                return;
+            }
+
+            var sicknesses = modifiers.sicknesses;
+            if (sicknesses == null)
+            {
+                Logger.Log($"[AddFlatulenceSicknessToMinion][TEST] Minion '{dupeLabel}' does NOT have Sicknesses instance.");
+                return;
+            }
+
+            bool hasFlatulenceSickness = sicknesses.Get(FlatulenceSickness.ID) != null;
+            if (!hasFlatulenceSickness)
+            {
+                Logger.Log($"Added FlatulenceSickness to minion: {dupeLabel}");
+                sicknesses.Infect(new SicknessExposureInfo(FlatulenceSickness.ID, null));
+            }
+            else
+            {
+                Logger.Log($"[AddFlatulenceSicknessToMinion] Minion '{dupeLabel}' already has FlatulenceSickness.");
+            }
+
+            hasFlatulenceSickness = sicknesses.Get(FlatulenceSickness.ID) != null;
+            Logger.Log($"[AddFlatulenceSicknessToMinion] {dupeLabel}");
+            Logger.Log($"[TEST][AddFlatulenceSicknessToMinion][TEST] Minion: {dupeLabel}, HasFlatulenceSickness: {hasFlatulenceSickness}");
         }
     }
 
@@ -150,29 +187,127 @@ namespace FlatulenceMod
     {
         public static void Postfix(GameObject go)
         {
-            FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Postfix called.");
+            FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Postfix starting.");
             if (go == null)
             {
                 FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Game Object null.");
+                return;
             }
-            else
+            Patches.AddFlatulenceSicknessToMinion(go);
+            FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Postfix exiting.");
+        }
+    }
+
+    public class PeriodicTest : MonoBehaviour
+    {
+        private float timer = 0f;
+        private bool oneTime = false;
+
+        void Update()
+        {
+            timer += Time.unscaledDeltaTime;
+            if (timer >= 1f)
             {
-                var modifiers = go.GetComponent<Modifiers>();
-                var sicknesses = modifiers?.sicknesses;
-                if (modifiers != null)
+                //FlatulenceMod.Patches.Logger.Log("[PeriodicTest] tick.");
+                timer = 0f;
+            }
+        }
+
+        // Update AddFlatulenceSicknessToMinions to use the helper
+        public static void AddFlatulenceSicknessToMinions()
+        {
+            FlatulenceMod.Patches.Logger.Log("[AddFlatulenceSicknessToMinions] Starting");
+            var allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>();
+
+            foreach (var go in allObjects)
+            {
+                if (go.GetComponent<MinionIdentity>() != null)
                 {
-                    FlatulenceMod.Patches.Logger.Log($"[MinionConfigPatch] Modifiers component found on: {go.name}");
-                    if (sicknesses == null)
+                    Patches.AddFlatulenceSicknessToMinion(go);
+                }
+            }
+
+            FlatulenceMod.Patches.Logger.Log("[AddFlatulenceSicknessToMinions] Exiting");
+        }
+
+        public static void AddFlatulenceEffectToMinions()
+        {
+            FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions] Starting");
+            var allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>();
+            foreach (var go in allObjects)
+            {
+                var minionIdentity = go.GetComponent<MinionIdentity>();
+                if (minionIdentity != null)
+                {
+                    string dupeLabel = $"{minionIdentity.GetProperName()}({go.GetInstanceID()})";
+                    var effects = go.GetComponent<Effects>();
+                    if (effects != null)
                     {
-                        FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Sicknesses not found in Modifiers.");
+                        bool hasFlatulenceEffect = effects.HasEffect(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID);
+                        if (!hasFlatulenceEffect)
+                        {
+                            effects.Add(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID, true);
+                            FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions] Added FlatulenceEffect to minion: {dupeLabel}");
+                        }
+                        else
+                        {
+                            FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions] Minion '{dupeLabel}' already has FlatulenceEffect.");
+                        }
+
+                        hasFlatulenceEffect = effects.HasEffect(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID);
+                        FlatulenceMod.Patches.Logger.Log($"[TEST][AddFlatulenceEffectToMinions][TEST] Dupe: {dupeLabel}, HasFlatulenceEffect: {hasFlatulenceEffect}");
+                    }
+                    else
+                    {
+                        FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions][TEST] Minion '{dupeLabel}' does NOT have Effects component.");
                     }
                 }
-                else
+            }
+            FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions] Exiting");
+        }
+    }
+
+    public class FlatulencePeriodic : MonoBehaviour
+    {
+        private float timer = 0f;
+        private const float interval = 10f; // Every 60 seconds
+
+        void Update()
+        {
+            timer += Time.unscaledDeltaTime;
+            if (timer >= interval)
+            {
+                FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] Timer triggered. Scanning minions...");
+                timer = 0f;
+                var allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>();
+                foreach (var go in allObjects)
                 {
-                    FlatulenceMod.Patches.Logger.Log($"[MinionConfigPatch] Modifiers component NOT found on: {go.name}");
+                    var minionIdentity = go.GetComponent<MinionIdentity>();
+                    var sicknesses = go.GetComponent<Sicknesses>();
+                    var effects = go.GetComponent<Effects>();
+                    if (minionIdentity != null && sicknesses != null && effects != null)
+                    {
+                        string dupeLabel = $"{minionIdentity.GetProperName()}({go.GetInstanceID()})";
+                        bool hasSickness = sicknesses.Get(FlatulenceSickness.ID) != null;
+                        bool hasEffect = effects.HasEffect(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID);
+                        FlatulenceMod.Patches.Logger.Log(
+                            $"[FlatulencePeriodic] Minion: {dupeLabel}, HasFlatulenceSickness: {hasSickness}, HasFlatulenceEffect: {hasEffect}"
+                        );
+                        if (hasSickness)
+                        {
+                            if (!hasEffect)
+                            {
+                                effects.Add(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID, true);
+                                FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] Added FlatulenceEffect to minion: {dupeLabel}");
+                            }
+                            else
+                            {
+                                FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] Minion '{dupeLabel}' already has FlatulenceEffect.");
+                            }
+                        }
+                    }
                 }
             }
-            FlatulenceMod.Patches.Logger.Log("[MinionConfig] Postfix Exiting.");
         }
     }
 
@@ -187,20 +322,24 @@ namespace FlatulenceMod
         }
     }
 
-    [HarmonyPatch(typeof(MedicinalPillWorkable), "CanBeTakenBy")]
+    //[HarmonyPatch(typeof(MedicinalPillWorkable), "CanBeTakenBy")]
     public static class MedicinalPillWorkable_CanBeTakenBy_Patch
     {
         public static void Postfix(MedicinalPillWorkable __instance, GameObject consumer, ref bool __result)
         {
             var pillInfo = __instance?.pill?.info;
-            var consumerName = consumer?.name;
+            var minionIdentity = consumer.GetComponent<MinionIdentity>();
+            var consumerLabel = minionIdentity != null
+                ? $"{minionIdentity.GetProperName()}({consumer.GetInstanceID()})"
+                : $"{consumer.name}({consumer.GetInstanceID()})";
             var effect = pillInfo?.effect;
             var medicineType = pillInfo?.medicineType;
             var curedSicknesses = pillInfo?.curedSicknesses != null ? string.Join(", ", pillInfo.curedSicknesses) : "none";
 
             var consumable = consumer.GetComponent<ConsumableConsumer>();
+            var modifiers = consumer.GetComponent<Modifiers>();
+            var sicknesses = modifiers != null ? modifiers.sicknesses : null;
             var effects = consumer.GetComponent<Effects>();
-            var sicknesses = consumer.GetComponent<Sicknesses>();
 
             bool isPermitted = consumable != null && consumable.IsPermitted(__instance.ConsumableId);
             bool hasFlatulenceEffect = effects != null && effects.HasEffect(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID);
@@ -211,16 +350,18 @@ namespace FlatulenceMod
 
             if (pillInfo?.curedSicknesses != null && pillInfo.curedSicknesses.Contains("Allergies"))
             {
+                if (!hasAllergiesSickness) __result = false;
                 FlatulenceMod.Patches.Logger.Log(
-                    $"[CanBeTakenBy][Allergies] Pill: {__instance?.name}, Consumer: {consumerName}, " +
+                    $"[CanBeTakenBy][Allergies] Pill: {__instance?.name}, Consumer: {consumerLabel}, " +
                     $"HasAllergiesSickness: {hasAllergiesSickness}, IsPermitted: {isPermitted}, Ready: {isNotIncapacitated}, Result: {__result}"
                 );
             }
 
             if (pillInfo?.curedSicknesses != null && pillInfo.curedSicknesses.Contains(FlatulenceSickness.ID))
             {
+                if (!hasFlatulenceSickness) __result = false;
                 FlatulenceMod.Patches.Logger.Log(
-                    $"[CanBeTakenBy][Flatulence] Pill: {__instance?.name}, Consumer: {consumerName}, " +
+                    $"[CanBeTakenBy][Flatulence] Consumer: {consumerLabel}, " +
                     $"HasFlatulenceEffect: {hasFlatulenceEffect}, HasFlatulenceSickness: {hasFlatulenceSickness}, " +
                     $"HasNoFlatulenceEffect: {hasNoFlatulenceEffect}, IsPermitted: {isPermitted}, Ready: {isNotIncapacitated}, Result: {__result}"
                 );
@@ -234,9 +375,9 @@ namespace FlatulenceMod
         public static void Prefix(Chore.Precondition.Context __instance)
         {
             var minionName = __instance.consumerState?.gameObject?.name;
-            if (!string.IsNullOrEmpty(minionName) && minionName == "Frankie")
+            if (!string.IsNullOrEmpty(minionName))
             {
-                FlatulenceMod.Patches.Logger.Log($"[RunPreconditions] Chore: {__instance.chore?.GetType().Name}, Minion: {minionName}");
+                //FlatulenceMod.Patches.Logger.Log($"[RunPreconditions] Chore: {__instance.chore?.GetType().Name}, Minion: {minionName}");
             }
         }
     }
@@ -246,9 +387,6 @@ namespace FlatulenceMod
     {
         public static void Postfix(Game __instance)
         {
-            FlatulenceMod.Patches.Logger.Log("[Game_OnSpawn_Patch] Game.OnSpawn called. Main loop is ready!");
-            // Place your test logic here
-            FlatulenceMod.Patches.RunOnce();
         }
     }
 
@@ -317,8 +455,6 @@ namespace FlatulenceMod
             }
             prefabCreated = true;
 
-            FlatulenceMod.Patches.Logger.Log("[NoFlatulencePillConfig] CreatePrefab called.");
-
             var testAnimName = "pill_radiation_kanim";
             FlatulenceMod.Patches.Logger.Log($"[NoFlatulencePillConfig] Testing for animation: {testAnimName}");
             var anim = Assets.GetAnim((HashedString)testAnimName);
@@ -351,10 +487,7 @@ namespace FlatulenceMod
                 throw new Exception("Failed to create looseEntity for NoFlatulencePill!");
             }
 
-            FlatulenceMod.Patches.Logger.Log("[NoFlatulencePillConfig] Extending entity to medicine...");
             EntityTemplates.ExtendEntityToMedicine(looseEntity, MEDICINE.NOFLATULENCEPILL);
-
-            FlatulenceMod.Patches.Logger.Log("[NoFlatulencePillConfig] Adding MedicinalPill component...");
             var pillComponent = looseEntity.AddOrGet<MedicinalPill>();
             if (pillComponent == null)
             {
@@ -402,12 +535,10 @@ namespace FlatulenceMod
 
         public void OnPrefabInit(GameObject inst)
         {
-            // Add any initialization logic for the prefab here if needed
         }
 
         public void OnSpawn(GameObject inst)
         {
-            // Add any logic to execute when the prefab spawns here if needed
         }
     }
 
@@ -431,102 +562,6 @@ namespace FlatulenceMod
             {
                 new AttributeModifier(Db.Get().Amounts.Stress.deltaAttribute.Id, STRESS_PER_CYCLE, "Flatulence Sickness"),
             }));
-        }
-    }
-
-    public class PeriodicTest : MonoBehaviour
-    {
-        private float timer = 0f;
-        private bool oneTime = false;
-
-        void Update()
-        {
-            timer += Time.unscaledDeltaTime;
-            if (timer >= 1f)
-            {
-                FlatulenceMod.Patches.Logger.Log("[PeriodicTest] tick.");
-
-                timer = 0f;
-            }
-        }
-
-        public static void AddFlatulenceSicknessToMinions()
-        {
-            FlatulenceMod.Patches.Logger.Log("[AddFlatulenceSicknessToMinions] Starting");
-            var allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>();
-
-            foreach (var go in allObjects)
-            {
-                var minionIdentity = go.GetComponent<MinionIdentity>();
-                if (minionIdentity == null)
-                    continue;
-
-                var modifiers = go.GetComponent<Modifiers>();
-                if (modifiers == null)
-                {
-                    FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceSicknessToMinions][TEST] Minion '{go.name}' does NOT have Modifiers component.");
-                    continue;
-                }
-
-                var sicknesses = modifiers.sicknesses;
-                if (sicknesses == null)
-                {
-                    FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceSicknessToMinions][TEST] Minion '{go.name}' does NOT have Sicknesses instance.");
-                    continue;
-                }
-
-                bool hasFlatulenceSickness = sicknesses.Get(FlatulenceSickness.ID) != null;
-                if (!hasFlatulenceSickness)
-                {
-                    FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceSicknessToMinions] Added FlatulenceSickness to minion: {go.name}");
-                    sicknesses.Infect(new SicknessExposureInfo(FlatulenceSickness.ID, null));
-                }
-                else
-                {
-                    FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceSicknessToMinions] Minion '{go.name}' already has FlatulenceSickness.");
-                }
-
-                hasFlatulenceSickness = sicknesses.Get(FlatulenceSickness.ID) != null;
-                FlatulenceMod.Patches.Logger.Log($"[TEST][AddFlatulenceSicknessToMinions][TEST] Minion: {go.name}, HasFlatulenceSickness: {hasFlatulenceSickness}");
-            }
-
-            FlatulenceMod.Patches.Logger.Log("[AddFlatulenceSicknessToMinions] Exiting");
-        }
-
-        public static void AddFlatulenceEffectToMinions()
-        {
-            FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions] Starting");
-            var allObjects = UnityEngine.Object.FindObjectsOfType<GameObject>();
-            foreach (var go in allObjects)
-            {
-                var minionIdentity = go.GetComponent<MinionIdentity>();
-                if (minionIdentity != null)
-                {
-                    var effects = go.GetComponent<Effects>();
-                    // TEST: Log if Effects component is present or not
-                    if (effects != null)
-                    {
-                        bool hasFlatulenceEffect = effects.HasEffect(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID);
-                        if (!hasFlatulenceEffect)
-                        {
-                            effects.Add(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID, true);
-                            FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions] Added FlatulenceEffect to minion: {go.name}");
-                        }
-                        else
-                        {
-                            FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions] Minion '{go.name}' already has FlatulenceEffect.");
-                        }
-
-                        hasFlatulenceEffect = effects.HasEffect(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID);
-                        FlatulenceMod.Patches.Logger.Log($"[TEST][AddFlatulenceEffectToMinions][TEST] Dupe: {go.name}, HasFlatulenceEffect: {hasFlatulenceEffect}");
-                    }
-                    else
-                    {
-                         FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions][TEST] Minion '{go.name}' does NOT have Effects component.");
-                    }
-                }
-            }
-            FlatulenceMod.Patches.Logger.Log($"[AddFlatulenceEffectToMinions] Exiting");
         }
     }
 }
