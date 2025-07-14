@@ -27,18 +27,19 @@ namespace FlatulenceMod
     {
         public const string FLATULENCE_SICKNESS_ID = "FlatulenceSickness";
         public const float FLATULENCE_STRESS_PER_CYCLE = 0.1f;
-
         public const string FLATULENCE_EFFECT_ID = "FlatulenceEffect";
         public const string NOFLATULENCE_EFFECT_ID = "NoFlatulenceEffect";
-
         public const string NOFLATULENCE_PILL_ID = "NoFlatulencePill";
         public const float NOFLATULENCE_EFFECT_DURATION = 15f;
         public const float FLATULENCE_EFFECT_DURATION = 15f;
-
         public const float FLATULENCE_PERIODIC_INTERVAL = 30f;
         public const float NOFLATULENCE_PILL_RECIPE_TIME = 10f;
         public const int NOFLATULENCE_PILL_RECIPE_SORTORDER = 10;
         public const float FLATULENCE_REINFECT_INTERVAL = 30f;
+
+        public const float FLATULENCE_EFFECT_STRESS_MODIFIER = 10f;
+        public const float FLATULENCE_SICKNESS_STRESS_PER_CYCLE = 0.01f; 
+
     }
 
     public class Patches
@@ -305,6 +306,7 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
         }
     }
 
+    // debugging code to see if dupe is eligible to take the pill
     //[HarmonyPatch(typeof(MedicinalPillWorkable), "CanBeTakenBy")]
     public static class MedicinalPillWorkable_CanBeTakenBy_Patch
     {
@@ -328,17 +330,6 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
             bool hasFlatulenceEffect = effects != null && effects.HasEffect(EFFECTS.FLATULENCE_EFFECT_ID);
             bool hasNoFlatulenceEffect = effects != null && effects.HasEffect(EFFECTS.NOFLATULENCE_EFFECT_ID);
             bool hasFlatulenceSickness = sicknesses != null && sicknesses.Get(FlatulenceSickness.ID) != null;
-            bool hasAllergiesSickness = sicknesses != null && sicknesses.Get("Allergies") != null;
-            bool isNotIncapacitated = consumer != null && consumer.GetComponent<Health>()?.IsIncapacitated() == false;
-
-            if (pillInfo?.curedSicknesses != null && pillInfo.curedSicknesses.Contains("Allergies"))
-            {
-                if (!hasAllergiesSickness) __result = false;
-                FlatulenceMod.Patches.Logger.Log(
-                    $"[CanBeTakenBy][Allergies] Pill: {__instance?.name}, Consumer: {consumerLabel}, " +
-                    $"HasAllergiesSickness: {hasAllergiesSickness}, IsPermitted: {isPermitted}, Ready: {isNotIncapacitated}, Result: {__result}"
-                );
-            }
 
             if (pillInfo?.curedSicknesses != null && pillInfo.curedSicknesses.Contains(FlatulenceSickness.ID))
             {
@@ -346,7 +337,7 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
                 FlatulenceMod.Patches.Logger.Log(
                     $"[CanBeTakenBy][Flatulence] Consumer: {consumerLabel}, " +
                     $"HasFlatulenceEffect: {hasFlatulenceEffect}, HasFlatulenceSickness: {hasFlatulenceSickness}, " +
-                    $"HasNoFlatulenceEffect: {hasNoFlatulenceEffect}, IsPermitted: {isPermitted}, Ready: {isNotIncapacitated}, Result: {__result}"
+                    $"HasNoFlatulenceEffect: {hasNoFlatulenceEffect}, IsPermitted: {isPermitted}, Result: {__result}"
                 );
             }
         }
@@ -358,9 +349,9 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
         public static void Prefix(Chore.Precondition.Context __instance)
         {
             var minionName = __instance.consumerState?.gameObject?.name;
-            if (!string.IsNullOrEmpty(minionName))
+            if (!string.IsNullOrEmpty(minionName) && !string.Equals(minionName, "LightBug", StringComparison.OrdinalIgnoreCase))
             {
-                //FlatulenceMod.Patches.Logger.Log($"[RunPreconditions] Chore: {__instance.chore?.GetType().Name}, Minion: {minionName}");
+                FlatulenceMod.Patches.Logger.Log($"[RunPreconditions] Chore: {__instance.chore?.GetType().Name}, Minion: {minionName}");
             }
         }
     }
