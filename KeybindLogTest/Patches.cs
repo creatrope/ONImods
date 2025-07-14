@@ -5,16 +5,18 @@ using HLib;
 using KMod;
 using KSerialization;
 using Newtonsoft.Json; // Ensure this using directive is present
+using PeterHan.PLib.Actions;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
+using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
-using PeterHan.PLib.Actions;
 using System;
 using System.Collections.Generic; // For List<> and Dictionary<>
 using System.Runtime.CompilerServices; // For ConditionalWeakTable
 using TUNING;
 using UnityEngine;
 using static Rendering.BlockTileRenderer;
+using static STRINGS.CODEX.CRITTERSTATUS.FERTILITY;
 
 namespace KeybindLogTest
 {
@@ -40,11 +42,18 @@ namespace KeybindLogTest
             }
         }
 
-        internal static void Register()
+        [PLibMethod(RunAt.AfterLayerableLoad)]
+        internal static void AddKeycodeHandler()
         {
+            KInputHandler.Add(Global.GetInputManager().GetDefaultController(),
+                new MinimalKeybindHandler(), 512);
+        }
+
+        internal static void Register(PPatchManager manager)
+        {
+            manager.RegisterPatchClass(typeof(MinimalKeybindHandler));
             KeyTestAction = new PActionManager().CreateAction(
-                "KeybindLogTest.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl));
-            KInputHandler.Add(Global.GetInputManager().GetDefaultController(), new MinimalKeybindHandler(), 512);
+                "KeybindLogTest.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.C, Modifier.Shift | Modifier.Ctrl));
         }
     }
 
@@ -55,7 +64,7 @@ namespace KeybindLogTest
             base.OnLoad(harmony);
             harmony.PatchAll();
             PUtil.InitLibrary();
-            MinimalKeybindHandler.Register();
+            MinimalKeybindHandler.Register(new PPatchManager(harmony));
         }
     }
 }
