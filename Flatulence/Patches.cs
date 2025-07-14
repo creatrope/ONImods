@@ -38,8 +38,10 @@ namespace FlatulenceMod
         public const float FLATULENCE_REINFECT_INTERVAL = 30f;
 
         public const float FLATULENCE_EFFECT_STRESS_MODIFIER = 10f;
-        public const float FLATULENCE_SICKNESS_STRESS_PER_CYCLE = 0.01f; 
+        public const float FLATULENCE_SICKNESS_STRESS_PER_CYCLE = 0.01f;
 
+        // In ModConstants class
+        public const float NOFLATULENCE_EFFECT_ACTUAL_DURATION = 15f;
     }
 
     public class Patches
@@ -63,11 +65,6 @@ namespace FlatulenceMod
             KeyTestHandler.KeyTestAction = new PActionManager().CreateAction(
                 "FlatulenceMod.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl));
             KInputHandler.Add(Global.GetInputManager().GetDefaultController(), new KeyTestHandler(), 512);
-
-            // Ensure PeriodicTest runs by attaching it to a GameObject
-            var go = new GameObject("FlatulenceMod_PeriodicTest");
-            go.AddComponent<PeriodicTest>();
-            UnityEngine.Object.DontDestroyOnLoad(go);
 
             // Ensure FlatulencePeriodic runs by attaching it to a GameObject
             var flatulenceGo = new GameObject("FlatulenceMod_FlatulencePeriodic");
@@ -261,8 +258,7 @@ namespace FlatulenceMod
                     var minionIdentity = go.GetComponent<MinionIdentity>();
                     if (minionIdentity == null)
                     {
-                        FlatulenceMod.Patches.Logger.Log(
-$"[FlatulencePeriodic] minionIdentity is null."); return;
+                        FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] minionIdentity is null."); return;
                     }
                     var modifiers = go.GetComponent<Modifiers>();
                     var sicknesses = modifiers != null ? modifiers.sicknesses : null;
@@ -295,73 +291,22 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
             }
         }
     }
-    /*
-    public class PeriodicTest : MonoBehaviour
+   
+    [HarmonyPatch(typeof(Flatulence), "Emit")]
+    public static class Flatulence_Emit_Patch_Test
     {
-        public static void Prefix(TakeMedicineChore __instance, Chore.Precondition.Context context)
+        public static void Prefix(Flatulence __instance)
         {
-            var minion = context.consumerState?.gameObject;
-            var medicine = __instance.target?.GetComponent<MedicinalPill>();
-            FlatulenceMod.Patches.Logger.Log($"[TakeMedicinePatch] {minion?.name} considering medicine: {medicine?.info?.id}");
-        }
-    }
-    */
-
-    // debugging code to see if dupe is eligible to take the pill
-    //[HarmonyPatch(typeof(MedicinalPillWorkable), "CanBeTakenBy")]
-    public static class MedicinalPillWorkable_CanBeTakenBy_Patch
-    {
-        public static void Postfix(MedicinalPillWorkable __instance, GameObject consumer, ref bool __result)
-        {
-            var pillInfo = __instance?.pill?.info;
-            var minionIdentity = consumer.GetComponent<MinionIdentity>();
-            var consumerLabel = minionIdentity != null
-                ? $"{minionIdentity.GetProperName()}({consumer.GetInstanceID()})"
-                : $"{consumer.name}({consumer.GetInstanceID()})";
-            var effect = pillInfo?.effect;
-            var medicineType = pillInfo?.medicineType;
-            var curedSicknesses = pillInfo?.curedSicknesses != null ? string.Join(", ", pillInfo.curedSicknesses) : "none";
-
-            var consumable = consumer.GetComponent<ConsumableConsumer>();
-            var modifiers = consumer.GetComponent<Modifiers>();
-            var sicknesses = modifiers != null ? modifiers.sicknesses : null;
-            var effects = consumer.GetComponent<Effects>();
-
-            bool isPermitted = consumable != null && consumable.IsPermitted(__instance.ConsumableId);
-            bool hasFlatulenceEffect = effects != null && effects.HasEffect(EFFECTS.FLATULENCE_EFFECT_ID);
-            bool hasNoFlatulenceEffect = effects != null && effects.HasEffect(EFFECTS.NOFLATULENCE_EFFECT_ID);
-            bool hasFlatulenceSickness = sicknesses != null && sicknesses.Get(FlatulenceSickness.ID) != null;
-
-            if (pillInfo?.curedSicknesses != null && pillInfo.curedSicknesses.Contains(FlatulenceSickness.ID))
+            var minion = __instance.gameObject;
+            var minionIdentity = minion.GetComponent<MinionIdentity>();
+            var traits = minion.GetComponent<Traits>();
+            if (traits != null && traits.HasTrait("Flatulence"))
             {
-                if (!hasFlatulenceSickness) __result = false;
-                FlatulenceMod.Patches.Logger.Log(
-                    $"[CanBeTakenBy][Flatulence] Consumer: {consumerLabel}, " +
-                    $"HasFlatulenceEffect: {hasFlatulenceEffect}, HasFlatulenceSickness: {hasFlatulenceSickness}, " +
-                    $"HasNoFlatulenceEffect: {hasNoFlatulenceEffect}, IsPermitted: {isPermitted}, Result: {__result}"
-                );
+                string dupeLabel = minionIdentity != null
+                    ? $"{minionIdentity.GetProperName()}({minion.GetInstanceID()})"
+                    : $"{minion.name}({minion.GetInstanceID()})";
+                FlatulenceMod.Patches.Logger.Log($"[Flatulence_Emit_Patch_Test] Dupe '{dupeLabel}' emit pass test triggered.");
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(Chore.Precondition.Context), "RunPreconditions")]
-    public static class ChorePreconditionContext_RunPreconditions_Patch
-    {
-        public static void Prefix(Chore.Precondition.Context __instance)
-        {
-            var minionName = __instance.consumerState?.gameObject?.name;
-            if (!string.IsNullOrEmpty(minionName) && !string.Equals(minionName, "LightBug", StringComparison.OrdinalIgnoreCase))
-            {
-                FlatulenceMod.Patches.Logger.Log($"[RunPreconditions] Chore: {__instance.chore?.GetType().Name}, Minion: {minionName}");
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Game), "OnSpawn")]
-    public static class Game_OnSpawn_Patch
-    {
-        public static void Postfix(Game __instance)
-        {
         }
     }
 
@@ -381,7 +326,7 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
                 trigger_floating_text: false,
                 is_bad: true
             );
-            effect.Add(new AttributeModifier("Stress", 10f, "Flatulence Stress"));
+            effect.Add(new AttributeModifier("Stress", 1f, "Flatulence Stress"));
             return effect;
         }
 
@@ -391,7 +336,7 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
                 NOFLATULENCE_EFFECT_ID,
                 STRINGS.EFFECTS.NOFLATULENCEEFFECT.NAME,
                 STRINGS.EFFECTS.NOFLATULENCEEFFECT.DESC,
-                duration: 15f,
+                duration: ModConstants.NOFLATULENCE_EFFECT_ACTUAL_DURATION,
                 show_in_ui: true,
                 trigger_floating_text: false,
                 is_bad: false
