@@ -48,24 +48,14 @@ namespace KeybindLogTest
         }
     }
 
-    public class Patches
-    {
-        public static void OnLoad()
-        {
-
-           MinimalKeybindHandler.Register();
-        }
-    }
-
     public class Mod : UserMod2
     {
         public override void OnLoad(Harmony harmony)
         {
-            KeybindLogTest.Patches.OnLoad();
             base.OnLoad(harmony);
-
-            PUtil.InitLibrary();
             harmony.PatchAll();
+            PUtil.InitLibrary();
+            MinimalKeybindHandler.Register();
         }
     }
 }
