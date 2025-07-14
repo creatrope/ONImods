@@ -226,7 +226,7 @@ namespace FlatulenceMod
     public class FlatulencePeriodic : MonoBehaviour
     {
         private float timer = 0f;
-        private const float interval = 10f; // Every 60 seconds
+        private const float interval = 15f; // Every 60 seconds
 
         void Update()
         {
@@ -237,7 +237,7 @@ namespace FlatulenceMod
                 timer = 0f;
                 var allMinions = UnityEngine.Object.FindObjectsOfType<GameObject>()
                     .Where(go => go.GetComponent<MinionIdentity>() != null)
-                    .ToArray(); 
+                    .ToArray();
                 foreach (var go in allMinions)
                 {
                     var minionIdentity = go.GetComponent<MinionIdentity>();
@@ -257,32 +257,19 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
                     {
                         bool hasFlatulenceTrait = traits.HasTrait("Flatulence");
                         FlatulenceMod.Patches.Logger.Log(
-$"[FlatulencePeriodic] Minion: {dupeLabel}, hasFlatulenceTrait: {hasFlatulenceTrait}");
-                    } else
-                    {
-                        FlatulenceMod.Patches.Logger.Log(
-$"[FlatulencePeriodic] Minion: {dupeLabel} traits is null.");
-                    }
+                            $"[FlatulencePeriodic] Minion: {dupeLabel}, hasFlatulenceTrait: {hasFlatulenceTrait}");
 
-                    if (sicknesses != null && effects != null)
-                    {
-                        bool hasSickness = sicknesses.Get(FlatulenceSickness.ID) != null;
-                        bool hasEffect = effects.HasEffect(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID);
-                        FlatulenceMod.Patches.Logger.Log(
-                            $"[FlatulencePeriodic] Minion: {dupeLabel}, HasFlatulenceSickness: {hasSickness}, HasFlatulenceEffect: {hasEffect}"
-                        );
-                        if (hasSickness)
+                        // Add FlatulenceSickness if not present
+                        if (sicknesses != null && sicknesses.Get(FlatulenceSickness.ID) == null)
                         {
-                            if (!hasEffect)
-                            {
-                                effects.Add(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID, true);
-                                FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] Added FlatulenceEffect to minion: {dupeLabel}");
-                            }
-                            else
-                            {
-                                FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] Minion '{dupeLabel}' already has FlatulenceEffect.");
-                            }
+                            sicknesses.Infect(new SicknessExposureInfo(FlatulenceSickness.ID, null));
+                            FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] Added FlatulenceSickness to minion: {dupeLabel}");
                         }
+                    }
+                    else
+                    {
+                        FlatulenceMod.Patches.Logger.Log(
+                            $"[FlatulencePeriodic] Minion: {dupeLabel} traits is null.");
                     }
                 }
                 FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] Timer exiting");
