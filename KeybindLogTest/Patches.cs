@@ -53,7 +53,7 @@ namespace KeybindLogTest
         {
             manager.RegisterPatchClass(typeof(MinimalKeybindHandler));
             KeyTestAction = new PActionManager().CreateAction(
-                "KeybindLogTest.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.C, Modifier.Shift | Modifier.Ctrl));
+                "KeybindLogTest.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl));
         }
     }
 
