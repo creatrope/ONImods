@@ -30,7 +30,6 @@ namespace FlatulenceMod
         public const string FLATULENCE_EFFECT_ID = "FlatulenceEffect";
         public const string NOFLATULENCE_EFFECT_ID = "NoFlatulenceEffect";
         public const string NOFLATULENCE_PILL_ID = "NoFlatulencePill";
-        public const float NOFLATULENCE_EFFECT_DURATION = 15f;
         public const float FLATULENCE_EFFECT_DURATION = 15f;
         public const float FLATULENCE_PERIODIC_INTERVAL = 30f;
         public const float NOFLATULENCE_PILL_RECIPE_TIME = 10f;
@@ -40,8 +39,7 @@ namespace FlatulenceMod
         public const float FLATULENCE_EFFECT_STRESS_MODIFIER = 10f;
         public const float FLATULENCE_SICKNESS_STRESS_PER_CYCLE = 0.01f;
 
-        // In ModConstants class
-        public const float NOFLATULENCE_EFFECT_ACTUAL_DURATION = 15f;
+        public const float NOFLATULENCE_EFFECT_DURATION = 15f;
     }
 
     public class Patches
@@ -61,10 +59,7 @@ namespace FlatulenceMod
             Logger.Reset();
             LocString.CreateLocStringKeys(typeof(STRINGS), null);
 
-            // Register your action and handler in OnLoad or a similar init method
-            KeyTestHandler.KeyTestAction = new PActionManager().CreateAction(
-                "FlatulenceMod.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl));
-            KInputHandler.Add(Global.GetInputManager().GetDefaultController(), new KeyTestHandler(), 512);
+            KeyTestHandler.Register();
 
             // Ensure FlatulencePeriodic runs by attaching it to a GameObject
             var flatulenceGo = new GameObject("FlatulenceMod_FlatulencePeriodic");
@@ -116,7 +111,7 @@ namespace FlatulenceMod
 
     internal sealed class KeyTestHandler : IInputHandler
     {
-        public static PAction KeyTestAction;
+        private static PAction KeyTestAction;
         private readonly Action snapshotAction;
 
         public string handlerName => "KeyTest Handler";
@@ -134,7 +129,15 @@ namespace FlatulenceMod
         public void OnKeyDown(KButtonEvent e)
         {
             if (e.TryConsume(snapshotAction))
-                FlatulenceMod.Patches.Logger.Log("[KeyTest] CTRL+F7 pressed!");
+                FlatulenceMod.Patches.Logger.Log("[KeyTest] Hotkey pressed!");
+        }
+
+        // Register the action and handler
+        internal static void Register()
+        {
+            KeyTestAction = new PActionManager().CreateAction(
+                "FlatulenceMod.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl));
+            KInputHandler.Add(Global.GetInputManager().GetDefaultController(), new KeyTestHandler(), 512);
         }
     }
 
@@ -336,7 +339,7 @@ namespace FlatulenceMod
                 NOFLATULENCE_EFFECT_ID,
                 STRINGS.EFFECTS.NOFLATULENCEEFFECT.NAME,
                 STRINGS.EFFECTS.NOFLATULENCEEFFECT.DESC,
-                duration: ModConstants.NOFLATULENCE_EFFECT_ACTUAL_DURATION,
+                duration: ModConstants.NOFLATULENCE_EFFECT_DURATION,
                 show_in_ui: true,
                 trigger_floating_text: false,
                 is_bad: false

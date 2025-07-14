@@ -48,7 +48,7 @@ namespace KeybindLogTest
         }
     }
 
-    public class Mod : UserMod2
+    public class Mod : UserMod2 
     {
         public override void OnLoad(Harmony harmony)
         {
