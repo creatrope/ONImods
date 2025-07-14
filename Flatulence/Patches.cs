@@ -295,7 +295,7 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
             }
         }
     }
-
+    /*
     public class PeriodicTest : MonoBehaviour
     {
         public static void Prefix(TakeMedicineChore __instance, Chore.Precondition.Context context)
@@ -305,6 +305,7 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
             FlatulenceMod.Patches.Logger.Log($"[TakeMedicinePatch] {minion?.name} considering medicine: {medicine?.info?.id}");
         }
     }
+    */
 
     // debugging code to see if dupe is eligible to take the pill
     //[HarmonyPatch(typeof(MedicinalPillWorkable), "CanBeTakenBy")]
