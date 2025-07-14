@@ -19,8 +19,28 @@ using TUNING;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
+// ======= MOD CONSTANTS =======
 namespace FlatulenceMod
 {
+    // Sickness and Effect IDs
+    public static class ModConstants
+    {
+        public const string FLATULENCE_SICKNESS_ID = "FlatulenceSickness";
+        public const float FLATULENCE_STRESS_PER_CYCLE = 0.1f;
+
+        public const string FLATULENCE_EFFECT_ID = "FlatulenceEffect";
+        public const string NOFLATULENCE_EFFECT_ID = "NoFlatulenceEffect";
+
+        public const string NOFLATULENCE_PILL_ID = "NoFlatulencePill";
+        public const float NOFLATULENCE_EFFECT_DURATION = 15f;
+        public const float FLATULENCE_EFFECT_DURATION = 15f;
+
+        public const float FLATULENCE_PERIODIC_INTERVAL = 30f;
+        public const float NOFLATULENCE_PILL_RECIPE_TIME = 10f;
+        public const int NOFLATULENCE_PILL_RECIPE_SORTORDER = 10;
+        public const float FLATULENCE_REINFECT_INTERVAL = 30f;
+    }
+
     public class Patches
     {
         private static bool staticInitialized = false;
@@ -79,18 +99,18 @@ namespace FlatulenceMod
                 return;
             }
 
-            bool hasFlatulenceSickness = sicknesses.Get(FlatulenceSickness.ID) != null;
+            bool hasFlatulenceSickness = sicknesses.Get(ModConstants.FLATULENCE_SICKNESS_ID) != null;
             if (!hasFlatulenceSickness)
             {
                 Logger.Log($"Added FlatulenceSickness to minion: {dupeLabel}");
-                sicknesses.Infect(new SicknessExposureInfo(FlatulenceSickness.ID, null));
+                sicknesses.Infect(new SicknessExposureInfo(ModConstants.FLATULENCE_SICKNESS_ID, null));
             }
             else
             {
                 Logger.Log($"[AddFlatulenceSicknessToMinion] Minion '{dupeLabel}' already has FlatulenceSickness.");
             }
 
-            hasFlatulenceSickness = sicknesses.Get(FlatulenceSickness.ID) != null;
+            hasFlatulenceSickness = sicknesses.Get(ModConstants.FLATULENCE_SICKNESS_ID) != null;
             Logger.Log($"[AddFlatulenceSicknessToMinion] {dupeLabel}");
             Logger.Log($"[TEST][AddFlatulenceSicknessToMinion][TEST] Minion: {dupeLabel}, HasFlatulenceSickness: {hasFlatulenceSickness}");
         }
@@ -166,7 +186,7 @@ namespace FlatulenceMod
                 if (sicknessesDb != null)
                 {
                     // Only add if not already present
-                    if (sicknessesDb.resources.Find(s => s.id == FlatulenceSickness.ID) == null)
+                    if (sicknessesDb.resources.Find(s => s.id == ModConstants.FLATULENCE_SICKNESS_ID) == null)
                     {
                         sicknessesDb.Add(new FlatulenceSickness());
                         FlatulenceMod.Patches.Logger.Log("[RegisterPatch] FlatulenceSickness registered.");
@@ -188,7 +208,6 @@ namespace FlatulenceMod
     {
         public static void Postfix(GameObject go)
         {
-            FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Postfix starting.");
             if (go == null)
             {
                 FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Game Object null.");
@@ -218,15 +237,13 @@ namespace FlatulenceMod
             {
                 FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Minion already has Flatulent trait.");
             }
-
-            FlatulenceMod.Patches.Logger.Log("[MinionConfigPatch] Postfix exiting.");
         }
     }
 
     public class FlatulencePeriodic : MonoBehaviour
     {
         private float timer = 0f;
-        private const float interval = 15f; // Every 60 seconds
+        private const float interval = ModConstants.FLATULENCE_REINFECT_INTERVAL; // Every 60 seconds
 
         void Update()
         {
@@ -260,9 +277,9 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
                             $"[FlatulencePeriodic] Minion: {dupeLabel}, hasFlatulenceTrait: {hasFlatulenceTrait}");
 
                         // Add FlatulenceSickness if not present
-                        if (sicknesses != null && sicknesses.Get(FlatulenceSickness.ID) == null)
+                        if (sicknesses != null && sicknesses.Get(ModConstants.FLATULENCE_SICKNESS_ID) == null)
                         {
-                            sicknesses.Infect(new SicknessExposureInfo(FlatulenceSickness.ID, null));
+                            sicknesses.Infect(new SicknessExposureInfo(ModConstants.FLATULENCE_SICKNESS_ID, null));
                             FlatulenceMod.Patches.Logger.Log($"[FlatulencePeriodic] Added FlatulenceSickness to minion: {dupeLabel}");
                         }
                     }
@@ -308,8 +325,8 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
             var effects = consumer.GetComponent<Effects>();
 
             bool isPermitted = consumable != null && consumable.IsPermitted(__instance.ConsumableId);
-            bool hasFlatulenceEffect = effects != null && effects.HasEffect(FlatulenceMod.EFFECTS.FLATULENCE_EFFECT_ID);
-            bool hasNoFlatulenceEffect = effects != null && effects.HasEffect(FlatulenceMod.EFFECTS.NOFLATULENCE_EFFECT_ID);
+            bool hasFlatulenceEffect = effects != null && effects.HasEffect(EFFECTS.FLATULENCE_EFFECT_ID);
+            bool hasNoFlatulenceEffect = effects != null && effects.HasEffect(EFFECTS.NOFLATULENCE_EFFECT_ID);
             bool hasFlatulenceSickness = sicknesses != null && sicknesses.Get(FlatulenceSickness.ID) != null;
             bool hasAllergiesSickness = sicknesses != null && sicknesses.Get("Allergies") != null;
             bool isNotIncapacitated = consumer != null && consumer.GetComponent<Health>()?.IsIncapacitated() == false;
@@ -364,7 +381,7 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
         public static Effect CreateFlatulenceEffect()
         {
             var effect = new Effect(
-                EFFECTS.FLATULENCE_EFFECT_ID,
+                FLATULENCE_EFFECT_ID,
                 STRINGS.EFFECTS.FLATULENCEEFFECT.NAME,
                 STRINGS.EFFECTS.FLATULENCEEFFECT.DESC,
                 duration: -1f,
@@ -422,15 +439,10 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
             prefabCreated = true;
 
             var testAnimName = "pill_radiation_kanim";
-            FlatulenceMod.Patches.Logger.Log($"[NoFlatulencePillConfig] Testing for animation: {testAnimName}");
             var anim = Assets.GetAnim((HashedString)testAnimName);
             if (anim == null)
             {
-                FlatulenceMod.Patches.Logger.Log($"[NoFlatulencePillConfig] TEST FAILED: Animation '{testAnimName}' not found!");
-            }
-            else
-            {
-                FlatulenceMod.Patches.Logger.Log($"[NoFlatulencePillConfig] TEST PASSED: Animation '{testAnimName}' found.");
+                FlatulenceMod.Patches.Logger.Log($"[NoFlatulencePillConfig] [Test]: Animation '{testAnimName}' not found!");
             }
 
             GameObject looseEntity = EntityTemplates.CreateLooseEntity(
@@ -479,23 +491,17 @@ $"[FlatulencePeriodic] minionIdentity is null."); return;
                 ingredients,
                 results)
             {
-                time = 50f,
+                time = ModConstants.NOFLATULENCE_PILL_RECIPE_TIME,
                 description = STRINGS.ITEMS.MEDICINE.NOFLATULENCEPILL.DESC,
                 nameDisplay = ComplexRecipe.RecipeNameDisplay.Result,
                 fabricators = new List<Tag>() { (Tag)"Apothecary" },
-                sortOrder = 10
+                sortOrder = ModConstants.NOFLATULENCE_PILL_RECIPE_SORTORDER
             };
 
             if (recipe == null)
             {
                 FlatulenceMod.Patches.Logger.Log("[NoFlatulencePillConfig] ERROR: ComplexRecipe is null!");
             }
-            else
-            {
-                FlatulenceMod.Patches.Logger.Log("[NoFlatulencePillConfig] ComplexRecipe created successfully.");
-            }
-
-            FlatulenceMod.Patches.Logger.Log("[NoFlatulencePillConfig] CreatePrefab finished.");
             return looseEntity;
         }
 
