@@ -93,7 +93,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <!-- ILRepack and Deploy Targets -->
-
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot;  &quot;$(Plib)&quot;" />
   </Target>

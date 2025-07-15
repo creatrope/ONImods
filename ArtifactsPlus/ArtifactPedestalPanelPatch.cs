@@ -28,14 +28,14 @@ namespace ArtifactsPlus
 
             if (!IsValidForTarget(target))
             {
-                PUtil.LogDebug("[ArtifactPedestalPanel_OnSelectTarget_Patch] Target is not a valid pedestal.");
+                Patches.LogDebug("[ArtifactPedestalPanel_OnSelectTarget_Patch] Target is not a valid pedestal.");
                 return;
             }
 
             var pedestal = target.GetComponent<ItemPedestal>();
             if (pedestal != null)
             {
-                PUtil.LogDebug($"[ArtifactPedestalPanel_OnSelectTarget_Patch] found a pedestal, instance id: {pedestal.GetInstanceID()}");
+                Patches.LogDebug($"[ArtifactPedestalPanel_OnSelectTarget_Patch] found a pedestal, instance id: {pedestal.GetInstanceID()}");
             }
 
             var createCollapsableSectionMethod = typeof(DetailScreenTab).GetMethod("CreateCollapsableSection", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -83,7 +83,7 @@ namespace ArtifactsPlus
         private static bool IsValidForTarget(GameObject target)
         {
             bool isPedestal = target != null && target.GetComponent<ItemPedestal>() != null;
-            PUtil.LogDebug($"[ArtifactPedestalPanel_OnSelectTarget_Patch] IsValidForTarget called for '{target?.name ?? "null"}' (Type: {target?.GetType().Name ?? "null"}), Has ItemPedestal: {isPedestal}");
+            Patches.LogDebug($"[ArtifactPedestalPanel_OnSelectTarget_Patch] IsValidForTarget called for '{target?.name ?? "null"}' (Type: {target?.GetType().Name ?? "null"}), Has ItemPedestal: {isPedestal}");
             return isPedestal;
         }
     }
