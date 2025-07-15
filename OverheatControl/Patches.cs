@@ -12,6 +12,7 @@ using PeterHan.PLib.UI;
 using System;
 using System.Collections.Generic; // For List<> and Dictionary<>
 using System.Runtime.CompilerServices; // For ConditionalWeakTable
+using System.Threading;
 using TUNING;
 using UnityEngine;
 using static Rendering.BlockTileRenderer;
@@ -50,7 +51,33 @@ namespace OverheatControl
 
             hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
             {
-                Debug.Log("Hotkey Pressed!");
+                KSelectable selected = SelectTool.Instance?.selected;
+                if (selected != null)
+                    PopUpMessage("TestMessage", "Hotkey triggered on selected object!", selected.gameObject);
+                else
+                    Debug.Log("[Hotkey] No object selected.");
+            });
+
+            hotkeyListener.RegisterHotkey("Ctrl+F2", () =>
+            {
+                List<string> values = new List<string>();
+                foreach (BuildingDef buildingDef in Assets.BuildingDefs)
+                {
+                    if (IsOverheatableAndPowered(buildingDef))
+                        values.Add(buildingDef.PrefabID);
+                }
+                Logger.Log("[Hotkey] Overheatable and powered building IDs captured: " + string.Join(", ", values));
+            });
+
+            hotkeyListener.RegisterHotkey("Ctrl+F3", () =>
+            {
+                List<string> values = new List<string>();
+                foreach (BuildingDef buildingDef in Assets.BuildingDefs)
+                {
+                    if (!buildingDef.Overheatable && buildingDef.BuildingComplete.GetComponent<IEnergyConsumer>() != null)
+                        values.Add(buildingDef.PrefabID);
+                }
+                Logger.Log("[Hotkey] Non-overheatable powered building IDs captured: " + string.Join(", ", values));
             });
 
             // Register for Unity update loop
@@ -85,6 +112,20 @@ namespace OverheatControl
             {
                 Logger.Log("[GameClock] Instance is null.");
             }
+        }
+
+        public static void PopUpMessage(string internalName, string message, GameObject gameObject)
+        {
+            if (PopFXManager.Instance != null)
+                PopFXManager.Instance.SpawnFX(PopFXManager.Instance.sprite_Plus, message, gameObject.transform, new Vector3(0.0f, 0.0f, 0.0f), 2f);
+            else
+                Logger.Log("[PopUpMessage] PopFXManager.Instance is null.");
+        }
+
+        // Add this utility method to the Patches class
+        public static bool IsOverheatableAndPowered(BuildingDef def)
+        {
+            return def != null && def.Overheatable && def.BuildingComplete.GetComponent<IEnergyConsumer>() != null;
         }
 
         [HarmonyPatch(typeof(Db), "Initialize")]
@@ -164,26 +205,26 @@ namespace OverheatControl
     public class ModOptions
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
-        [JsonProperty] // Add JSON property for serialization
-        public bool EnableCustomLog { get; set; } = false;
+        [JsonProperty]
+        public bool EnableCustomLog { get; set; }
 
-        [Option("Max %", "Shutdown @ % of Overheat Temp")]
-        [Limit(5, 100)]
-        [JsonProperty] // Add JSON property for serialization
-        public float ShutdownPercent { get; set; } = 50.0f;
-        [Option("Min %", "Restore % of Overheat Temp")]
-        [Limit(5, 100)]
-        [JsonProperty] // Add JSON property for serialization
-        public float RestorePercent { get; set; } = 40.0f;
+        [JsonProperty]
+        [Option("Shutdown %", "Shutdown @ % of Overheat Temp")]
+        [Limit(5.0, 100.0)]
+        public float ShutdownPercent { get; set; } = 90f;
+
+        [Option("Restore %", "Restore % of Overheat Temp")]
+        [Limit(5.0, 100.0)]
+        [JsonProperty]
+        public float RestorePercent { get; set; } = 80f;
     }
 
     public class Mod : UserMod2
     {
         public override void OnLoad(Harmony harmony)
         {
-            OverheatControl.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
+            Patches.OnLoad();
             base.OnLoad(harmony);
-
             PUtil.InitLibrary();
             new POptions().RegisterOptions(this, typeof(ModOptions));
             harmony.PatchAll();
@@ -193,100 +234,22 @@ namespace OverheatControl
     [HarmonyPatch(typeof(DetailsScreen), "OnPrefabInit")]
     public static class SideScreenRegister
     {
-        private static bool registered = false;
+        private static bool registered;
 
         public static void Postfix()
         {
-            if (registered) return;
+            if (registered)
+                return;
             registered = true;
             PUIUtils.AddSideScreenContent<SimpleSideScreen>();
         }
     }
 
-    // Custom MonoBehaviour to run logic continuously
-    public class BuildingTemperatureMonitor : MonoBehaviour
+    // Add this enum to represent building states
+    public enum BuildingState
     {
-        private Building building;
-        private bool isOverheatable;
-
-        // Use a per-instance check time instead of a global one
-        private float lastCheckTime = 0f;
-
-        // Add a state variable to track the building's state
-        private string state = "active"; // Possible values: "active", "cooling"
-
-        public void Initialize(Building building)
-        {
-            this.building = building;
-            this.isOverheatable = building.Def.Overheatable; // Check if the building is overheatable
-        }
-
-        void Update()
-        {
-            // Verify GameClock.Instance is not null and GetTime is updating correctly  
-            if (GameClock.Instance != null)
-            {
-                float currentTime = GameClock.Instance.GetTime();
-
-                // Use a per-instance check time instead of a global one
-                if (currentTime - lastCheckTime < 5) // Check every 5 seconds  
-                    return;
-
-                lastCheckTime = currentTime; // Update the per-instance check time
-            }
-            else
-            {
-                Patches.Logger.Log("[BuildingTemperatureMonitor] GameClock.Instance is null.");
-                return;
-            }
-
-            if (building != null && isOverheatable) // Only process logic for overheatable buildings  
-            {
-                var def = building.Def;
-                var kSelectable = building.gameObject.GetComponent<KSelectable>();
-                string name = kSelectable != null ? kSelectable.GetProperName() : def.Name; // Fallback to def.Name if KSelectable is unavailable
-                name = name.Replace("<link=\"BATTERYMEDIUM\">", "").Replace("</link>", "");
-
-                // Return early if the building is not a BatteryMedium prefab  
-                if (building.PrefabID() != BatteryMediumConfig.ID)
-                    return;
-
-                int instanceId = building.GetInstanceID();
-
-                var primaryElement = building.gameObject.GetComponent<PrimaryElement>();
-                if (primaryElement != null)
-                {
-                    float overheat = def.OverheatTemperature - 273.15f; // Convert Kelvin to Celsius
-                    float shutdownThreshold = overheat * (Patches.ShutdownPercent / 100f);
-                    float restoreThreshold = overheat * (Patches.RestorePercent / 100f);
-
-                    float currentTemperature = primaryElement.Temperature - 273.15f; // Convert Kelvin to Celsius
-
-                    //Patches.Logger.Log($"[Building] Checking Instance: {name}({instanceId}), {currentTemperature} vs overheat@{overheat}");
-
-                    if (state == "active" && currentTemperature >= shutdownThreshold)
-                    {
-                        building.Def.EnergyConsumptionWhenActive = 0f;
-                        state = "cooling";
-                        Patches.Logger.Log($"[Building] Shutdown triggered: {name}({instanceId}), {currentTemperature} > {shutdownThreshold}. State set to 'cooling'.");
-                    }
-                    else if (state == "cooling")
-                    {
-                        if (currentTemperature <= restoreThreshold)
-                        {
-                            building.Def.EnergyConsumptionWhenActive = def.GeneratorWattageRating;
-                            state = "active";
-                            Patches.Logger.Log($"[Building] Restored: {name}({instanceId}), {currentTemperature} <= {restoreThreshold}. State set to 'active'.");
-                        }
-                        else
-                        {
-                            Patches.Logger.Log($"[Building] Cooling continues: {name}({instanceId}), {currentTemperature} > {restoreThreshold}. State remains 'cooling'.");
-                            return;
-                        }
-                    }
-                }
-            }
-        }
+        Active,
+        Cooling,
     }
 
     // Patch to attach the custom MonoBehaviour to buildings
@@ -295,24 +258,11 @@ namespace OverheatControl
     {
         public static void Postfix(Building __instance)
         {
-            // Check if the building is a BatteryMedium before attaching and logging
-            if (__instance.PrefabID() == BatteryMediumConfig.ID)
-            {
-                var monitor = __instance.gameObject.AddComponent<BuildingTemperatureMonitor>();
-                monitor.Initialize(__instance);
-
-                // Add logging to confirm attachment timing and print InstanceID
-                Patches.Logger.Log($"[Building_OnSpawn_Patch] Attempting to attach BuildingTemperatureMonitor to: {__instance.name}, InstanceID: {monitor.GetInstanceID()}");
-
-                if (__instance.gameObject.GetComponent<BuildingTemperatureMonitor>() != null)
-                {
-                    Patches.Logger.Log($"[Building_OnSpawn_Patch] BuildingTemperatureMonitor successfully attached to: {__instance.name}, InstanceID: {monitor.GetInstanceID()}");
-                }
-                else
-                {
-                    Patches.Logger.Log($"[Building_OnSpawn_Patch] Failed to attach BuildingTemperatureMonitor to: {__instance.name}");
-                }
-            }
+            // Only attach if building is overheatable and powered, and monitor is not already present
+            if (!Patches.IsOverheatableAndPowered(__instance.Def) ||
+                __instance.gameObject.GetComponent<BuildingTemperatureMonitor>() != null)
+                return;
+            __instance.gameObject.AddComponent<BuildingTemperatureMonitor>().Initialize(__instance);
         }
     }
 }
