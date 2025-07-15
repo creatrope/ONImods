@@ -1,13 +1,14 @@
 ﻿using ArtifactsPlus; // Add this import for ArtifactEffectTracker
 using HarmonyLib;
-using HLib;
 using Klei.AI; // Add this import for Analyzable
 using KMod;
-using KSerialization; // Add this import for HotkeyListener
+using KSerialization;
 using Newtonsoft.Json; // Add this import for JsonObject and JsonObjectAttribute
 using Newtonsoft.Json.Linq;
-using PeterHan.PLib.Core; // Add this import for PUtil
+using PeterHan.PLib.Actions;
+using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
+using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
 using System;
 using System.Collections.Generic;
@@ -24,10 +25,6 @@ namespace ArtifactsPlus
 {
     public static class Patches
     {
-        public static HLib.HotkeyListener hotkeyListener;
-
-        public static readonly CustomLogger Logger = new CustomLogger("ArtifactsPlus");
-
         public static string ArtifactPowersConfigPath
         {
             get
@@ -35,19 +32,19 @@ namespace ArtifactsPlus
                 try
                 {
                     var config = ArtifactsPlusConfig.Instance; // Access the configuration using PLib's SingletonOptions
-                    //Patches.Logger.Log($"[ArtifactsPlus] Config object: {JsonConvert.SerializeObject(config, Formatting.Indented)}");
+                    //PUtil.LogDebug($"[ArtifactsPlus] Config object: {JsonConvert.SerializeObject(config, Formatting.Indented)}");
 
                     var configFile = config.ArtifactConfigFile;
                     var fullPath = Path.Combine(
                         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), configFile
                     );
 
-                    Patches.Logger.Log($"[ArtifactsPlus] Using ArtifactConfig file: {fullPath}");
+                    PUtil.LogDebug($"[ArtifactsPlus] Using ArtifactConfig file: {fullPath}");
                     return fullPath;
                 }
                 catch (Exception ex)
                 {
-                    Patches.Logger.Log($"[ArtifactsPlus] Failed to retrieve ArtifactConfig file: {ex.Message}");
+                    PUtil.LogDebug($"[ArtifactsPlus] Failed to retrieve ArtifactConfig file: {ex.Message}");
                     throw;
                 }
             }
@@ -55,31 +52,21 @@ namespace ArtifactsPlus
 
         public static void OnLoad()
         {
-            try
+            // PrintActiveArtifactsWithWorlds();
+
+            var config = ArtifactsPlusConfig.Instance;
+
+     
+            if (config == null)
             {
-                // Initialize and register hotkeys
-                hotkeyListener = new HotkeyListener();
-
-                hotkeyListener.RegisterHotkey("Ctrl+F12", () =>
-                {
-                    PrintActiveArtifactsWithWorlds();
-                });
-
-                var config = ArtifactsPlusConfig.Instance; // Access the configuration using PLib's SingletonOptions
-                Patches.Logger.SetLoggingEnabled(config.EnableCustomLog);
-                ArtifactStateTracker.LoadArtifactConfig();
-
-                if (config.EnableCustomLog)
-                {
-                    Patches.Logger.Reset(); // Reset the log file at the start of the game
-                }
-
-                // starting a game with automatically trigger occupant changed so artifacts will register
+                Debug.LogError("[ArtifactsPlus] ArtifactsPlusConfig.Instance is null!");
+                return;
             }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[ArtifactsPlus] Failed to initialize OnLoad: {ex.Message}");
-            }
+
+            if (!config.EnableCustomLog)
+                Debug.DisableLogging();
+
+            ArtifactStateTracker.LoadArtifactConfig(); 
         }
 
         public static void PrintActiveArtifactsWithWorlds()
@@ -89,11 +76,11 @@ namespace ArtifactsPlus
 
             if (!activeArtifacts.Any())
             {
-                Patches.Logger.Log("[ArtifactsPlus] No active artifacts found.");
+                PUtil.LogDebug("[ArtifactsPlus] No active artifacts found.");
                 return;
             }
 
-            Patches.Logger.Log("[ArtifactsPlus] Active Artifacts and their Worlds:");
+            PUtil.LogDebug("[ArtifactsPlus] Active Artifacts and their Worlds:");
             foreach (var artifact in activeArtifacts)
             {
                 int cell = Grid.PosToCell(artifact.transform.position);
@@ -101,7 +88,7 @@ namespace ArtifactsPlus
                 string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
                 string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
 
-                Patches.Logger.Log($"- {artifactName} in {worldName}");
+                PUtil.LogDebug($"- {artifactName} in {worldName}");
             }
         }
 
@@ -114,7 +101,7 @@ namespace ArtifactsPlus
             int instanceId = artifact.GetInstanceID();
             string shortCircuitIssue = criteria.ShortCircuited;
 
-            Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifactId}' ({instanceId}) failed due to: {shortCircuitIssue}.");
+            PUtil.LogDebug($"[ArtifactsPlus] Artifact '{artifactId}' ({instanceId}) failed due to: {shortCircuitIssue}.");
         }
 
         [HarmonyPatch(typeof(Game), "OnPrefabInit")]
@@ -127,11 +114,11 @@ namespace ArtifactsPlus
 
                 if (config.EnableCustomLog)
                 {
-                    Patches.Logger.Log("[ArtifactsPlus] Custom logging is enabled.");
+                    PUtil.LogDebug("[ArtifactsPlus] Custom logging is enabled.");
                 }
 
-                Patches.Logger.Log($"[ArtifactsPlus] Using ArtifactConfig file: {config.ArtifactConfigFile}");
-                Patches.Logger.Log($"[ArtifactsPlus] Artifact polling interval: {config.ArtifactPollingInterval}");
+                PUtil.LogDebug($"[ArtifactsPlus] Using ArtifactConfig file: {config.ArtifactConfigFile}");
+                PUtil.LogDebug($"[ArtifactsPlus] Artifact polling interval: {config.ArtifactPollingInterval}");
             }
         }
 
@@ -162,7 +149,7 @@ namespace ArtifactsPlus
                     string oldWorldName = ClusterManager.Instance.GetWorld(oldWorldId)?.GetProperName() ?? $"World_{oldWorldId}";
                     string newWorldName = ClusterManager.Instance.GetWorld(newWorldId)?.GetProperName() ?? $"World_{newWorldId}";
 
-                    Patches.Logger.Log($"[ArtifactsPlus] Minion '{minionName}' migrated from '{oldWorldName}' to '{newWorldName}'.");
+                    PUtil.LogDebug($"[ArtifactsPlus] Minion '{minionName}' migrated from '{oldWorldName}' to '{newWorldName}'.");
 
                     var prefabId = minionGo.GetComponent<KPrefabID>();
                     if (prefabId != null)
@@ -185,7 +172,7 @@ namespace ArtifactsPlus
                 ArtifactStateTracker.InitializeAllMinions();
 
                 string minionName = go.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
-                Patches.Logger.Log($"[MinionConfig] Minion '{minionName}' spawned.");
+                PUtil.LogDebug($"[MinionConfig] Minion '{minionName}' spawned.");
 
                 var prefabId = go.GetComponent<KPrefabID>();
                 if (prefabId != null)
@@ -243,7 +230,7 @@ namespace ArtifactsPlus
 
         private static Dictionary<string, ArtifactConfig> artifactConfigMap;
 
-            private static GameObject[] GlobalAllArtifacts; // Renamed from allArtifacts
+        private static GameObject[] GlobalAllArtifacts; // Renamed from allArtifacts
         private static GameObject[] allMinions; // Cache for all minions
 
         public struct ArtifactCriteriaResult
@@ -413,7 +400,7 @@ namespace ArtifactsPlus
         {
             if (artifact == null)
             {
-                Patches.Logger.Log("[ERROR] UpdateArtifactState called with a null artifact.");
+                PUtil.LogDebug("[ERROR] UpdateArtifactState called with a null artifact.");
                 return false;
             }
 
@@ -432,7 +419,7 @@ namespace ArtifactsPlus
             var config = GetArtifactConfig(internalName);
             if (config == null)
             {
-                Patches.Logger.Log($"[WARN] No config found for artifact '{internalName}'");
+                PUtil.LogDebug($"[WARN] No config found for artifact '{internalName}'");
                 return false;
             }
 
@@ -445,7 +432,7 @@ namespace ArtifactsPlus
             {
                 string stateText = state.IsActive ? "ACTIVE" : "INACTIVE";
 
-                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{internalName}' ({id}) {stateText}");
+                PUtil.LogDebug($"[ArtifactsPlus] Artifact '{internalName}' ({id}) {stateText}");
 
                 PopFXManager.Instance.SpawnFX(
                     state.IsActive ? PopFXManager.Instance.sprite_Plus : PopFXManager.Instance.sprite_Negative,
@@ -530,7 +517,7 @@ namespace ArtifactsPlus
 
                 if (!(configJson["Artifacts"] is JArray arr))
                 {
-                    Patches.Logger.Log("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
+                    PUtil.LogDebug("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
                     return;
                 }
 
@@ -572,7 +559,7 @@ namespace ArtifactsPlus
             }
             catch (Exception ex)
             {
-                Patches.Logger.Log($"[ERROR] Failed to load artifact config: {ex}");
+                PUtil.LogDebug($"[ERROR] Failed to load artifact config: {ex}");
             }
         }
 
@@ -630,7 +617,7 @@ namespace ArtifactsPlus
                 .Select(kp => kp.gameObject)
                 .Where(artifact => artifact != null) // Ensure null artifacts are excluded
                 .ToArray();
-            Patches.Logger.Log($"GlobalAllArtifacts length: {GlobalAllArtifacts?.Length ?? 0}");
+            PUtil.LogDebug($"GlobalAllArtifacts length: {GlobalAllArtifacts?.Length ?? 0}");
         }
 
         public static GameObject[] GetAllArtifacts()
@@ -723,7 +710,7 @@ namespace ArtifactsPlus
             if (artifact != null && !ArtifactsOnPedestals.Contains(artifact))
             {
                 ArtifactsOnPedestals.Add(artifact);
-                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact"}' registered on pedestal.");
+                PUtil.LogDebug($"[ArtifactsPlus] Artifact '{artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact"}' registered on pedestal.");
             }
         }
 
@@ -732,18 +719,18 @@ namespace ArtifactsPlus
             if (artifact != null && ArtifactsOnPedestals.Contains(artifact))
             {
                 ArtifactsOnPedestals.Remove(artifact);
-                Patches.Logger.Log($"[ArtifactsPlus] Artifact '{artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact"}' unregistered from pedestal.");
+                PUtil.LogDebug($"[ArtifactsPlus] Artifact '{artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact"}' unregistered from pedestal.");
             }
         }
 
         public static void PerformIntegrityCheck()
         {
-            Patches.Logger.Log("[ArtifactStateTracker] Performing integrity check on artifacts.");
+            PUtil.LogDebug("[ArtifactStateTracker] Performing integrity check on artifacts.");
 
             // Store the initial count of artifacts
             if (GlobalAllArtifacts == null)
             {
-                Patches.Logger.Log("[ArtifactStateTracker] GlobalAllArtifacts null.");
+                PUtil.LogDebug("[ArtifactStateTracker] GlobalAllArtifacts null.");
                 return;
             }
 
@@ -756,15 +743,15 @@ namespace ArtifactsPlus
             // Log counts only if they are different
             if (initialCount != cleanedCount)
             {
-                Patches.Logger.Log($"[ArtifactStateTracker] Artifact count before cleanup: {initialCount}");
-                Patches.Logger.Log($"[ArtifactStateTracker] Artifact count after cleanup: {cleanedCount}");
+                PUtil.LogDebug($"[ArtifactStateTracker] Artifact count before cleanup: {initialCount}");
+                PUtil.LogDebug($"[ArtifactStateTracker] Artifact count after cleanup: {cleanedCount}");
             }
 
             foreach (var artifact in GlobalAllArtifacts)
             {
                 if (artifact == null)
                 {
-                    Patches.Logger.Log("[ArtifactStateTracker] Skipping null artifact.");
+                    PUtil.LogDebug("[ArtifactStateTracker] Skipping null artifact.");
                     continue;
                 }
 
@@ -774,14 +761,14 @@ namespace ArtifactsPlus
                 {
                     state = new ArtifactState();
                     ArtifactStateTracker.ArtifactStates[artifactId] = state;
-                    Patches.Logger.Log($"[ArtifactStateTracker] Initialized state for artifact ID: {artifactId}");
+                    PUtil.LogDebug($"[ArtifactStateTracker] Initialized state for artifact ID: {artifactId}");
                 }
 
                 // Validate artifact components
                 var prefabId = artifact.GetComponent<KPrefabID>();
                 if (prefabId == null)
                 {
-                    Patches.Logger.Log($"[ArtifactStateTracker] Artifact ID: {artifactId} is missing KPrefabID. Skipping.");
+                    PUtil.LogDebug($"[ArtifactStateTracker] Artifact ID: {artifactId} is missing KPrefabID. Skipping.");
                     continue;
                 }
 
@@ -790,7 +777,7 @@ namespace ArtifactsPlus
                 var config = ArtifactStateTracker.GetArtifactConfig(artifactName);
                 if (config == null)
                 {
-                    Patches.Logger.Log($"[ArtifactStateTracker] No configuration found for artifact '{artifactName}' (ID: {artifactId}).");
+                    PUtil.LogDebug($"[ArtifactStateTracker] No configuration found for artifact '{artifactName}' (ID: {artifactId}).");
                 }
             }
         }
@@ -800,12 +787,8 @@ namespace ArtifactsPlus
     {
         private int tickCounter = 0;
         private static int pollInterval; // Cache poll interval for the current save/load  
-
-        public HLib.HotkeyListener hotkeyListener { get; set; }
-
-        public ArtifactStatePoller(HLib.HotkeyListener hotkeyListener)
+        public ArtifactStatePoller()
         {
-            this.hotkeyListener = hotkeyListener;
             var config = ArtifactsPlusConfig.Instance;
             pollInterval = config.ArtifactPollingInterval; // Read polling interval from configuration
         }
@@ -833,7 +816,7 @@ namespace ArtifactsPlus
 
                 var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                     .Where(kp => kp != null && kp.HasTag("Minion"))
-                    .Select(kp => kp.gameObject); 
+                    .Select(kp => kp.gameObject);
                 // get an updated list of all minions per world.
 
                 foreach (var minion in allMinions)
@@ -852,27 +835,27 @@ namespace ArtifactsPlus
                 bool anyStateChanged = ArtifactStateTracker.PollAllArtifacts(minionsPerWorld);
 
 
-                //Patches.Logger.Log($"[ArtifactsPlus] Updating Minions affected by state-changed Artifacts.");
+                //PUtil.LogDebug($"[ArtifactsPlus] Updating Minions affected by state-changed Artifacts.");
 
                 foreach (var artifact in allArtifacts)
                 {
                     if (artifact == null) // Ensure null artifacts are excluded
                     {
-                        Patches.Logger.Log("[WARN] Null artifact encountered during Update.");
+                        PUtil.LogDebug("[WARN] Null artifact encountered during Update.");
                         continue;
                     }
 
                     var artifactTransform = artifact.transform;
                     if (artifactTransform == null) // Additional null check for artifact.transform
                     {
-                        Patches.Logger.Log("[WARN] Artifact has a null transform.");
+                        PUtil.LogDebug("[WARN] Artifact has a null transform.");
                         continue;
                     }
 
                     var prefabId = artifact.GetComponent<KPrefabID>();
                     if (prefabId == null) // Additional null check for KPrefabID component
                     {
-                        Patches.Logger.Log("[WARN] Artifact is missing KPrefabID component.");
+                        PUtil.LogDebug("[WARN] Artifact is missing KPrefabID component.");
                         continue;
                     }
 
@@ -889,7 +872,7 @@ namespace ArtifactsPlus
                         {
                             foreach (var minion in minionsPerWorld[worldId])
                             {
-                                Patches.Logger.Log($"[ArtifactsPlus] Applying artifact modifiers to minion '{minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion"}' for artifact '{prefabId.PrefabTag.Name ?? "Unknown Artifact"}'.");
+                                PUtil.LogDebug($"[ArtifactsPlus] Applying artifact modifiers to minion '{minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion"}' for artifact '{prefabId.PrefabTag.Name ?? "Unknown Artifact"}'.");
                                 ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
                             }
                         }
@@ -897,79 +880,77 @@ namespace ArtifactsPlus
                         {
                             foreach (var minion in minionsPerWorld[worldId])
                             {
-                                Patches.Logger.Log($"[ArtifactsPlus] Removing artifact modifiers to minion '{minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion"}' for artifact '{prefabId.PrefabTag.Name ?? "Unknown Artifact"}'.");
+                                PUtil.LogDebug($"[ArtifactsPlus] Removing artifact modifiers to minion '{minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion"}' for artifact '{prefabId.PrefabTag.Name ?? "Unknown Artifact"}'.");
                                 ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
                             }
                         }
                     }
                 }
 
-                    //Patches.Logger.Log($"[ArtifactsPlus] Updating minions who have changed worlds.");
+                //PUtil.LogDebug($"[ArtifactsPlus] Updating minions who have changed worlds.");
 
-                    var minionsWithWorldChangedFlag = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                        .Where(kp => kp != null && kp.HasTag("Minion") && kp.Tags.Any(tag => tag.Name.StartsWith("worldChanged")))
-                        .Select(kp => kp.gameObject)
-                        .ToList();
+                var minionsWithWorldChangedFlag = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                    .Where(kp => kp != null && kp.HasTag("Minion") && kp.Tags.Any(tag => tag.Name.StartsWith("worldChanged")))
+                    .Select(kp => kp.gameObject)
+                    .ToList();
 
-                    foreach (var minion in minionsWithWorldChangedFlag)
+                foreach (var minion in minionsWithWorldChangedFlag)
+                {
+                    string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+
+                    var prefabId = minion.GetComponent<KPrefabID>();
+
+                    // get oldworld name
+                    var worldChangedTag = prefabId.Tags.FirstOrDefault(tag => tag.Name.StartsWith("worldChanged"));
+                    var worldChangedTagName = worldChangedTag.Name; // Extract the name property of the Tag
+                    var parts = worldChangedTagName.Split('-'); // Perform the Split operation on the string
+
+                    var oldWorldId = -1; // Default value if extraction fails  
+                    if (parts.Length == 2 && int.TryParse(parts[1], out var parsedWorldId))
                     {
-                        string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+                        oldWorldId = parsedWorldId;
+                    }
+                    prefabId.RemoveTag(worldChangedTag);
 
-                        var prefabId = minion.GetComponent<KPrefabID>();
+                    // get new world id
+                    int cell = Grid.PosToCell(minion.transform.position);
+                    int newWorldId = Grid.WorldIdx[cell];
 
-                        // get oldworld name
-                        var worldChangedTag = prefabId.Tags.FirstOrDefault(tag => tag.Name.StartsWith("worldChanged"));
-                        var worldChangedTagName = worldChangedTag.Name; // Extract the name property of the Tag
-                        var parts = worldChangedTagName.Split('-'); // Perform the Split operation on the string
+                    PUtil.LogDebug($"[ArtifactsPlus] Processing world change for minion: {minionName} (OldWorldId: {oldWorldId}, NewWorldId: {newWorldId})");
 
-                        var oldWorldId = -1; // Default value if extraction fails  
-                        if (parts.Length == 2 && int.TryParse(parts[1], out var parsedWorldId))
-                        {
-                            oldWorldId = parsedWorldId;
-                        }
-                        prefabId.RemoveTag(worldChangedTag);
+                    if (oldWorldId >= 0)
+                    {// find all the artifacts from the oldworld
+                     //PUtil.LogDebug($"[ArtifactsPlus] Removing Minions Artifacts From Previous World");
 
-                        // get new world id
-                        int cell = Grid.PosToCell(minion.transform.position);
-                        int newWorldId = Grid.WorldIdx[cell];
-
-                        Patches.Logger.Log($"[ArtifactsPlus] Processing world change for minion: {minionName} (OldWorldId: {oldWorldId}, NewWorldId: {newWorldId})");
-
-                        if (oldWorldId >= 0)
-                        {// find all the artifacts from the oldworld
-                            //Patches.Logger.Log($"[ArtifactsPlus] Removing Minions Artifacts From Previous World");
-
-                            var artifactsInPreviousWorld = ArtifactStateTracker.GetAllArtifacts()
-                                .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == oldWorldId)
-                                .ToList();
-
-                            foreach (var artifact in artifactsInPreviousWorld)
-                            {
-                                string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                                Patches.Logger.Log($"[ArtifactsPlus] RemoveArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
-                                ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
-                            }
-                        }
-
-                       // Patches.Logger.Log($"[ArtifactsPlus] Applying Minions Artifacts From New World");
-
-                        int ncell = Grid.PosToCell(minion.transform.position);
-                        int worldId = Grid.WorldIdx[ncell];
-
-                        var artifactsInNewWorld = ArtifactStateTracker.GetAllArtifacts()
-                            .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == worldId)
+                        var artifactsInPreviousWorld = ArtifactStateTracker.GetAllArtifacts()
+                            .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == oldWorldId)
                             .ToList();
 
-                        foreach (var artifact in artifactsInNewWorld)
+                        foreach (var artifact in artifactsInPreviousWorld)
                         {
                             string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                            Patches.Logger.Log($"[ArtifactsPlus] ApplyArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
-                            ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
+                            PUtil.LogDebug($"[ArtifactsPlus] RemoveArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
+                            ArtifactEffectTracker.RemoveArtifactModifiersToMinion(minion, artifact);
                         }
                     }
-            }
 
-            hotkeyListener?.Update();
+                    // PUtil.LogDebug($"[ArtifactsPlus] Applying Minions Artifacts From New World");
+
+                    int ncell = Grid.PosToCell(minion.transform.position);
+                    int worldId = Grid.WorldIdx[ncell];
+
+                    var artifactsInNewWorld = ArtifactStateTracker.GetAllArtifacts()
+                        .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == worldId)
+                        .ToList();
+
+                    foreach (var artifact in artifactsInNewWorld)
+                    {
+                        string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
+                        PUtil.LogDebug($"[ArtifactsPlus] ApplyArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
+                        ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
+                    }
+                }
+            }
         }
     }
 
@@ -996,46 +977,46 @@ namespace ArtifactsPlus
     {
         public static void Postfix(ItemPedestal __instance, object data)
         {
-            //Patches.Logger.Log("[ArtifactsPlus] OnOccupantChanged triggered.");
+            //PUtil.LogDebug("[ArtifactsPlus] OnOccupantChanged triggered.");
 
             var receptacleField = typeof(ItemPedestal).GetField("receptacle", BindingFlags.NonPublic | BindingFlags.Instance);
             if (receptacleField == null)
             {
-                Patches.Logger.Log("[ArtifactsPlus] Failed to find 'receptacle' field in ItemPedestal.");
+                PUtil.LogDebug("[ArtifactsPlus] Failed to find 'receptacle' field in ItemPedestal.");
                 return;
             }
 
             var receptacle = receptacleField.GetValue(__instance) as SingleEntityReceptacle;
             if (receptacle == null)
             {
-                Patches.Logger.Log("[ArtifactsPlus] 'receptacle' is null.");
+                PUtil.LogDebug("[ArtifactsPlus] 'receptacle' is null.");
                 return;
             }
 
             GameObject occupant = receptacle.Occupant;
             if (occupant == null)
             {
-                //Patches.Logger.Log("[ArtifactsPlus] Occupant is null. This was likely a removal.");
+                //PUtil.LogDebug("[ArtifactsPlus] Occupant is null. This was likely a removal.");
                 return; // This was a removal, ignore it, handled elsewhere
             }
 
-           //Patches.Logger.Log($"[ArtifactsPlus] Occupant found: {occupant.name}");
+            //PUtil.LogDebug($"[ArtifactsPlus] Occupant found: {occupant.name}");
 
             var prefabID = occupant.GetComponent<KPrefabID>();
             if (prefabID == null)
             {
-                Patches.Logger.Log("[ArtifactsPlus] Occupant does not have a KPrefabID component.");
+                PUtil.LogDebug("[ArtifactsPlus] Occupant does not have a KPrefabID component.");
                 return;
             }
 
             if (!prefabID.HasTag("Artifact"))
             {
-                //Patches.Logger.Log($"[ArtifactsPlus] Occupant '{occupant.name}' does not have the 'Artifact' tag.");
+                //PUtil.LogDebug($"[ArtifactsPlus] Occupant '{occupant.name}' does not have the 'Artifact' tag.");
                 return;
             }
 
             string artifactName = prefabID.PrefabTag.Name ?? "Unknown Artifact";
-            //Patches.Logger.Log($"[ArtifactsPlus] Registering artifact '{artifactName}' on pedestal.");
+            //PUtil.LogDebug($"[ArtifactsPlus] Registering artifact '{artifactName}' on pedestal.");
 
             ArtifactStateTracker.RegisterArtifactOnPedestal(occupant);
         }
@@ -1051,7 +1032,7 @@ namespace ArtifactsPlus
             if (removedOccupant != null && removedOccupant.GetComponent<KPrefabID>()?.HasTag("Artifact") == true)
             {
                 string occupantName = removedOccupant.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                //Patches.Logger.Log($"[ArtifactsPlus] Artifact '{occupantName}' is being removed from SingleEntityReceptacle.");
+                //PUtil.LogDebug($"[ArtifactsPlus] Artifact '{occupantName}' is being removed from SingleEntityReceptacle.");
 
                 // Call the unregister function to remove the artifact from the pedestal tracking
                 ArtifactStateTracker.UnregisterArtifactOnPedestal(removedOccupant);
@@ -1067,7 +1048,6 @@ namespace ArtifactsPlus
             if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
             {
                 var poller = Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
-                poller.hotkeyListener = Patches.hotkeyListener;
             }
         }
     }

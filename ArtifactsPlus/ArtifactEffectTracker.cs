@@ -1,4 +1,3 @@
-using HLib; // Add this if you want to use 'CustomLogger' directly, or fully qualify as shown below
 using Klei.AI;
 using Newtonsoft.Json;
 using System;
@@ -8,37 +7,24 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using ArtifactsPlus; // Add this namespace to access ArtifactStateTracker
-using PeterHan.PLib.Options; // Add this namespace to resolve 'POptions'
+using PeterHan.PLib.Actions;
+using PeterHan.PLib.Core;
+using PeterHan.PLib.Options;
+using PeterHan.PLib.PatchManager;
+using PeterHan.PLib.UI;
 
 namespace ArtifactsPlus
 {
     public class ArtifactEffectTracker : MonoBehaviour
     {
-        private static HotkeyListener hotkeyListener;
-
         public static void OnLoad()
         {
             try
             {
-                var options = POptions.ReadSettings<ArtifactsPlusOptions>();
-
-                Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
-                if (options.EnableCustomLog)
-                {
-                    Patches.Logger.Reset(); // Reset the log file at the start of the game
-                }
-
+    
                 ArtifactStateTracker.LoadArtifactConfig();
 
-                // Initialize and register hotkeys
-                hotkeyListener = new HotkeyListener();
-
-                hotkeyListener.RegisterHotkey("Ctrl+F12", () =>
-                {
-                    PrintActiveArtifactsWithWorlds();
-                });
-
-                Patches.Logger.Log($"[ArtifactsPlus] onLoad: update the state of the artifacts");
+                PUtil.LogDebug($"[ArtifactsPlus] onLoad: update the state of the artifacts");
 
                 // Update the state of all artifacts
                 var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -153,7 +139,7 @@ namespace ArtifactsPlus
         {
             if (minion == null || artifact == null)
             {
-                Patches.Logger.Log("RemoveArtifactModifiersToMinion: Minion or artifact is null.");
+                PUtil.LogDebug("RemoveArtifactModifiersToMinion: Minion or artifact is null.");
                 return;
             }
 
@@ -162,13 +148,13 @@ namespace ArtifactsPlus
             var minionModifiers = minion.GetComponent<MinionModifiers>();
             if (minionModifiers == null)
             {
-                Patches.Logger.Log($"RemoveArtifactModifiersToMinion: Minion '{minion.name}' does not have a MinionModifiers component.");
+                PUtil.LogDebug($"RemoveArtifactModifiersToMinion: Minion '{minion.name}' does not have a MinionModifiers component.");
                 return;
             }
 
             if (minionModifiers.attributes == null)
             {
-                Patches.Logger.Log($"RemoveArtifactModifiersToMinion: Minion '{minion.name}' does not have any attributes.");
+                PUtil.LogDebug($"RemoveArtifactModifiersToMinion: Minion '{minion.name}' does not have any attributes.");
                 return;
             }
 
@@ -188,7 +174,7 @@ namespace ArtifactsPlus
                     {
                         if (descriptionCB.Equals(artifactInstanceId.ToString(), StringComparison.OrdinalIgnoreCase))
                         {
-                            //Patches.Logger.Log($"Removing Modifier: ID='{currentModifier.AttributeId}', Value='{currentModifier.Value}', Description='{currentModifier.Description}', DescriptionCB='{descriptionCB}'");
+                            //PUtil.LogDebug($"Removing Modifier: ID='{currentModifier.AttributeId}', Value='{currentModifier.Value}', Description='{currentModifier.Description}', DescriptionCB='{descriptionCB}'");
                             attrInstance.Remove(currentModifier); // Safely remove the modifier
                         }
                     }
@@ -203,7 +189,7 @@ namespace ArtifactsPlus
 
             if (minionModifiers == null || minionModifiers.attributes == null)
             {
-                Patches.Logger.Log($"GetMinionArtifactInfusions: Minion '{minion.name}' does not have a MinionModifiers component or attributes.");
+                PUtil.LogDebug($"GetMinionArtifactInfusions: Minion '{minion.name}' does not have a MinionModifiers component or attributes.");
                 return summary.ToString();
             }
 
@@ -251,7 +237,7 @@ namespace ArtifactsPlus
             {
                 int instanceId = artifact.GetInstanceID();
                 string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact ID";
-                Patches.Logger.Log($"Artifact ID: {artifactId}, Instance ID: {instanceId}");
+                PUtil.LogDebug($"Artifact ID: {artifactId}, Instance ID: {instanceId}");
             }
         }
 
@@ -265,7 +251,7 @@ namespace ArtifactsPlus
             {
                 int worldId = artifact.GetComponent<KPrefabID>()?.GetMyWorldId() ?? -1;
                 string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact ID";
-                Patches.Logger.Log($"Artifact ID: {artifactId}, World ID: {worldId}");
+                PUtil.LogDebug($"Artifact ID: {artifactId}, World ID: {worldId}");
             }
         }
     }
