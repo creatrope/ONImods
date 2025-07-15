@@ -1,8 +1,14 @@
 using HarmonyLib;
 using Klei.AI;
+using PeterHan.PLib.Core;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using PeterHan.PLib.Actions;
+using PeterHan.PLib.Core;
+using PeterHan.PLib.Options;
+using PeterHan.PLib.PatchManager;
+using PeterHan.PLib.UI;
 
 namespace ArtifactsPlus
 {
@@ -27,7 +33,7 @@ namespace ArtifactsPlus
             }
 
             var createCollapsableSectionMethod = typeof(DetailScreenTab).GetMethod("CreateCollapsableSection", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            currentPanel = (CollapsibleDetailContentPanel)createCollapsableSectionMethod.Invoke(__instance, new object[] { "Artifact Details" });
+            currentPanel = (CollapsibleDetailContentPanel)createCollapsableSectionMethod.Invoke(__instance, new object[] { "Artifact DetailsX" });
             if (currentPanel != null)
             {
                 var pedestal = target.GetComponent<ItemPedestal>();
@@ -71,7 +77,9 @@ namespace ArtifactsPlus
 
         private static bool IsValidForTarget(GameObject target)
         {
-            return target != null && target.GetComponent<ItemPedestal>() != null;
+            bool isPedestal = target != null && target.GetComponent<ItemPedestal>() != null;
+            PUtil.LogDebug($"[ArtifactPedestalPanel_OnSelectTarget_Patch] IsValidForTarget called for '{target?.name ?? "null"}' (Type: {target?.GetType().Name ?? "null"}), Has ItemPedestal: {isPedestal}");
+            return isPedestal;
         }
     }
 }

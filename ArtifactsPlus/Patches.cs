@@ -53,20 +53,32 @@ namespace ArtifactsPlus
         public static void OnLoad()
         {
             // PrintActiveArtifactsWithWorlds();
+            Debug.Log("[ArtifactsPlus] entering Patches.OnLoad");
 
             var config = ArtifactsPlusConfig.Instance;
 
-     
-            if (config == null)
+
+            if (config != null)
+            {
+                if (config.EnableCustomLog)
+                {
+                    Debug.Log("[ArtifactsPlus] debug logging enabled");
+                }
+                else
+                {
+                    Debug.LogError("[ArtifactsPlus] disabling logging");
+                    Debug.DisableLogging();
+                }
+                PUtil.LogDebug("[ArtifactsPlus] loadartifactconfig");
+                ArtifactStateTracker.LoadArtifactConfig();
+            }
+            else
             {
                 Debug.LogError("[ArtifactsPlus] ArtifactsPlusConfig.Instance is null!");
-                return;
+
             }
+            Debug.Log("[ArtifactsPlus] exiting Patches.OnLoad");
 
-            if (!config.EnableCustomLog)
-                Debug.DisableLogging();
-
-            ArtifactStateTracker.LoadArtifactConfig(); 
         }
 
         public static void PrintActiveArtifactsWithWorlds()
@@ -113,9 +125,7 @@ namespace ArtifactsPlus
                 var config = ArtifactsPlusConfig.Instance;
 
                 if (config.EnableCustomLog)
-                {
                     PUtil.LogDebug("[ArtifactsPlus] Custom logging is enabled.");
-                }
 
                 PUtil.LogDebug($"[ArtifactsPlus] Using ArtifactConfig file: {config.ArtifactConfigFile}");
                 PUtil.LogDebug($"[ArtifactsPlus] Artifact polling interval: {config.ArtifactPollingInterval}");
@@ -959,6 +969,9 @@ namespace ArtifactsPlus
         public override void OnLoad(Harmony harmony)
         {
             new POptions().RegisterOptions(this, typeof(ArtifactsPlusConfig)); // Register the options
+
+            PUtil.InitLibrary();
+
             Patches.OnLoad();
 
             if (harmony == null)
@@ -968,7 +981,6 @@ namespace ArtifactsPlus
             }
 
             harmony.PatchAll();
-            PUtil.InitLibrary();
         }
     }
 
@@ -1073,7 +1085,7 @@ namespace ArtifactsPlus
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         [JsonProperty]
-        public bool EnableCustomLog { get; set; }
+        public bool EnableCustomLog { get; set; } = true;
 
         [Option("Artifact Config File", "Set the path to the artifact configuration file.", Format = "F")]
         [JsonProperty]
