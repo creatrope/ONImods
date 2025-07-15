@@ -23,22 +23,28 @@ namespace KeybindLogTest
     internal sealed class MinimalKeybindHandler : IInputHandler
     {
         private static PAction KeyTestAction;
+        private static PAction KeyTestAction2; // Add second action
         private readonly Action snapshotAction;
+        private readonly Action snapshotAction2; // Add second action field
 
         public string handlerName => "MinimalKeybindHandler";
         public KInputHandler inputHandler { get; set; }
 
         internal MinimalKeybindHandler()
         {
-            var action = KeyTestAction;
-            snapshotAction = action != null ? action.GetKAction() : PAction.MaxAction;
+            snapshotAction = KeyTestAction != null ? KeyTestAction.GetKAction() : PAction.MaxAction;
+            snapshotAction2 = KeyTestAction2 != null ? KeyTestAction2.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
         {
             if (e.TryConsume(snapshotAction))
             {
-                Debug.Log("[MinimalKeybindHandler] Hotkey pressed!");
+                Debug.Log("[MinimalKeybindHandler] Hotkey 1 pressed!");
+            }
+            else if (e.TryConsume(snapshotAction2))
+            {
+                Debug.Log("[MinimalKeybindHandler] Hotkey 2 pressed!");
             }
         }
 
@@ -54,6 +60,8 @@ namespace KeybindLogTest
             manager.RegisterPatchClass(typeof(MinimalKeybindHandler));
             KeyTestAction = new PActionManager().CreateAction(
                 "KeybindLogTest.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl));
+            KeyTestAction2 = new PActionManager().CreateAction(
+                "KeybindLogTest.KeyTestAction2", "Test Key Action 2", new PKeyBinding(KKeyCode.F12, Modifier.Ctrl));
         }
     }
 
