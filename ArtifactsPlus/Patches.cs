@@ -15,11 +15,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text; // <-- Add this for StringBuilder
+using System.Text; 
 using UnityEngine;
-using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
-using Object = UnityEngine.Object; // Explicitly alias UnityEngine.Object to avoid ambiguity
-using static ArtifactsPlus.ArtifactStateTracker; // Add this import to bring PerformIntegrityCheck into context
+using Object = UnityEngine.Object; 
+using static ArtifactsPlus.ArtifactStateTracker; 
 
 namespace ArtifactsPlus
 {

@@ -19,24 +19,29 @@ namespace ArtifactsPlus
 
         private static void Postfix(DetailScreenTab __instance, GameObject target)
         {
-            if (!IsValidForTarget(target))
-            {
-                Debug.Log("[ArtifactPedestalPanel_OnSelectTarget_Patch] Target is not a valid pedestal.");
-                return;
-            }
-
-            // Remove the previous panel if it exists
+            // Always clean up previous panel
             if (currentPanel != null)
             {
                 Object.Destroy(currentPanel.gameObject);
                 currentPanel = null;
             }
 
+            if (!IsValidForTarget(target))
+            {
+                PUtil.LogDebug("[ArtifactPedestalPanel_OnSelectTarget_Patch] Target is not a valid pedestal.");
+                return;
+            }
+
+            var pedestal = target.GetComponent<ItemPedestal>();
+            if (pedestal != null)
+            {
+                PUtil.LogDebug($"[ArtifactPedestalPanel_OnSelectTarget_Patch] found a pedestal, instance id: {pedestal.GetInstanceID()}");
+            }
+
             var createCollapsableSectionMethod = typeof(DetailScreenTab).GetMethod("CreateCollapsableSection", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            currentPanel = (CollapsibleDetailContentPanel)createCollapsableSectionMethod.Invoke(__instance, new object[] { "Artifact DetailsX" });
+            currentPanel = (CollapsibleDetailContentPanel)createCollapsableSectionMethod.Invoke(__instance, new object[] { "Artifact Details" });
             if (currentPanel != null)
             {
-                var pedestal = target.GetComponent<ItemPedestal>();
                 var receptacleField = typeof(ItemPedestal).GetField("receptacle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var receptacle = receptacleField?.GetValue(pedestal) as SingleEntityReceptacle;
                 var artifact = receptacle?.Occupant;

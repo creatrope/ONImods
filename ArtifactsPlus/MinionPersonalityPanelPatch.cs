@@ -1,4 +1,10 @@
 using HarmonyLib;
+using PeterHan.PLib.Actions;
+using PeterHan.PLib.Core;
+using PeterHan.PLib.Options;
+using PeterHan.PLib.PatchManager;
+using PeterHan.PLib.UI;
+using System.Linq; // Add for component listing
 using Unity.IO.LowLevel.Unsafe;
 using UnityEngine;
 
@@ -24,16 +30,25 @@ namespace ArtifactsPlus
     {
         private static void Postfix(MinionPersonalityPanel __instance, GameObject target)
         {
-            if (target == null || MinionPersonalityPanel_OnPrefabInit_Patch.modifiers == null)
+            // Call IsValidTarget from this file
+            if (!IsValidTarget(target))
             {
+                PUtil.LogDebug("[MinionPersonalityPanel_OnSelectTarget_Patch] Target is not a valid minion.");
                 return;
             }
+            string minionName = target.GetComponent<MinionIdentity>()?.GetProperName() ?? target.name;
+            PUtil.LogDebug($"[MinionPersonalityPanel_OnSelectTarget_Patch] found a minion: {minionName}");
 
-            string summary = target != null
-                ? ArtifactEffectTracker.GetMinionArtifactInfusions(target)
-                : "No minion selected.";
+            string summary = ArtifactEffectTracker.GetMinionArtifactInfusions(target);
             MinionPersonalityPanel_OnPrefabInit_Patch.modifiers.SetLabel("artifact_summary", summary, "Summary of artifact modifiers currently applied to this minion.");
             MinionPersonalityPanel_OnPrefabInit_Patch.modifiers.Commit();
+        }
+
+        private static bool IsValidTarget(GameObject target)
+        {
+            bool isMinion = target != null && target.GetComponent<MinionIdentity>() != null;
+            PUtil.LogDebug($"[MinionPersonalityPanel_OnSelectTarget_Patch] IsValidForTarget called for '{target?.name ?? "null"}' (Type: {target?.GetType().Name ?? "null"}), isMinion: {isMinion}");
+            return isMinion;
         }
     }
 
