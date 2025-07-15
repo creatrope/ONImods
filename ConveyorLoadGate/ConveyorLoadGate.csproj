@@ -91,6 +91,7 @@
 	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
+			<MakeDir Directories="$(DeploymentBasePath)$(ProjectName)\" />
 		<Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
 		<Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
 	</Target>
