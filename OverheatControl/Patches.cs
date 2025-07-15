@@ -1,7 +1,6 @@
 using Database;
 using Epic.OnlineServices.Platform;
 using HarmonyLib;
-using HLib;
 using KMod;
 using KSerialization;
 using Newtonsoft.Json; // Ensure this using directive is present
@@ -22,95 +21,43 @@ namespace OverheatControl
 {
     public class Patches
     {
-        // Change from private to public so HotkeyListenerUpdater can access it
-        public static HLib.HotkeyListener hotkeyListener;
-
-        // Add a guard to prevent double static initialization
-        private static bool staticInitialized = false;
-
-        // Change Logger field to public static
-        public static readonly CustomLogger Logger = new CustomLogger("OverheatControl");
-
         // Add static variables to store the settings
         public static float ShutdownPercent { get; private set; }
         public static float RestorePercent { get; private set; }
+
+        private static bool staticInitialized = false;
 
         static Patches()
         {
             if (staticInitialized)
                 return;
             staticInitialized = true;
-
-            var uniqueId = Guid.NewGuid();
-            var timestamp = System.DateTime.Now.ToString("O");
-            var domain = AppDomain.CurrentDomain.FriendlyName;
-            var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-
-            // Initialize and register hotkeys
-            hotkeyListener = new HLib.HotkeyListener();
-
-            hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
-            {
-                KSelectable selected = SelectTool.Instance?.selected;
-                if (selected != null)
-                    PopUpMessage("TestMessage", "Hotkey triggered on selected object!", selected.gameObject);
-                else
-                    Debug.Log("[Hotkey] No object selected.");
-            });
-
-            hotkeyListener.RegisterHotkey("Ctrl+F2", () =>
-            {
-                List<string> values = new List<string>();
-                foreach (BuildingDef buildingDef in Assets.BuildingDefs)
-                {
-                    if (IsOverheatableAndPowered(buildingDef))
-                        values.Add(buildingDef.PrefabID);
-                }
-                Logger.Log("[Hotkey] Overheatable and powered building IDs captured: " + string.Join(", ", values));
-            });
-
-            hotkeyListener.RegisterHotkey("Ctrl+F3", () =>
-            {
-                List<string> values = new List<string>();
-                foreach (BuildingDef buildingDef in Assets.BuildingDefs)
-                {
-                    if (!buildingDef.Overheatable && buildingDef.BuildingComplete.GetComponent<IEnergyConsumer>() != null)
-                        values.Add(buildingDef.PrefabID);
-                }
-                Logger.Log("[Hotkey] Non-overheatable powered building IDs captured: " + string.Join(", ", values));
-            });
-
-            // Register for Unity update loop
-            HotkeyListenerUpdater.Create();
         }
 
         public static void OnLoad()
         {
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
-            Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
-            Patches.Logger.Reset();
 
-            // Read settings and store them in static variables for global access
+            if (!options.EnableCustomLog)
+                Debug.DisableLogging();
+
             ShutdownPercent = options.ShutdownPercent;
             RestorePercent = options.RestorePercent;
 
-            // Serialize options to JSON and log them
             string optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
-            Patches.Logger.Log($"[OverheatControl] Settings loaded:\n{optionsJson}");
+            PUtil.LogDebug($"Settings loaded:\n{optionsJson}");
         }
 
-        // Add a method to log cycle changes
         public static void LogCycleChanges()
         {
             if (GameClock.Instance != null)
             {
                 int currentCycle = GameClock.Instance.GetCycle();
                 float timeSinceStartOfCycle = GameClock.Instance.GetTimeSinceStartOfCycle();
-                //Logger.Log($"[GameClock] Current Cycle: {currentCycle}, Time Since Start of Cycle: {timeSinceStartOfCycle}");
             }
             else
             {
-                Logger.Log("[GameClock] Instance is null.");
+                PUtil.LogDebug("GameClock Instance is null.");
             }
         }
 
@@ -119,10 +66,9 @@ namespace OverheatControl
             if (PopFXManager.Instance != null)
                 PopFXManager.Instance.SpawnFX(PopFXManager.Instance.sprite_Plus, message, gameObject.transform, new Vector3(0.0f, 0.0f, 0.0f), 2f);
             else
-                Logger.Log("[PopUpMessage] PopFXManager.Instance is null.");
+                PUtil.LogDebug("PopFXManager.Instance is null.");
         }
 
-        // Add this utility method to the Patches class
         public static bool IsOverheatableAndPowered(BuildingDef def)
         {
             return def != null && def.Overheatable && def.BuildingComplete.GetComponent<IEnergyConsumer>() != null;
@@ -147,7 +93,6 @@ namespace OverheatControl
             {
                 if (__instance.Overheatable)
                 {
-                    //Patches.Logger.Log($"[BuildingDef] Overheatable building detected: {__instance.Name}, OverheatTemperature: {__instance.OverheatTemperature}");
                 }
             }
         }
@@ -157,7 +102,6 @@ namespace OverheatControl
         {
             public static void Postfix(float dt)
             {
-                // Log cycle changes whenever time is added
                 LogCycleChanges();
             }
         }
@@ -167,37 +111,7 @@ namespace OverheatControl
         {
             public static void Postfix()
             {
-                Logger.Log("[GameClock] Initialized.");
-            }
-        }
-    }
-
-    // MonoBehaviour to call HotkeyListener.Update every frame
-    public class HotkeyListenerUpdater : KMonoBehaviour
-    {
-        private static HotkeyListenerUpdater _instance;
-
-        public static void Create()
-        {
-            if (_instance == null)
-            {
-                var go = new GameObject("HotKeyListenerUpdater");
-                UnityEngine.Object.DontDestroyOnLoad(go);
-                _instance = go.AddComponent<HotkeyListenerUpdater>();
-            }
-
-            Patches.Logger.Log("HotkeyListenerUpdater.Create called");
-        }
-
-        void Update()
-        {
-            if (Patches.hotkeyListener != null)
-            {
-                Patches.hotkeyListener.Update();
-            }
-            else
-            {
-                Patches.Logger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
+                PUtil.LogDebug("GameClock Initialized.");
             }
         }
     }
@@ -245,20 +159,17 @@ namespace OverheatControl
         }
     }
 
-    // Add this enum to represent building states
     public enum BuildingState
     {
         Active,
         Cooling,
     }
 
-    // Patch to attach the custom MonoBehaviour to buildings
     [HarmonyPatch(typeof(Building), "OnSpawn")]
     public class Building_OnSpawn_Patch
     {
         public static void Postfix(Building __instance)
         {
-            // Only attach if building is overheatable and powered, and monitor is not already present
             if (!Patches.IsOverheatableAndPowered(__instance.Def) ||
                 __instance.gameObject.GetComponent<BuildingTemperatureMonitor>() != null)
                 return;
