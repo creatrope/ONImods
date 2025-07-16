@@ -88,6 +88,9 @@
     <None Include="mod_info.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="artifactsconfig.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -100,6 +103,7 @@
     <Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
     <Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
     <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="ArtifactsConfig.json" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <PropertyGroup>
