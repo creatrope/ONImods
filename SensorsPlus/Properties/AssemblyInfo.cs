@@ -4,11 +4,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("SensorsP")]
+[assembly: AssemblyTitle("SensorsPlus")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("SensorsP")]
+[assembly: AssemblyProduct("SensorsPlus")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

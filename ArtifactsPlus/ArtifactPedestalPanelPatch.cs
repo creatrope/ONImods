@@ -1,6 +1,5 @@
 using HarmonyLib;
 using Klei.AI;
-using PeterHan.PLib.Core;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;

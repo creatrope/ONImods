@@ -24,18 +24,11 @@ namespace SensorsPlus
         // Define the missing RIBBON_PORT_ID constant
         public static readonly HashedString RIBBON_PORT_ID = new HashedString("RibbonPort");
 
-        // Change from private to public so HotkeyListenerUpdater can access it
-        public static HLib.HotkeyListener hotkeyListener;
-
         // Add a static flag to control ribbon debug output
         public static bool ribbonDebugEnabled = false;
 
         // Add a guard to prevent double static initialization
         private static bool staticInitialized = false;
-
-        // Change Logger field to public static
-        public static readonly CustomLogger Logger = new CustomLogger("SensorsPlus");
-
         static Patches()
         {
             if (staticInitialized)
@@ -47,14 +40,8 @@ namespace SensorsPlus
             var domain = AppDomain.CurrentDomain.FriendlyName;
             var threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
-            // Initialize and register hotkeys
-            hotkeyListener = new HLib.HotkeyListener();
-
-            hotkeyListener.RegisterHotkey("Ctrl+F11", () =>
-            {
-                ribbonDebugEnabled = !ribbonDebugEnabled;
-                Patches.Logger.Log($"[SensorsPlus] Ctrl+F11 pressed: ribbonDebugEnabled is now {(ribbonDebugEnabled ? "ON" : "OFF")}");
-            });
+                     //ribbonDebugEnabled = !ribbonDebugEnabled;
+       
 
             // Register for Unity update loop
             HotkeyListenerUpdater.Create();
@@ -63,18 +50,15 @@ namespace SensorsPlus
         public static void OnLoad()
         {
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
-            Patches.Logger.SetLoggingEnabled(options.EnableCustomLog);
-            Patches.Logger.Reset();
-
 
             // Set global variables for all options
             SensorMathUtils.MovingAverageWindow = options.MovingAverageWindow;
             SensorMathUtils.SamplingIntervalSeconds = options.SamplingIntervalSeconds;
 
             // Log all options to the custom logger
-            Patches.Logger.Log($"[ModOptions] EnableCustomLog: {options.EnableCustomLog}");
-            Patches.Logger.Log($"[ModOptions] MovingAverageWindow: {SensorMathUtils.MovingAverageWindow}");
-            Patches.Logger.Log($"[ModOptions] SamplingIntervalSeconds: {SensorMathUtils.SamplingIntervalSeconds}");
+            //Patches.Logger.Log($"[ModOptions] EnableCustomLog: {options.EnableCustomLog}");
+            //Patches.Logger.Log($"[ModOptions] MovingAverageWindow: {SensorMathUtils.MovingAverageWindow}");
+            //Patches.Logger.Log($"[ModOptions] SamplingIntervalSeconds: {SensorMathUtils.SamplingIntervalSeconds}");
         }
 
         // Utility method to add or update a ribbon port
@@ -83,7 +67,7 @@ namespace SensorsPlus
             if (logicPorts.outputPortInfo == null)
             {
                 logicPorts.outputPortInfo = new[] { newPort };
-                Patches.Logger.Log($"[{logContext}] Created ribbon port: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
+                //Patches.Logger.Log($"[{logContext}] Created ribbon port: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
             }
             else
             {
@@ -91,11 +75,11 @@ namespace SensorsPlus
                 if (!ports.Exists(p => p.id == newPort.id))
                 {
                     ports.Add(newPort);
-                    Patches.Logger.Log($"[{logContext}] Added ribbon port: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
+                    //Patches.Logger.Log($"[{logContext}] Added ribbon port: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
                 }
                 else
                 {
-                    Patches.Logger.Log($"[{logContext}] Ribbon port already exists: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
+                    //Patches.Logger.Log($"[{logContext}] Ribbon port already exists: {newPort.id} | InstanceID: {logicPorts.gameObject.GetInstanceID()}");
                 }
                 logicPorts.outputPortInfo = ports.ToArray();
             }
@@ -129,19 +113,11 @@ namespace SensorsPlus
                 _instance = go.AddComponent<HotkeyListenerUpdater>();
             }
 
-            Patches.Logger.Log("HotkeyListenerUpdater.Create called");
+            //Patches.Logger.Log("HotkeyListenerUpdater.Create called");
         }
 
         void Update()
         {
-            if (Patches.hotkeyListener != null)
-            {
-                Patches.hotkeyListener.Update();
-            }
-            else
-            {
-                Patches.Logger.Log("[HotkeyListenerUpdater] Patches.hotkeyListener is null.");
-            }
         }
     }
 
@@ -169,7 +145,7 @@ namespace SensorsPlus
         public override void OnLoad(Harmony harmony)
         {
             onLoadCount++;
-            Patches.Logger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount}");
+            //Patches.Logger.Log($"SensorsPlus: Mod.OnLoad called. Count={onLoadCount}");
             SensorsPlus.Patches.OnLoad(); // <-- Ensure hotkey system is initialized
             base.OnLoad(harmony);
 
@@ -204,7 +180,7 @@ namespace SensorsPlus
             {
                 counterComponent.Init = 1;
                 counterComponent.Target = (int)(SensorMathUtils.SamplingIntervalSeconds / 0.2);
-                Patches.Logger.Log($"[LogicPressureSensor] {id} target {counterComponent.Target}");
+                //Patches.Logger.Log($"[LogicPressureSensor] {id} target {counterComponent.Target}");
 
             }
             int incr = counterComponent.Increment();
@@ -221,7 +197,7 @@ namespace SensorsPlus
             var ports = __instance.GetComponent<LogicPorts>();
             if (ports == null)
             {
-                Patches.Logger.Log("[LogicPressureSensor] LogicPorts is null. Skipping processing.");
+                //Patches.Logger.Log("[LogicPressureSensor] LogicPorts is null. Skipping processing.");
                 return; // Exit early to avoid NullReferenceException
             }
 
@@ -294,12 +270,12 @@ namespace SensorsPlus
         {
             if (go == null)
             {
-                Patches.Logger.Log("[LogicPressureSensorGasConfig] GameObject is null. Exiting.");
+                //Patches.Logger.Log("[LogicPressureSensorGasConfig] GameObject is null. Exiting.");
                 return;
             }
 
             // Log GameObject InstanceID for debugging
-            Patches.Logger.Log($"[LogicPressureSensorGasConfig] GameObject InstanceID: {go.GetInstanceID()}");
+            //Patches.Logger.Log($"[LogicPressureSensorGasConfig] GameObject InstanceID: {go.GetInstanceID()}");
 
             var logicPorts = go.AddOrGet<LogicPorts>();
             var counterComponent = go.AddOrGet<SensorCounterComponent>();
@@ -326,7 +302,7 @@ namespace SensorsPlus
         {
             if (go == null)
             {
-                Patches.Logger.Log("[LogicPressureSensorLiquidConfig] GameObject is null. Exiting.");
+                //Patches.Logger.Log("[LogicPressureSensorLiquidConfig] GameObject is null. Exiting.");
                 return;
             }
 
@@ -355,7 +331,7 @@ namespace SensorsPlus
         {
             if (go == null)
             {
-                Patches.Logger.Log("[LogicTemperatureSensorConfig] GameObject is null. Exiting.");
+                //Patches.Logger.Log("[LogicTemperatureSensorConfig] GameObject is null. Exiting.");
                 return;
             }
 

@@ -25,14 +25,8 @@ namespace RailSensor
 
         private static bool staticInitialized = false;
 
-        // Change Logger field to public static
-        public static readonly CustomLogger Logger = new CustomLogger("RailSensor");
-
         static Patches()
         {
-            Logger.SetLoggingEnabled(false); 
-            Logger.Reset();
-
             if (staticInitialized)
             {
                 return;
@@ -47,8 +41,6 @@ namespace RailSensor
 
         public static void OnLoad()
         {
-            Logger.SetLoggingEnabled(true);
-            Logger.Reset();
         }
     }
     public class Mod : UserMod2
@@ -60,7 +52,6 @@ namespace RailSensor
 
             PUtil.InitLibrary();
             harmony.PatchAll();
-            Patches.Logger.Log("Mod.OnLoad finished: PUtil.InitLibrary, options registered, harmony patched.");
         }
     }
 
@@ -111,7 +102,7 @@ namespace RailSensor
             bool currentState = __instance.IsSwitchedOn;
             if (currentState != trigger)
             {
-                Patches.Logger.Log($"State Change {{trigger={trigger}, instanceID={__instance.GetInstanceID()}}}");
+                //Patches.Logger.Log($"State Change {{trigger={trigger}, instanceID={__instance.GetInstanceID()}}}");
                 Traverse.Create(__instance).Method("SetState", trigger).GetValue();
             }
         }

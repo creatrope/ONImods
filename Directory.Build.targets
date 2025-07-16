@@ -1,0 +1,41 @@
+<Project>
+  <Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(ProjectName)' != 'HLib'">
+    <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
+    <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).pdb" />
+  </Target>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(ProjectName)' != 'HLib'">
+    <Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
+    <Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+  </Target>
+
+  	<Target Name="RunILRepack" AfterTargets="Build" Condition="'$(ProjectName)' != 'HLib'">
+		<PropertyGroup>
+			<MainDll>$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll</MainDll>
+			<PLibDll>..\packages\PLib.4.17.1\lib\net471\PLib.dll</PLibDll>
+			<HLibDll>..\HLib\bin\Release\HLib.dll</HLibDll>
+			<ILRepackExePath>$(ILRepackExe)</ILRepackExePath>
+			<OutputDll>$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll</OutputDll>
+		</PropertyGroup>
+		<Exec Command="&quot;$(ILRepackExePath)&quot; /out:&quot;$(OutputDll)&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MainDll)&quot; &quot;$(PLibDll)&quot; &quot;$(HLibDll)&quot;" />
+	</Target>
+    <ItemGroup>
+    <Reference Include="0Harmony" HintPath="$(ONIManaged)\0Harmony.dll" />
+    <Reference Include="Assembly-CSharp" HintPath="$(ONIManaged)\Assembly-CSharp.dll" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ONIManaged)\Assembly-CSharp-firstpass.dll" />
+    <Reference Include="Newtonsoft.Json" HintPath="$(ONIManaged)\Newtonsoft.Json.dll" />
+    <Reference Include="PLib" HintPath="..\packages\PLib.4.17.1\lib\net471\PLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
+    <Reference Include="HLib" HintPath="..\HLib\bin\Release\HLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Unity.TextMeshPro" HintPath="$(ONIManaged)\Unity.TextMeshPro.dll" />
+    <Reference Include="UnityEngine" HintPath="$(ONIManaged)\UnityEngine.dll" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ONIManaged)\UnityEngine.CoreModule.dll" />
+    <Reference Include="UnityEngine.UI" HintPath="$(ONIManaged)\UnityEngine.UI.dll" />
+  </ItemGroup>
+</Project>

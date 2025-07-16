@@ -149,7 +149,7 @@ namespace SensorsPlus
 
                 if (textChild == null)
                 {
-                    Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child NOT FOUND.");
+                    //Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child NOT FOUND.");
                     derivativeText = null;
                 }
                 else
@@ -162,7 +162,7 @@ namespace SensorsPlus
                     }
                     else
                     {
-                        Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child found, but TMP_Text not present.");
+                        //Patches.Logger.Log($"[UI] Derivative label realized for {sensorType} sensor: 'Text' child found, but TMP_Text not present.");
                         derivativeText = null;
                     }
                 }
@@ -204,14 +204,14 @@ namespace SensorsPlus
             if (derivativeText == null)
             {
                 string sensorType = pressureSensor != null ? "Pressure" : (temperatureSensor != null ? "Temperature" : "Unknown");
-                Patches.Logger.Log($"[UI] UpdateDerivativeLabel: derivativeText is null for {sensorType} sensor!");
+                //Patches.Logger.Log($"[UI] UpdateDerivativeLabel: derivativeText is null for {sensorType} sensor!");
                 return;
             }
 
             if (!(derivativeText is LocText locText))
             {
                 string sensorType = pressureSensor != null ? "Pressure" : (temperatureSensor != null ? "Temperature" : "Unknown");
-                Patches.Logger.Log($"[UI] UpdateDerivativeLabel: derivativeText is not LocText (actual type: {derivativeText.GetType().Name}) for {sensorType} sensor!");
+                //Patches.Logger.Log($"[UI] UpdateDerivativeLabel: derivativeText is not LocText (actual type: {derivativeText.GetType().Name}) for {sensorType} sensor!");
                 return;
             }
 
