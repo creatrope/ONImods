@@ -83,6 +83,7 @@
   <ItemGroup>
     <Compile Include="HotkeyListener.cs" />
     <Compile Include="CustomLogger.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

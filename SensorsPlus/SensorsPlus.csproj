@@ -1,11 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <!-- Define a reusable property for the project name -->
-    <ProjectName>SensorsPlus</ProjectName>
-    <Plib>C:\Users\sendh\Documents\Github\Sendhb-ONI\packages\PLib.4.17.1\lib\net471\PLib.dll</Plib>
-    <!-- Define a reusable property for the base deployment path -->
+    <ProjectName>ConveyorLoadGate</ProjectName>
     <DeploymentBasePath>C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\</DeploymentBasePath>
+    <ILRepackExe>$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe</ILRepackExe>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -14,8 +12,8 @@
     <ProjectGuid>{AC2FE871-60C8-40DA-8614-FB0BC3ADF29B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>$(ProjectName)</RootNamespace>
-    <AssemblyName>$(ProjectName)</AssemblyName>
+    <RootNamespace>ConveyorLoadGate</RootNamespace>
+    <AssemblyName>ConveyorLoadGate</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -42,19 +40,22 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
-      <HintPath>..\lib\0Harmony.dll</HintPath>
+      <HintPath>$(ONIManaged)\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\lib\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(ONIManaged)\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>..\lib\Assembly-CSharp-firstpass.dll</HintPath>
+      <HintPath>$(ONIManaged)\Assembly-CSharp-firstpass.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <HintPath>$(ONIManaged)\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="PLib">
-      <HintPath>..\lib\PLib.dll</HintPath>
+      <HintPath>..\packages\PLib.4.17.1\lib\net471\PLib.dll</HintPath>
+    </Reference>
+    <Reference Include="HLib">
+      <HintPath>..\HLib\bin\Release\HLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -63,26 +64,24 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="Unity.TextMeshPro">
-      <HintPath>..\lib\Unity.TextMeshPro.dll</HintPath>
+      <HintPath>$(ONILib)\Unity.TextMeshPro.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>..\lib\UnityEngine.dll</HintPath>
+      <HintPath>$(ONIManaged)\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\lib\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(ONIManaged)\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>..\lib\UnityEngine.UI.dll</HintPath>
+      <HintPath>$(ONIManaged)\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SensorCounterComponent.cs" />
     <Compile Include="SensorInputValueComponent.cs" />
     <Compile Include="SensorMathUtils.cs" />
     <Compile Include="SensorSimpleInputSideScreen.cs" />
-    <Compile Include="SensorState.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="mod.yaml">
@@ -96,21 +95,31 @@
   <ItemGroup>
     <ProjectReference Include="..\HLib\HLib.csproj">
       <Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
-      <Name>CustomLogger</Name>
+      <Name>HLib</Name>
     </ProjectReference>
   </ItemGroup>
-  <!-- ILRepack and Deploy Targets -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
     <Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
     <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe&quot; /out:&quot;$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(Plib)&quot;" />
+    <PropertyGroup>
+      <MainDll>$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll</MainDll>
+      <PLibDll>..\packages\PLib.4.17.1\lib\net471\PLib.dll</PLibDll>
+      <HLibDll>..\HLib\bin\Release\HLib.dll</HLibDll>
+      <ILRepackExePath>$(ILRepackExe)</ILRepackExePath>
+      <OutputDll>$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll</OutputDll>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(ILRepackExePath)')" Text="ILRepack.exe not found: $(ILRepackExePath)" />
+    <Error Condition="!Exists('$(MainDll)')" Text="Main DLL not found: $(MainDll)" />
+    <Error Condition="!Exists('$(PLibDll)')" Text="PLib.dll not found: $(PLibDll)" />
+    <Error Condition="!Exists('$(HLibDll)')" Text="HLib.dll not found: $(HLibDll)" />
+    <Exec Command="&quot;$(ILRepackExePath)&quot; /out:&quot;$(OutputDll)&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MainDll)&quot; &quot;$(PLibDll)&quot; &quot;$(HLibDll)&quot;" />
   </Target>
-	<Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
-		<Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
-		<Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).pdb" />
-	</Target>
+  <Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
+    <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
+    <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).pdb" />
+  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

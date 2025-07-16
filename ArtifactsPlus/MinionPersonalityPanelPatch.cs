@@ -33,11 +33,11 @@ namespace ArtifactsPlus
             // Call IsValidTarget from this file
             if (!IsValidTarget(target))
             {
-                Patches.LogDebug("[MinionPersonalityPanel_OnSelectTarget_Patch] Target is not a valid minion.");
+                Patches.logger.LogDebug("[MinionPersonalityPanel_OnSelectTarget_Patch] Target is not a valid minion.");
                 return;
             }
             string minionName = target.GetComponent<MinionIdentity>()?.GetProperName() ?? target.name;
-            Patches.LogDebug($"[MinionPersonalityPanel_OnSelectTarget_Patch] found a minion: {minionName}");
+            Patches.logger.LogDebug($"[MinionPersonalityPanel_OnSelectTarget_Patch] found a minion: {minionName}");
 
             string summary = ArtifactEffectTracker.GetMinionArtifactInfusions(target);
             MinionPersonalityPanel_OnPrefabInit_Patch.modifiers.SetLabel("artifact_summary", summary, "Summary of artifact modifiers currently applied to this minion.");
@@ -47,7 +47,7 @@ namespace ArtifactsPlus
         private static bool IsValidTarget(GameObject target)
         {
             bool isMinion = target != null && target.GetComponent<MinionIdentity>() != null;
-            Patches.LogDebug($"[MinionPersonalityPanel_OnSelectTarget_Patch] IsValidForTarget called for '{target?.name ?? "null"}' (Type: {target?.GetType().Name ?? "null"}), isMinion: {isMinion}");
+            Patches.logger.LogDebug($"[MinionPersonalityPanel_OnSelectTarget_Patch] IsValidForTarget called for '{target?.name ?? "null"}' (Type: {target?.GetType().Name ?? "null"}), isMinion: {isMinion}");
             return isMinion;
         }
     }

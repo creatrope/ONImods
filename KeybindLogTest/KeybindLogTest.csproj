@@ -1,14 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <Username>sendh</Username>
-    <UserProfile>C:\Users\$(Username)</UserProfile>
     <ProjectName>KeybindLogTest</ProjectName>
-    <ONIManaged>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</ONIManaged>
-    <ONILib>$(UserProfile)\Documents\ONI\Assembly-CSharp\lib</ONILib>
-    <PLibPath>$(UserProfile)\Documents\Github\Sendhb-ONI\packages\PLib.4.17.1\lib\net471</PLibPath>
-    <Plib>$(PLibPath)\PLib.dll</Plib>
-    <DeploymentBasePath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Local\</DeploymentBasePath>
+    <DeploymentBasePath>C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\</DeploymentBasePath>
     <ILRepackExe>$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe</ILRepackExe>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
@@ -18,8 +12,8 @@
     <ProjectGuid>{9E16CD56-B939-407B-ABFE-56E0B16D4668}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>$(ProjectName)</RootNamespace>
-    <AssemblyName>$(ProjectName)</AssemblyName>
+    <RootNamespace>KeybindLogTest</RootNamespace>
+    <AssemblyName>KeybindLogTest</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -58,7 +52,10 @@
       <HintPath>$(ONIManaged)\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="PLib">
-      <HintPath>$(PLibPath)\PLib.dll</HintPath>
+      <HintPath>..\packages\PLib.4.17.1\lib\net471\PLib.dll</HintPath>
+    </Reference>
+    <Reference Include="HLib">
+      <HintPath>..\HLib\bin\Release\HLib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -95,7 +92,7 @@
   <ItemGroup>
     <ProjectReference Include="..\HLib\HLib.csproj">
       <Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
-      <Name>CustomLogger</Name>
+      <Name>HLib</Name>
     </ProjectReference>
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
@@ -104,7 +101,18 @@
     <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
   </Target>
   <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(ILRepackExe)&quot; /out:&quot;$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(Plib)&quot;" />
+    <PropertyGroup>
+      <MainDll>$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll</MainDll>
+      <PLibDll>..\packages\PLib.4.17.1\lib\net471\PLib.dll</PLibDll>
+      <HLibDll>..\HLib\bin\Release\HLib.dll</HLibDll>
+      <ILRepackExePath>$(ILRepackExe)</ILRepackExePath>
+      <OutputDll>$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll</OutputDll>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(ILRepackExePath)')" Text="ILRepack.exe not found: $(ILRepackExePath)" />
+    <Error Condition="!Exists('$(MainDll)')" Text="Main DLL not found: $(MainDll)" />
+    <Error Condition="!Exists('$(PLibDll)')" Text="PLib.dll not found: $(PLibDll)" />
+    <Error Condition="!Exists('$(HLibDll)')" Text="HLib.dll not found: $(HLibDll)" />
+    <Exec Command="&quot;$(ILRepackExePath)&quot; /out:&quot;$(OutputDll)&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MainDll)&quot; &quot;$(PLibDll)&quot; &quot;$(HLibDll)&quot;" />
   </Target>
   <Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
     <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
