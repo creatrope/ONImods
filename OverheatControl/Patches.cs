@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic; // For List<> and Dictionary<>
 using System.Runtime.CompilerServices; // For ConditionalWeakTable
 using System.Threading;
+using HLib;
 using TUNING;
 using UnityEngine;
 using static Rendering.BlockTileRenderer;
@@ -27,6 +28,7 @@ namespace OverheatControl
 
         private static bool staticInitialized = false;
 
+        private static readonly HLib.Logger logger = new HLib.Logger("OverheatControl");
         static Patches()
         {
             if (staticInitialized)
@@ -38,14 +40,14 @@ namespace OverheatControl
         {
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
 
-            if (!options.EnableCustomLog)
-                Debug.DisableLogging();
-
             ShutdownPercent = options.ShutdownPercent;
             RestorePercent = options.RestorePercent;
 
+            // Enable or disable logger based on EnableCustomLog
+            Patches.logger.SetLoggingState(options.EnableCustomLog);
+
             string optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
-            PUtil.LogDebug($"Settings loaded:\n{optionsJson}");
+            Patches.logger.LogDebug($"Settings loaded:\n{optionsJson}");
         }
 
         public static void LogCycleChanges()
@@ -57,7 +59,7 @@ namespace OverheatControl
             }
             else
             {
-                PUtil.LogDebug("GameClock Instance is null.");
+                Patches.logger.LogDebug("GameClock Instance is null.");
             }
         }
 
@@ -66,7 +68,7 @@ namespace OverheatControl
             if (PopFXManager.Instance != null)
                 PopFXManager.Instance.SpawnFX(PopFXManager.Instance.sprite_Plus, message, gameObject.transform, new Vector3(0.0f, 0.0f, 0.0f), 2f);
             else
-                PUtil.LogDebug("PopFXManager.Instance is null.");
+                Patches.logger.LogDebug("PopFXManager.Instance is null.");
         }
 
         public static bool IsOverheatableAndPowered(BuildingDef def)
@@ -111,7 +113,7 @@ namespace OverheatControl
         {
             public static void Postfix()
             {
-                PUtil.LogDebug("GameClock Initialized.");
+                Patches.logger.LogDebug("GameClock Initialized.");
             }
         }
     }
