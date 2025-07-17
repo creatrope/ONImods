@@ -409,28 +409,11 @@ namespace FlatulenceMod
                     {
                         Patches.logger.LogDebug($"[FlatulencePeriodic] minionIdentity is null."); return;
                     }
-                    var modifiers = go.GetComponent<Modifiers>();
-                    var sicknesses = modifiers != null ? modifiers.sicknesses : null;
-                    var effects = go.GetComponent<Effects>();
                     var traits = go.GetComponent<Traits>();
 
-                    string dupeLabel = $"{minionIdentity.GetProperName()}({go.GetInstanceID()})";
-
-                    if (traits != null)
+                    if (traits != null && traits.HasTrait("Flatulence"))
                     {
-                        bool hasFlatulenceTrait = traits.HasTrait("Flatulence");
-                        Patches.logger.LogDebug($"[FlatulencePeriodic] Minion: {dupeLabel}, hasFlatulenceTrait: {hasFlatulenceTrait}");
-
-                        // Add FlatulenceSickness if not present
-                        if (sicknesses != null && sicknesses.Get(ModConstants.FLATULENCE_SICKNESS_ID) == null)
-                        {
-                            sicknesses.Infect(new SicknessExposureInfo(ModConstants.FLATULENCE_SICKNESS_ID, null));
-                            Patches.logger.LogDebug($"[FlatulencePeriodic] Added FlatulenceSickness to minion: {dupeLabel}");
-                        }
-                    }
-                    else
-                    {
-                        Patches.logger.LogDebug($"[FlatulencePeriodic] Minion: {dupeLabel} traits is null.");
+                        SicknessHelpers.AddFlatulenceSickness(go);
                     }
                 }
                 Patches.logger.LogDebug($"[FlatulencePeriodic] Timer exiting");
@@ -668,6 +651,31 @@ namespace FlatulenceMod
                     ? $"{minionIdentity.GetProperName()}({__instance.gameObject.GetInstanceID()})"
                     : $"{__instance.gameObject.name}({__instance.gameObject.GetInstanceID()})";
                 FlatulenceMod.Patches.logger.LogDebug($"[NoFlatulenceEffect] ACTIVATED for '{dupeLabel}'.");
+            }
+        }
+    }
+
+    public static class SicknessHelpers
+    {
+        /// <summary>
+        /// Adds FlatulenceSickness to the specified minion if not already present.
+        /// </summary>
+        public static void AddFlatulenceSickness(GameObject minionGo)
+        {
+            if (minionGo == null) return;
+            var minionIdentity = minionGo.GetComponent<MinionIdentity>();
+            if (minionIdentity == null) return;
+
+            var modifiers = minionGo.GetComponent<Modifiers>();
+            if (modifiers == null) return;
+
+            var sicknesses = modifiers.sicknesses;
+            if (sicknesses == null) return;
+
+            if (sicknesses.Get(FlatulenceMod.ModConstants.FLATULENCE_SICKNESS_ID) == null)
+            {
+                sicknesses.Infect(new SicknessExposureInfo(FlatulenceMod.ModConstants.FLATULENCE_SICKNESS_ID, null));
+                FlatulenceMod.Patches.logger.LogDebug($"[SicknessHelpers] Added FlatulenceSickness to minion: {minionGo.name}({minionGo.GetInstanceID()})");
             }
         }
     }
