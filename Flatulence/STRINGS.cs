@@ -6,7 +6,7 @@ public static class STRINGS
         {
             public static class FLATULENCESICKNESS
             {
-                public static LocString NAME = "Flatulence (Disease)";
+                public static LocString NAME = "Windy Syndrome";
                 public static LocString DESCRIPTION = "This duplicant suffers from excessive flatulence.";
             }
         }
@@ -41,7 +41,7 @@ public static class STRINGS
         {
             public static class NOFLATULENCEPILL
             {
-                public static LocString NAME = "No Flatulence Pill";
+                public static LocString NAME = "WindStopper  Pill";
                 public static LocString DESC = "A pill that temporarily prevents flatulence in duplicants.";
             }
         }
@@ -51,7 +51,7 @@ public static class STRINGS
     {
         public const string ENABLE_CUSTOM_OUTPUT_LOG = "Enable Custom Output Log";
         public const string ENABLE_CUSTOM_OUTPUT_LOG_DESC = "Enable or disable custom output logging.";
-        public const string NO_FLATULENCE_PILL_RECIPE_TIME = "No Flatulence Pill Recipe Time";
+        public const string NO_FLATULENCE_PILL_RECIPE_TIME = "WindStopper Recipe Time";
         public const string NO_FLATULENCE_PILL_RECIPE_TIME_DESC = "Time required to craft No Flatulence Pill.";
         public const string FLATULENCE_REINFECT_INTERVAL = "Flatulence Reinfect Interval";
         public const string FLATULENCE_REINFECT_INTERVAL_DESC = "Interval for reinfecting minions with Flatulence.";

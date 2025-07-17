@@ -280,7 +280,10 @@ namespace FlatulenceMod
                     if (minionIdentity != null)
                     {
                         var selectedGameObject = selectedObj.gameObject;
-                        if (FlatulenceMod.TraitHelpers.RemoveFlatulenceTrait(selectedGameObject))
+                        bool traitRemoved = FlatulenceMod.TraitHelpers.RemoveFlatulenceTrait(selectedGameObject);
+                        bool sicknessRemoved = SicknessHelpers.RemoveFlatulenceSickness(selectedGameObject);
+
+                        if (traitRemoved)
                         {
                             FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Flatulence trait removed via hotkey.");
                         }
@@ -288,7 +291,15 @@ namespace FlatulenceMod
                         {
                             FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Could not remove Flatulence trait via hotkey.");
                         }
-                        SicknessHelpers.RemoveFlatulenceSickness(selectedGameObject);
+
+                        if (sicknessRemoved)
+                        {
+                            FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Flatulence sickness removed via hotkey.");
+                        }
+                        else
+                        {
+                            FlatulenceMod.Patches.logger.LogDebug("[Hotkey] No Flatulence sickness to remove via hotkey.");
+                        }
                     }
                     else
                     {
@@ -690,6 +701,8 @@ namespace FlatulenceMod
             }));
         }
     }
+
+    [ConfigFile(SharedConfigLocation: true)]
 
     public class ModOptions
     {
