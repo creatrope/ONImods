@@ -41,6 +41,9 @@ namespace FlatulenceMod
         public const float FLATULENCE_SICKNESS_STRESS_PER_CYCLE = 0.01f;
 
         public const float NOFLATULENCE_EFFECT_DURATION = 15f;
+
+        // New constant for custom emit interval
+        public const float FLATULENCE_CUSTOM_EMIT_INTERVAL = 10f;
     }
 
     // Assuming FlatulenceConfig is a class that should be defined somewhere in your codebase
@@ -335,18 +338,33 @@ namespace FlatulenceMod
     [HarmonyPatch(typeof(Flatulence), "Emit")]
     public static class Flatulence_Emit_Patch_Test
     {
-        public static void Prefix(Flatulence __instance)
+        public static bool Prefix(Flatulence __instance)
         {
             var minion = __instance.gameObject;
             var minionIdentity = minion.GetComponent<MinionIdentity>();
-            var traits = minion.GetComponent<Traits>();
-            if (traits != null && traits.HasTrait("Flatulence"))
+            var effects = minion.GetComponent<Effects>();
+            string dupeLabel = minionIdentity != null
+                ? $"{minionIdentity.GetProperName()}({minion.GetInstanceID()})"
+                : $"{minion.name}({minion.GetInstanceID()})";
+
+            if (effects != null && effects.HasEffect(FlatulenceMod.ModConstants.NOFLATULENCE_EFFECT_ID))
             {
-                string dupeLabel = minionIdentity != null
-                    ? $"{minionIdentity.GetProperName()}({minion.GetInstanceID()})"
-                    : $"{minion.name}({minion.GetInstanceID()})";
-                Patches.logger.LogDebug($"[Flatulence_Emit_Patch_Test] Dupe '{dupeLabel}' emit pass test triggered.");
+                FlatulenceMod.Patches.logger.LogDebug($"[Flatulence_Emit_Patch_Test] EMIT SUPPRESSED for '{dupeLabel}' due to NoFlatulenceEffect.");
+                return false; // Suppress emission
             }
+            FlatulenceMod.Patches.logger.LogDebug($"[Flatulence_Emit_Patch_Test] EMIT ALLOWED for '{dupeLabel}'.");
+            return true; // Allow emission
+        }
+    }
+
+    [HarmonyPatch(typeof(Flatulence.States), "GetNewInterval")]
+    public static class Flatulence_EmitInterval_Patch
+    {
+        public static bool Prefix(ref float __result)
+        {
+            // Set a custom interval for testing, e.g., 1 second
+            __result = 1f;
+            return false; // Skip original method
         }
     }
 
