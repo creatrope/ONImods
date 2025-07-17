@@ -11,12 +11,11 @@ using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
 using System;
-using System.Collections.Generic; // For List<> and Dictionary<>
-using System.Runtime.CompilerServices; // For ConditionalWeakTable
+using System.Collections.Generic; 
+using System.Runtime.CompilerServices; 
 using TUNING;
 using UnityEngine;
 using static Rendering.BlockTileRenderer;
-using static STRINGS.CODEX.CRITTERSTATUS.FERTILITY;
 
 namespace KeybindLogTest
 {
