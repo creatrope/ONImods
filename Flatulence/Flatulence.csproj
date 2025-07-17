@@ -20,8 +20,22 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="anim\assets\flatulencepill\flatulencepill_anim.bytes" />
+    <None Include="anim\assets\flatulencepill\flatulencepill_build.bytes" />
     <None Include="mod.yaml" />
     <None Include="mod_info.yaml" />
   </ItemGroup>
+	<ItemGroup>
+		<!-- Recursively include all files in anim and its subdirectories -->
+		<AnimFiles Include="anim\**\*" />
+	</ItemGroup>
+  <ItemGroup>
+    <Content Include="anim\assets\flatulencepill\flatulencepill.png" />
+  </ItemGroup>
+  <Target Name="CopyAnimDirectory" AfterTargets="Build">
+    <RemoveDir Directories="$(DeploymentBasePath)$(ProjectName)\anim" />
+    <MakeDir Directories="$(DeploymentBasePath)$(ProjectName)\anim" />
+    <Copy SourceFiles="@(AnimFiles)" DestinationFiles="@(AnimFiles->'$(DeploymentBasePath)$(ProjectName)\anim\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />
+  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

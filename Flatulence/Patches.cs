@@ -11,6 +11,7 @@ using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,6 +20,8 @@ using System.Text;
 using System.Xml.Linq;
 using TUNING;
 using UnityEngine;
+
+
 
 // ======= MOD CONSTANTS =======
 namespace FlatulenceMod
@@ -47,9 +50,13 @@ namespace FlatulenceMod
 
         // Add these if you want to centralize trait names and animation names
         public const string FLATULENCE_TRAIT_NAME = "Flatulence";
-        public const string TEST_ANIM_NAME = "pill_radiation_kanim";
+        //public const string TEST_ANIM_NAME = "pill_radiation_kanim";
+        public const string ANIM_NAME = "flatulencepill_kanim";
+
         public const string APOTHECARY_FABRICATOR = "Apothecary";
         public const string PILL_INGREDIENT_TAG = "Carbon";
+
+        public const float PILL_EFFECT_GRACE_PERIOD = 60f; // seconds
     }
 
     // Assuming FlatulenceConfig is a class that should be defined somewhere in your codebase
@@ -524,6 +531,13 @@ namespace FlatulenceMod
                 FlatulenceMod.Patches.logger.LogDebug($"[Flatulence_Emit_Patch_Test] EMIT SUPPRESSED for '{dupeLabel}' due to NoFlatulenceEffect.");
                 return false; // Suppress emission
             }
+
+            if (PillGracePeriodManager.IsInGracePeriod(minion))
+            {
+                FlatulenceMod.Patches.logger.LogDebug($"[Flatulence_Emit_Patch_Test] EMIT SUPPRESSED for '{dupeLabel}' due to Pill Effect Grace Period.");
+                return false;
+            }
+
             FlatulenceMod.Patches.logger.LogDebug($"[Flatulence_Emit_Patch_Test] EMIT ALLOWED for '{dupeLabel}'.");
             return true; // Allow emission
         }
@@ -605,10 +619,10 @@ namespace FlatulenceMod
             }
             prefabCreated = true;
 
-            var anim = Assets.GetAnim((HashedString)ModConstants.TEST_ANIM_NAME);
+            var anim = Assets.GetAnim((HashedString)ModConstants.ANIM_NAME);
             if (anim == null)
             {
-                Patches.logger.LogDebug($"[NoFlatulencePillConfig] [Test]: Animation '{ModConstants.TEST_ANIM_NAME}' not found!");
+                Patches.logger.LogDebug($"[NoFlatulencePillConfig] [Test]: Animation '{ModConstants.ANIM_NAME}' not found!");
             }
 
             GameObject looseEntity = EntityTemplates.CreateLooseEntity(
@@ -733,6 +747,10 @@ namespace FlatulenceMod
         [Option("Pill Ingredient", "Tag of the ingredient used to craft the No Flatulence Pill.")]
         [JsonProperty]
         public string PillIngredientTag { get; set; } = "Carbon";
+
+        [Option("Pill Effect Grace Period", "Seconds after NoFlatulenceEffect expires before emission resumes.")]
+        [JsonProperty]
+        public float PillEffectGracePeriod { get; set; } = FlatulenceMod.ModConstants.PILL_EFFECT_GRACE_PERIOD;
     }
     [HarmonyPatch(typeof(Klei.AI.Effects), "Remove", new[] { typeof(Effect) })]
     public static class Effects_Remove_Effect_Patch
@@ -741,11 +759,14 @@ namespace FlatulenceMod
         {
             if (effect != null && effect.Id == FlatulenceMod.ModConstants.NOFLATULENCE_EFFECT_ID)
             {
-                var minionIdentity = __instance.gameObject.GetComponent<MinionIdentity>();
+                var minion = __instance.gameObject;
+                var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+                PillGracePeriodManager.SetGracePeriod(minion, options.PillEffectGracePeriod);
+                var minionIdentity = minion.GetComponent<MinionIdentity>();
                 string dupeLabel = minionIdentity != null
-                    ? $"{minionIdentity.GetProperName()}({__instance.gameObject.GetInstanceID()})"
-                    : $"{__instance.gameObject.name}({__instance.gameObject.GetInstanceID()})";
-                FlatulenceMod.Patches.logger.LogDebug($"[NoFlatulenceEffect] EXPIRED (auto) for '{dupeLabel}'.");
+                    ? $"{minionIdentity.GetProperName()}({minion.GetInstanceID()})"
+                    : $"{minion.name}({minion.GetInstanceID()})";
+                FlatulenceMod.Patches.logger.LogDebug($"[NoFlatulenceEffect] EXPIRED (auto) for '{dupeLabel}'. Grace period started for {options.PillEffectGracePeriod} seconds.");
             }
         }
     }
@@ -847,6 +868,33 @@ namespace FlatulenceMod
             }
             FlatulenceMod.Patches.logger.LogDebug("[SicknessHelpers] Minion does not have FlatulenceSickness.");
             return false;
+        }
+    }
+
+
+    public static class PillGracePeriodManager
+    {
+        // Maps minion instance IDs to the time when grace period ends
+        private static readonly ConcurrentDictionary<int, float> gracePeriodEndTimes = new ConcurrentDictionary<int, float>();
+
+        public static void SetGracePeriod(GameObject minion, float duration)
+        {
+            gracePeriodEndTimes[minion.GetInstanceID()] = Time.unscaledTime + duration;
+        }
+
+        public static bool IsInGracePeriod(GameObject minion)
+        {
+            float endTime;
+            if (gracePeriodEndTimes.TryGetValue(minion.GetInstanceID(), out endTime))
+            {
+                return Time.unscaledTime < endTime;
+            }
+            return false;
+        }
+
+        public static void ClearGracePeriod(GameObject minion)
+        {
+            gracePeriodEndTimes.TryRemove(minion.GetInstanceID(), out _);
         }
     }
 }
