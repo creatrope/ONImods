@@ -28,24 +28,28 @@ namespace FlatulenceMod
     {
         // pill making constants
         public const string NOFLATULENCE_PILL_ID = "NoFlatulencePill";
-        public const float NOFLATULENCE_PILL_RECIPE_TIME = 5f;
-        public const int NOFLATULENCE_PILL_RECIPE_SORTORDER = 10;
-        
         public const string FLATULENCE_SICKNESS_ID = "FlatulenceSickness";
         public const string NOFLATULENCE_EFFECT_ID = "NoFlatulenceEffect";
+        public const int NOFLATULENCE_PILL_RECIPE_SORTORDER = 10;
 
-        public const float FLATULENCE_REINFECT_INTERVAL = 120f;
-        public const float FLATULENCE_SICKNESS_STRESS_PER_CYCLE = 0.001f;
-        public const float NOFLATULENCE_EFFECT_DURATION = 60f;
+        public const float NOFLATULENCE_PILL_RECIPE_TIME = 5f;
+        public const float FLATULENCE_REINFECT_INTERVAL = 240f;
+        public const float FLATULENCE_SICKNESS_STRESS_PER_CYCLE = 0f;
+        public const float NOFLATULENCE_EFFECT_DURATION = 600f;
 
         // New constant for custom emit interval
-        public const float FLATULENCE_CUSTOM_EMIT_INTERVAL = 30f;
+        public const float FLATULENCE_CUSTOM_EMIT_INTERVAL = 240f;
 
         // not adding flatulence effect, so these shouldn't matter.
         public const string FLATULENCE_EFFECT_ID = "FlatulenceEffect";
         public const float FLATULENCE_EFFECT_DURATION = 15f;
         public const float FLATULENCE_EFFECT_STRESS_MODIFIER = 10f;
 
+        // Add these if you want to centralize trait names and animation names
+        public const string FLATULENCE_TRAIT_NAME = "Flatulence";
+        public const string TEST_ANIM_NAME = "pill_radiation_kanim";
+        public const string APOTHECARY_FABRICATOR = "Apothecary";
+        public const string PILL_INGREDIENT_TAG = "Carbon";
     }
 
     // Assuming FlatulenceConfig is a class that should be defined somewhere in your codebase
@@ -256,7 +260,6 @@ namespace FlatulenceMod
                         {
                             FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Could not add Flatulence trait via hotkey.");
                         }
-                        //SicknessHelpers.AddFlatulenceSickness(selectedGameObject);
                     }
                     else
                     {
@@ -394,19 +397,21 @@ namespace FlatulenceMod
             if (minionGo == null) return false;
             var traits = minionGo.GetComponent<Traits>();
             if (traits == null) return false;
-            if (!traits.HasTrait("Flatulence"))
+            if (traits.HasTrait("Flatulence"))
             {
-                var flatulenceTrait = Db.Get().traits.Get("Flatulence");
-                if (flatulenceTrait != null)
-                {
-                    traits.Add(flatulenceTrait);
-                    FlatulenceMod.Patches.logger.LogDebug($"[TraitHelpers] Flatulence trait added to minion: {minionGo.name}({minionGo.GetInstanceID()})");
-                    return true;
-                }
-                else
-                {
-                    FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] ERROR: Flatulence trait not found in Db.");
-                }
+                FlatulenceMod.Patches.logger.LogDebug($"[TraitHelpers] Minion already has Flatulence trait: {minionGo.name}({minionGo.GetInstanceID()})");
+                return true;
+            }
+            var flatulenceTrait = Db.Get().traits.Get("Flatulence");
+            if (flatulenceTrait != null)
+            {
+                traits.Add(flatulenceTrait);
+                FlatulenceMod.Patches.logger.LogDebug($"[TraitHelpers] Flatulence trait added to minion: {minionGo.name}({minionGo.GetInstanceID()})");
+                return true;
+            }
+            else
+            {
+                FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] ERROR: Flatulence trait not found in Db.");
             }
             return false;
         }
@@ -416,23 +421,21 @@ namespace FlatulenceMod
             if (minionGo == null) return false;
             var traits = minionGo.GetComponent<Traits>();
             if (traits == null) return false;
-            if (traits.HasTrait("Flatulence"))
+            if (!traits.HasTrait("Flatulence"))
             {
-                var flatulenceTrait = Db.Get().traits.Get("Flatulence");
-                if (flatulenceTrait != null)
-                {
-                    traits.Remove(flatulenceTrait);
-                    FlatulenceMod.Patches.logger.LogDebug($"[TraitHelpers] Flatulence trait removed from minion: {minionGo.name}({minionGo.GetInstanceID()})");
-                    return true;
-                }
-                else
-                {
-                    FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] ERROR: Flatulence trait not found in Db.");
-                }
+                FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] Minion does not have Flatulence trait.");
+                return true;
+            }
+            var flatulenceTrait = Db.Get().traits.Get("Flatulence");
+            if (flatulenceTrait != null)
+            {
+                traits.Remove(flatulenceTrait);
+                FlatulenceMod.Patches.logger.LogDebug($"[TraitHelpers] Flatulence trait removed from minion: {minionGo.name}({minionGo.GetInstanceID()})");
+                return false;
             }
             else
             {
-                FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] Minion does not have Flatulence trait.");
+                FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] ERROR: Flatulence trait not found in Db.");
             }
             return false;
         }
@@ -443,17 +446,6 @@ namespace FlatulenceMod
     {
         public static void Postfix(GameObject go)
         {
-            if (go == null)
-            {
-                Patches.logger.LogDebug("[MinionConfigPatch] Game Object null.");
-                return;
-            }
-            if (!TraitHelpers.AddFlatulenceTrait(go))
-            {
-                Patches.logger.LogDebug("[MinionConfigPatch] Could not add Flatulence trait (already present or missing component).");
-            }
-            //bool sicknessAdded = SicknessHelpers.AddFlatulenceSickness(go);
-            //Patches.logger.LogDebug($"[MinionConfigPatch] SicknessHelpers.AddFlatulenceSickness returned: {sicknessAdded}");
         }
     }
 
@@ -499,9 +491,22 @@ namespace FlatulenceMod
             var minion = __instance.gameObject;
             var minionIdentity = minion.GetComponent<MinionIdentity>();
             var effects = minion.GetComponent<Effects>();
+            var modifiers = minion.GetComponent<Modifiers>();
             string dupeLabel = minionIdentity != null
                 ? $"{minionIdentity.GetProperName()}({minion.GetInstanceID()})"
                 : $"{minion.name}({minion.GetInstanceID()})";
+
+            // Check for FlatulenceSickness
+            bool hasFlatulenceSickness = false;
+            if (modifiers != null && modifiers.sicknesses != null)
+            {
+                hasFlatulenceSickness = modifiers.sicknesses.Get(FlatulenceMod.ModConstants.FLATULENCE_SICKNESS_ID) != null;
+            }
+            if (!hasFlatulenceSickness)
+            {
+                FlatulenceMod.Patches.logger.LogDebug($"[Flatulence_Emit_Patch_Test] EMIT SKIPPED for '{dupeLabel}' (no FlatulenceSickness).");
+                return false;
+            }
 
             if (effects != null && effects.HasEffect(FlatulenceMod.ModConstants.NOFLATULENCE_EFFECT_ID))
             {
@@ -589,11 +594,10 @@ namespace FlatulenceMod
             }
             prefabCreated = true;
 
-            var testAnimName = "pill_radiation_kanim";
-            var anim = Assets.GetAnim((HashedString)testAnimName);
+            var anim = Assets.GetAnim((HashedString)ModConstants.TEST_ANIM_NAME);
             if (anim == null)
             {
-                Patches.logger.LogDebug($"[NoFlatulencePillConfig] [Test]: Animation '{testAnimName}' not found!");
+                Patches.logger.LogDebug($"[NoFlatulencePillConfig] [Test]: Animation '{ModConstants.TEST_ANIM_NAME}' not found!");
             }
 
             GameObject looseEntity = EntityTemplates.CreateLooseEntity(
@@ -630,7 +634,7 @@ namespace FlatulenceMod
 
             ComplexRecipe.RecipeElement[] ingredients = new ComplexRecipe.RecipeElement[]
             {
-                new ComplexRecipe.RecipeElement((Tag)"Carbon", 1f)
+                new ComplexRecipe.RecipeElement((Tag)ModConstants.PILL_INGREDIENT_TAG, 1f)
             };
             ComplexRecipe.RecipeElement[] results = new ComplexRecipe.RecipeElement[]
             {
@@ -638,14 +642,14 @@ namespace FlatulenceMod
             };
 
             recipe = new ComplexRecipe(
-                ComplexRecipeManager.MakeRecipeID("Apothecary", ingredients, results),
+                ComplexRecipeManager.MakeRecipeID(ModConstants.APOTHECARY_FABRICATOR, ingredients, results),
                 ingredients,
                 results)
             {
                 time = ModConstants.NOFLATULENCE_PILL_RECIPE_TIME,
                 description = STRINGS.ITEMS.MEDICINE.NOFLATULENCEPILL.DESC,
                 nameDisplay = ComplexRecipe.RecipeNameDisplay.Result,
-                fabricators = new List<Tag>() { (Tag)"Apothecary" },
+                fabricators = new List<Tag>() { (Tag)ModConstants.APOTHECARY_FABRICATOR },
                 sortOrder = ModConstants.NOFLATULENCE_PILL_RECIPE_SORTORDER
             };
 
@@ -689,9 +693,33 @@ namespace FlatulenceMod
 
     public class ModOptions
     {
-        [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
+        [Option(STRINGS.OPTIONS.ENABLE_CUSTOM_OUTPUT_LOG, STRINGS.OPTIONS.ENABLE_CUSTOM_OUTPUT_LOG_DESC)]
         [JsonProperty]
         public bool EnableCustomLog { get; set; }
+
+        [Option(STRINGS.OPTIONS.NO_FLATULENCE_PILL_RECIPE_TIME, STRINGS.OPTIONS.NO_FLATULENCE_PILL_RECIPE_TIME_DESC)]
+        [JsonProperty]
+        public float NoFlatulencePillRecipeTime { get; set; } = 5f;
+
+        [Option(STRINGS.OPTIONS.FLATULENCE_REINFECT_INTERVAL, STRINGS.OPTIONS.FLATULENCE_REINFECT_INTERVAL_DESC)]
+        [JsonProperty]
+        public float FlatulenceReinfectInterval { get; set; } = 240f;
+
+        [Option(STRINGS.OPTIONS.FLATULENCE_SICKNESS_STRESS_PER_CYCLE, STRINGS.OPTIONS.FLATULENCE_SICKNESS_STRESS_PER_CYCLE_DESC)]
+        [JsonProperty]
+        public float FlatulenceSicknessStressPerCycle { get; set; } = 0f;
+
+        [Option(STRINGS.OPTIONS.NO_FLATULENCE_EFFECT_DURATION, STRINGS.OPTIONS.NO_FLATULENCE_EFFECT_DURATION_DESC)]
+        [JsonProperty]
+        public float NoFlatulenceEffectDuration { get; set; } = 600f;
+
+        [Option(STRINGS.OPTIONS.FLATULENCE_CUSTOM_EMIT_INTERVAL, STRINGS.OPTIONS.FLATULENCE_CUSTOM_EMIT_INTERVAL_DESC)]
+        [JsonProperty]
+        public float FlatulenceCustomEmitInterval { get; set; } = 240f;
+
+        [Option("Pill Ingredient", "Tag of the ingredient used to craft the No Flatulence Pill.")]
+        [JsonProperty]
+        public string PillIngredientTag { get; set; } = "Carbon";
     }
     [HarmonyPatch(typeof(Klei.AI.Effects), "Remove", new[] { typeof(Effect) })]
     public static class Effects_Remove_Effect_Patch
