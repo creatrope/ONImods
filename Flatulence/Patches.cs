@@ -143,8 +143,12 @@ namespace FlatulenceMod
     {
         private static PAction KeyTestAction;
         private static PAction KeyTestAction2;
+        private static PAction AddFlatulenceAction;
+        private static PAction RemoveFlatulenceAction;
         private readonly Action snapshotAction;
         private readonly Action snapshotAction2;
+        private readonly Action addFlatulenceSnapshot;
+        private readonly Action removeFlatulenceSnapshot;
 
         public string handlerName => "KeyTest Handler";
         public KInputHandler inputHandler { get; set; }
@@ -153,14 +157,78 @@ namespace FlatulenceMod
         {
             snapshotAction = KeyTestAction != null ? KeyTestAction.GetKAction() : PAction.MaxAction;
             snapshotAction2 = KeyTestAction2 != null ? KeyTestAction2.GetKAction() : PAction.MaxAction;
+            addFlatulenceSnapshot = AddFlatulenceAction != null ? AddFlatulenceAction.GetKAction() : PAction.MaxAction;
+            removeFlatulenceSnapshot = RemoveFlatulenceAction != null ? RemoveFlatulenceAction.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
         {
             if (e.TryConsume(snapshotAction))
-                Debug.Log("[Flatulence] CTRL-F7 pressed!");
+            {
+                // Print selected minion info
+                var selectedObj = SelectTool.Instance?.selected;
+                if (selectedObj != null)
+                {
+                    var minionIdentity = selectedObj.GetComponent<MinionIdentity>();
+                    if (minionIdentity != null)
+                    {
+                        string dupeLabel = $"{minionIdentity.GetProperName()}({selectedObj.GetInstanceID()})";
+                        FlatulenceMod.Patches.logger.LogDebug($"[Hotkey] Selected minion: {dupeLabel}");
+                    }
+                    else
+                    {
+                        FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Selected object is not a minion.");
+                    }
+                }
+                else
+                {
+                    FlatulenceMod.Patches.logger.LogDebug("[Hotkey] No object selected.");
+                }
+            }
             else if (e.TryConsume(snapshotAction2))
+            {
                 Debug.Log("[Flatulence] CTRL-F8 pressed!");
+            }
+            else if (e.TryConsume(addFlatulenceSnapshot))
+            {
+                var selectedObj = SelectTool.Instance?.selected;
+                if (selectedObj != null)
+                {
+                    var selectedGameObject = selectedObj.gameObject; // Convert KSelectable to GameObject
+                    if (FlatulenceMod.TraitHelpers.AddFlatulenceTrait(selectedGameObject))
+                    {
+                        FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Flatulence trait added via hotkey.");
+                    }
+                    else
+                    {
+                        FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Could not add Flatulence trait via hotkey.");
+                    }
+                }
+                else
+                {
+                    FlatulenceMod.Patches.logger.LogDebug("[Hotkey] No object selected for AddFlatulenceTrait.");
+                }
+            }
+            else if (e.TryConsume(removeFlatulenceSnapshot))
+            {
+                var selectedObj = SelectTool.Instance?.selected;
+                if (selectedObj != null)
+                {
+                    var selectedGameObject = selectedObj.gameObject; // Convert KSelectable to GameObject
+                    if (FlatulenceMod.TraitHelpers.RemoveFlatulenceTrait(selectedGameObject))
+                    {
+                        FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Flatulence trait removed via hotkey.");
+                    }
+                    else
+                    {
+                        FlatulenceMod.Patches.logger.LogDebug("[Hotkey] Could not remove Flatulence trait via hotkey.");
+                    }
+                }
+                else
+                {
+                    FlatulenceMod.Patches.logger.LogDebug("[Hotkey] No object selected for RemoveFlatulenceTrait.");
+                }
+            }
         }
 
         [PLibMethod(RunAt.AfterLayerableLoad)]
@@ -177,6 +245,10 @@ namespace FlatulenceMod
                 "FlatulenceMod.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl));
             KeyTestAction2 = new PActionManager().CreateAction(
                 "FlatulenceMod.KeyTestAction2", "Test Key Action 2", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl));
+            AddFlatulenceAction = new PActionManager().CreateAction(
+                "FlatulenceMod.AddFlatulenceTrait", "Add Flatulence Trait", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl));
+            RemoveFlatulenceAction = new PActionManager().CreateAction(
+                "FlatulenceMod.RemoveFlatulenceTrait", "Remove Flatulence Trait", new PKeyBinding(KKeyCode.F10, Modifier.Ctrl));
         }
     }
 
@@ -185,7 +257,7 @@ namespace FlatulenceMod
         public override void OnLoad(Harmony harmony)
         {
             new POptions().RegisterOptions(this, typeof(ModOptions)); // Register the options
-            
+
             Patches.OnLoad();
             base.OnLoad(harmony);
             PUtil.InitLibrary();
@@ -247,6 +319,57 @@ namespace FlatulenceMod
         }
     }
 
+    public static class TraitHelpers
+    {
+        public static bool AddFlatulenceTrait(GameObject minionGo)
+        {
+            if (minionGo == null) return false;
+            var traits = minionGo.GetComponent<Traits>();
+            if (traits == null) return false;
+            if (!traits.HasTrait("Flatulence"))
+            {
+                var flatulenceTrait = Db.Get().traits.Get("Flatulence");
+                if (flatulenceTrait != null)
+                {
+                    traits.Add(flatulenceTrait);
+                    FlatulenceMod.Patches.logger.LogDebug($"[TraitHelpers] Flatulence trait added to minion: {minionGo.name}({minionGo.GetInstanceID()})");
+                    return true;
+                }
+                else
+                {
+                    FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] ERROR: Flatulence trait not found in Db.");
+                }
+            }
+            return false;
+        }
+
+        public static bool RemoveFlatulenceTrait(GameObject minionGo)
+        {
+            if (minionGo == null) return false;
+            var traits = minionGo.GetComponent<Traits>();
+            if (traits == null) return false;
+            if (traits.HasTrait("Flatulence"))
+            {
+                var flatulenceTrait = Db.Get().traits.Get("Flatulence");
+                if (flatulenceTrait != null)
+                {
+                    traits.Remove(flatulenceTrait);
+                    FlatulenceMod.Patches.logger.LogDebug($"[TraitHelpers] Flatulence trait removed from minion: {minionGo.name}({minionGo.GetInstanceID()})");
+                    return true;
+                }
+                else
+                {
+                    FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] ERROR: Flatulence trait not found in Db.");
+                }
+            }
+            else
+            {
+                FlatulenceMod.Patches.logger.LogDebug("[TraitHelpers] Minion does not have Flatulence trait.");
+            }
+            return false;
+        }
+    }
+
     [HarmonyPatch(typeof(MinionConfig), "OnSpawn")]
     public static class MinionConfigPatch
     {
@@ -257,29 +380,9 @@ namespace FlatulenceMod
                 Patches.logger.LogDebug("[MinionConfigPatch] Game Object null.");
                 return;
             }
-
-            // Add Flatulence trait to minion if not already present
-            var traits = go.GetComponent<Traits>();
-            if (traits != null && !traits.HasTrait("Flatulence"))
+            if (!TraitHelpers.AddFlatulenceTrait(go))
             {
-                var flatulenceTrait = Db.Get().traits.Get("Flatulence");
-                if (flatulenceTrait != null)
-                {
-                    traits.Add(flatulenceTrait);
-                    Patches.logger.LogDebug("[MinionConfigPatch] Flatulent trait added to minion.");
-                }
-                else
-                {
-                    Patches.logger.LogDebug("[MinionConfigPatch] ERROR: Flatulence trait not found in Db.");
-                }
-            }
-            else if (traits == null)
-            {
-                Patches.logger.LogDebug("[MinionConfigPatch] Traits component is null, cannot add Flatulent trait.");
-            }
-            else
-            {
-                Patches.logger.LogDebug("[MinionConfigPatch] Minion already has Flatulent trait.");
+                Patches.logger.LogDebug("[MinionConfigPatch] Could not add Flatulence trait (already present or missing component).");
             }
         }
     }
@@ -334,7 +437,7 @@ namespace FlatulenceMod
             }
         }
     }
-   
+
     [HarmonyPatch(typeof(Flatulence), "Emit")]
     public static class Flatulence_Emit_Patch_Test
     {
@@ -512,13 +615,12 @@ namespace FlatulenceMod
     public class FlatulenceSickness : Sickness
     {
         public const string ID = "FlatulenceSickness";
-        public const float STRESS_PER_CYCLE = .1f;
 
         public FlatulenceSickness()
             : base(ID, SicknessType.Pathogen, Severity.Minor, 0.0001f, new List<InfectionVector>
             {
-                InfectionVector.Inhalation
-            }, 60f)
+                    InfectionVector.Inhalation
+            }, -1f) // Permanent
         {
             //this.AddSicknessComponent(new CommonSickEffectSickness());
             //this.AddSicknessComponent(new AnimatedSickness(new HashedString[]
@@ -527,7 +629,7 @@ namespace FlatulenceMod
             //}, Db.Get().Expressions.Pollen));
             this.AddSicknessComponent(new AttributeModifierSickness(new AttributeModifier[]
             {
-                new AttributeModifier(Db.Get().Amounts.Stress.deltaAttribute.Id, STRESS_PER_CYCLE, "Flatulence Sickness"),
+                    new AttributeModifier(Db.Get().Amounts.Stress.deltaAttribute.Id, ModConstants.FLATULENCE_SICKNESS_STRESS_PER_CYCLE, "Flatulence Sickness"),
             }));
         }
     }
@@ -537,5 +639,36 @@ namespace FlatulenceMod
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         [JsonProperty]
         public bool EnableCustomLog { get; set; }
+    }
+    [HarmonyPatch(typeof(Klei.AI.Effects), "Remove", new[] { typeof(Effect) })]
+    public static class Effects_Remove_Effect_Patch
+    {
+        public static void Prefix(Effects __instance, Effect effect)
+        {
+            if (effect != null && effect.Id == FlatulenceMod.ModConstants.NOFLATULENCE_EFFECT_ID)
+            {
+                var minionIdentity = __instance.gameObject.GetComponent<MinionIdentity>();
+                string dupeLabel = minionIdentity != null
+                    ? $"{minionIdentity.GetProperName()}({__instance.gameObject.GetInstanceID()})"
+                    : $"{__instance.gameObject.name}({__instance.gameObject.GetInstanceID()})";
+                FlatulenceMod.Patches.logger.LogDebug($"[NoFlatulenceEffect] EXPIRED (auto) for '{dupeLabel}'.");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Klei.AI.Effects), "Add", new Type[] { typeof(Effect), typeof(bool) })]
+    public static class Effects_Add_Effect_Patch
+    {
+        public static void Prefix(Effects __instance, Effect newEffect, bool should_save)
+        {
+            if (newEffect != null && newEffect.Id == FlatulenceMod.ModConstants.NOFLATULENCE_EFFECT_ID)
+            {
+                var minionIdentity = __instance.gameObject.GetComponent<MinionIdentity>();
+                string dupeLabel = minionIdentity != null
+                    ? $"{minionIdentity.GetProperName()}({__instance.gameObject.GetInstanceID()})"
+                    : $"{__instance.gameObject.name}({__instance.gameObject.GetInstanceID()})";
+                FlatulenceMod.Patches.logger.LogDebug($"[NoFlatulenceEffect] ACTIVATED for '{dupeLabel}'.");
+            }
+        }
     }
 }
