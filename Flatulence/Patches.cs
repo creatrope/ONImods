@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using PeterHan.PLib.Actions;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
+using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,6 @@ using System.Text;
 using System.Xml.Linq;
 using TUNING;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 // ======= MOD CONSTANTS =======
 namespace FlatulenceMod
@@ -84,7 +84,6 @@ namespace FlatulenceMod
             LocString.CreateLocStringKeys(typeof(STRINGS), null);
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
 
-            KeyTestHandler.Register();
 
             if (options != null)
             {
@@ -140,9 +139,9 @@ namespace FlatulenceMod
     internal sealed class KeyTestHandler : IInputHandler
     {
         private static PAction KeyTestAction;
-        private static PAction KeyTestAction2; // Second hotkey action
+        private static PAction KeyTestAction2;
         private readonly Action snapshotAction;
-        private readonly Action snapshotAction2; // Second hotkey action field
+        private readonly Action snapshotAction2;
 
         public string handlerName => "KeyTest Handler";
         public KInputHandler inputHandler { get; set; }
@@ -156,19 +155,25 @@ namespace FlatulenceMod
         public void OnKeyDown(KButtonEvent e)
         {
             if (e.TryConsume(snapshotAction))
-                Patches.logger.LogDebug("[KeyTest] Hotkey 1 pressed!");
+                Debug.Log("[Flatulence] CTRL-F7 pressed!");
             else if (e.TryConsume(snapshotAction2))
-                Patches.logger.LogDebug("[KeyTest] Hotkey 2 pressed!");
+                Debug.Log("[Flatulence] CTRL-F8 pressed!");
         }
 
-        // Register the actions and handler
-        internal static void Register()
+        [PLibMethod(RunAt.AfterLayerableLoad)]
+        internal static void AddKeycodeHandler()
         {
+            KInputHandler.Add(Global.GetInputManager().GetDefaultController(),
+                new KeyTestHandler(), 512);
+        }
+
+        internal static void Register(PPatchManager manager)
+        {
+            manager.RegisterPatchClass(typeof(KeyTestHandler));
             KeyTestAction = new PActionManager().CreateAction(
                 "FlatulenceMod.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl));
             KeyTestAction2 = new PActionManager().CreateAction(
                 "FlatulenceMod.KeyTestAction2", "Test Key Action 2", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl));
-            KInputHandler.Add(Global.GetInputManager().GetDefaultController(), new KeyTestHandler(), 512);
         }
     }
 
@@ -182,6 +187,8 @@ namespace FlatulenceMod
             base.OnLoad(harmony);
             PUtil.InitLibrary();
             harmony.PatchAll();
+            KeyTestHandler.Register(new PPatchManager(harmony));
+
         }
     }
 
