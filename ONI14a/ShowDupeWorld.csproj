@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Username>sendh</Username>
     <UserProfile>C:\Users\$(Username)</UserProfile>
-    <ProjectName>ONI14a</ProjectName>
+    <ProjectName>ShowDupeWorld</ProjectName>
     <ONIManaged>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</ONIManaged>
     <ONILib>$(UserProfile)\Documents\ONI\Assembly-CSharp\lib</ONILib>
     <PLibPath>$(UserProfile)\Documents\Github\Sendhb-ONI\packages\PLib.4.17.1\lib\net471</PLibPath>
@@ -95,7 +95,7 @@
   <ItemGroup>
     <ProjectReference Include="..\HLib\HLib.csproj">
       <Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
-      <Name>CustomLogger</Name>
+      <Name>HLib</Name>
     </ProjectReference>
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
