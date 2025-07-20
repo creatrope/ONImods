@@ -18,13 +18,9 @@
       <Name>CustomLogger</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="mysweeper.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="mysweeper_anim.bytes" />
-    <None Include="mysweeper_build.bytes" />
-  </ItemGroup>
+	<ItemGroup>
+		<AnimFiles Include="anim\**\*" />
+	</ItemGroup>
   <Target Name="CopyAnimDirectory" AfterTargets="Build">
     <RemoveDir Directories="$(DeploymentBasePath)$(ProjectName)\anim" />
     <MakeDir Directories="$(DeploymentBasePath)$(ProjectName)\anim" />
