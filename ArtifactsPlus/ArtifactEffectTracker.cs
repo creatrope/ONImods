@@ -27,11 +27,9 @@ namespace ArtifactsPlus
                 Patches.logger.LogDebug($"[ArtifactsPlus] onLoad: update the state of the artifacts");
 
                 // Update the state of all artifacts
-                var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                    .Where(kp => kp != null && kp.HasTag("Artifact"))
-                    .Select(kp => kp.gameObject);
+                var GlobalAllArtifacts = ArtifactStateTracker.GetAllArtifacts();
 
-                foreach (var artifact in allArtifacts)
+                foreach (var artifact in GlobalAllArtifacts)
                 {
                     ArtifactStateTracker.UpdateArtifactState(artifact);
                 }
@@ -219,9 +217,7 @@ namespace ArtifactsPlus
 
         private static string GetArtifactProperName(int artifactInstanceId)
         {
-            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Artifact"))
-                .Select(kp => kp.gameObject);
+            var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
             // Search for the artifact in allArtifacts  
             var artifact = allArtifacts.FirstOrDefault(a => a.GetInstanceID() == artifactInstanceId);
             return artifact?.GetProperName() ?? "Unknown Artifact";
@@ -229,9 +225,7 @@ namespace ArtifactsPlus
 
         public static void PrintAllArtifactIDsAndInstanceIDs()
         {
-            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Artifact"))
-                .Select(kp => kp.gameObject);
+            var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
 
             foreach (var artifact in allArtifacts)
             {
@@ -243,9 +237,7 @@ namespace ArtifactsPlus
 
         private static void PrintActiveArtifactsWithWorlds()
         {
-            var allArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Artifact"))
-                .Select(kp => kp.gameObject);
+            var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
 
             foreach (var artifact in allArtifacts)
             {
@@ -253,6 +245,14 @@ namespace ArtifactsPlus
                 string artifactId = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact ID";
                 Patches.logger.LogDebug($"Artifact ID: {artifactId}, World ID: {worldId}");
             }
+        }
+
+        public static List<GameObject> GetAllArtifacts()
+        {
+            return UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag("Artifact") && kp.gameObject != null && kp.gameObject)
+                .Select(kp => kp.gameObject)
+                .ToList();
         }
     }
 }

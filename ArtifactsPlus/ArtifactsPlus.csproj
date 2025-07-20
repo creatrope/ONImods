@@ -2,7 +2,7 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectName>ArtifactsPlus</ProjectName>
-	  <ProjectGuid>{6BBC8450-5842-4A89-AAC2-94C1276E9C77}</ProjectGuid>
+    <ProjectGuid>{6BBC8450-5842-4A89-AAC2-94C1276E9C77}</ProjectGuid>
     <RootNamespace>$(ProjectName)</RootNamespace>
     <AssemblyName>$(ProjectName)</AssemblyName>
     <TargetFrameworkProfile />
@@ -22,8 +22,12 @@
       <Name>HLib</Name>
     </ProjectReference>
   </ItemGroup>
-	<Target Name="CopyArtifactsConfig" AfterTargets="Build">
-		<Copy SourceFiles="ArtifactsConfig.json" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
-	</Target>
+  <ItemGroup>
+    <None Include="mod.yaml" />
+    <None Include="mod_info.yaml" />
+  </ItemGroup>
+  <Target Name="CopyArtifactsConfig" AfterTargets="Build">
+    <Copy SourceFiles="ArtifactsConfig.json" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

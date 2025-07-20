@@ -12,7 +12,7 @@ namespace ArtifactsPlus
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         [JsonProperty]
-        public bool EnableCustomLog { get; set; } = true;
+        public bool EnableCustomLog { get; set; } = false;
 
         [Option("Artifact Config File", "Set the path to the artifact configuration file.")]
         [JsonProperty]
