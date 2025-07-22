@@ -11,7 +11,7 @@ namespace NatureReserveFix
     [ConfigFile(SharedConfigLocation: true)]
     public class NatureReserveFixOptions
     {
-        [Option("Batch Update Frame Interval", "How many frames to wait before processing room batch updates.")]
+        [Option("Update Frame Interval", "How many frames to wait before processing room updates.")]
         [Limit(1, 600)]
         public int BatchUpdateFrameInterval { get; set; } = 60;
     }
@@ -42,11 +42,11 @@ namespace NatureReserveFix
                 bool added = cavitiesToUpdate.Add(cavity);
                 if (added)
                 {
-                    Debug.Log($"[NatureReserveFix] Queued cavity for update: {cavity.GetHashCode()} (total queued: {cavitiesToUpdate.Count})");
+                    // Debug.Log($"[NatureReserveFix] Queued cavity for update: {cavity.GetHashCode()} (total queued: {cavitiesToUpdate.Count})");
                 }
                 else
                 {
-                    Debug.Log($"[NatureReserveFix] Cavity already queued: {cavity.GetHashCode()}");
+                    // Debug.Log($"[NatureReserveFix] Cavity already queued: {cavity.GetHashCode()}");
                 }
             }
         }
@@ -64,7 +64,7 @@ namespace NatureReserveFix
 
             if (cavitiesToUpdate.Count > 0)
             {
-                Debug.Log($"[NatureReserveFix] Processing batch update for {cavitiesToUpdate.Count} cavities: [{string.Join(", ", cavitiesToUpdate.Select(c => c.GetHashCode()))}]");
+                // Debug.Log($"[NatureReserveFix] Processing batch update for {cavitiesToUpdate.Count} cavities: [{string.Join(", ", cavitiesToUpdate.Select(c => c.GetHashCode()))}]");
             }
 
             foreach (var cavity in cavitiesToUpdate)
