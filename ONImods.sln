@@ -56,6 +56,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConveyorLoadGate", "Conveyo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShowDupeWorld", "ShowDupeWorld\ShowDupeWorld.csproj", "{66847C0D-F860-4ED6-B805-A76DDF86ED9C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NatureReserveFix", "NatureReserveFix\NatureReserveFix.csproj", "{3BEACCD6-1A69-4861-AF1A-7FFBD5C791A6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F446A1C4-7859-4B1A-A508-32997511C3BF} = {F446A1C4-7859-4B1A-A508-32997511C3BF}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -106,6 +111,10 @@ Global
 		{66847C0D-F860-4ED6-B805-A76DDF86ED9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{66847C0D-F860-4ED6-B805-A76DDF86ED9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{66847C0D-F860-4ED6-B805-A76DDF86ED9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BEACCD6-1A69-4861-AF1A-7FFBD5C791A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BEACCD6-1A69-4861-AF1A-7FFBD5C791A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BEACCD6-1A69-4861-AF1A-7FFBD5C791A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BEACCD6-1A69-4861-AF1A-7FFBD5C791A6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
