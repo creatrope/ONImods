@@ -1,10 +1,10 @@
 ﻿using ArtifactsPlus; // Add this import for ArtifactEffectTracker
 using HarmonyLib;
 using HLib;
-using Klei.AI; // Add this import for Analyzable
+using Klei.AI; 
 using KMod;
 using KSerialization;
-using Newtonsoft.Json; // Add this import for JsonObject and JsonObjectAttribute
+using Newtonsoft.Json; 
 using Newtonsoft.Json.Linq;
 using PeterHan.PLib.Actions;
 using PeterHan.PLib.Core;
@@ -269,35 +269,33 @@ namespace ArtifactsPlus
                 return result;
             }
 
+            if (!isInDecorRoom(artifact))
+            {
+                result.ShortCircuited = "NotInDecorRoom";
+                return result;
+            }
 
-            // 0. Check if the artifact is on a pedestal
-            if (!CheckTransform(artifact, ref result)) return result;
-
-            // 1. Check if the artifact is on a pedestal
             if (!CheckOnPedestal(artifact, ref result)) return result;
-            // 2. Check if the artifact is analyzed
             if (!CheckAnalyzed(artifact, ref result)) return result;
-
-            // 3. Check if the artifact is entombed
             if (!CheckFree(artifact, ref result)) return result;
-
-            // 4. Check room size
-            if (!CheckRoomSize(artifact, config, ref result)) return result;
-
-            // 5. Check neighbor count
             if (!CheckNeighbors(artifact, config, ref result)) return result;
-
-            // 6. Check decor
-            if (!CheckDecor(artifact, config, ref result)) return result;
 
             result.MeetsAll = true;
             return result;
         }
 
-        private static bool CheckTransform(GameObject artifact, ref ArtifactCriteriaResult result)
+        public static bool isInDecorRoom(GameObject artifact)
         {
-            result.Transform = artifact.transform ? true : false; // Adjusted case to match ArtifactCriteriaResult
-            return result.Transform;
+            if (artifact == null || artifact.transform == null)
+                return false;
+
+            int cell = Grid.PosToCell(artifact.transform.position);
+            var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
+            var room = cavity?.room;
+            if (room != null && room.roomType != null && room.roomType.Id == "DecorRoom")
+                return true;
+
+            return false;
         }
 
         private static bool CheckOnPedestal(GameObject artifact, ref ArtifactCriteriaResult result)
@@ -428,6 +426,7 @@ namespace ArtifactsPlus
             }
 
             var criteria = EvaluateArtifactCriteria(artifact, config);
+
             state.IsActive = criteria.MeetsAll;
 
             state.StateChanged = wasActive != state.IsActive; // Determine if the state changed  
