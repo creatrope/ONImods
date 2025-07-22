@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 using PeterHan.PLib.Options;
+using Klei.AI;
 
 namespace NatureReserveFix
 {
@@ -13,7 +14,15 @@ namespace NatureReserveFix
     {
         [Option("Update Frame Interval", "How many frames to wait before processing room updates.")]
         [Limit(1, 600)]
-        public int BatchUpdateFrameInterval { get; set; } = 60;
+        public int BatchUpdateFrameInterval { get; set; } = 240;
+
+        [Option("Nature Reserve Quality of Life Bonus", "Extra bonus to Quality of Life for Nature Reserve effect.")]
+        [Limit(-10, 10)]
+        public int NatureReserveQoLBonus { get; set; } = 1;
+
+        [Option("Park Quality of Life Bonus", "Extra bonus to Quality of Life for Park effect.")]
+        [Limit(-10, 10)]
+        public int ParkQoLBonus { get; set; } = 1;
     }
 
     public class Mod : KMod.UserMod2
@@ -40,14 +49,6 @@ namespace NatureReserveFix
             if (cavity != null)
             {
                 bool added = cavitiesToUpdate.Add(cavity);
-                if (added)
-                {
-                    // Debug.Log($"[NatureReserveFix] Queued cavity for update: {cavity.GetHashCode()} (total queued: {cavitiesToUpdate.Count})");
-                }
-                else
-                {
-                    // Debug.Log($"[NatureReserveFix] Cavity already queued: {cavity.GetHashCode()}");
-                }
             }
         }
 
@@ -61,11 +62,6 @@ namespace NatureReserveFix
 
             if (Game.Instance?.roomProber == null)
                 return;
-
-            if (cavitiesToUpdate.Count > 0)
-            {
-                // Debug.Log($"[NatureReserveFix] Processing batch update for {cavitiesToUpdate.Count} cavities: [{string.Join(", ", cavitiesToUpdate.Select(c => c.GetHashCode()))}]");
-            }
 
             foreach (var cavity in cavitiesToUpdate)
             {
@@ -88,9 +84,56 @@ namespace NatureReserveFix
     [HarmonyPatch(typeof(Game), "OnPrefabInit")]
     public static class WildPlantsConstraintPatch
     {
+        private static bool bonusApplied = false;
+
         [HarmonyPostfix]
         public static void OnGamePrefabInit()
         {
+            if (bonusApplied)
+                return;
+            bonusApplied = true;
+
+            var natureReserveEffectId = "RoomNatureReserve";
+            Effect natureReserveEffect = Db.Get().effects.Get(natureReserveEffectId);
+
+            // Debug.Log($"[NatureReserveFix] Nature Reserve effect: {natureReserveEffectId}");
+            if (natureReserveEffect != null)
+            {
+                foreach (var mod in natureReserveEffect.SelfModifiers)
+                {
+                    if (mod.AttributeId == "QualityOfLife")
+                    {
+                        mod.SetValue(mod.Value + Mod.Options.NatureReserveQoLBonus);
+                        // Debug.Log($"[NatureReserveFix] Applied QoL bonus: {Mod.Options.NatureReserveQoLBonus} to Nature Reserve");
+                    }
+                    // Debug.Log($"[NatureReserveFix] Nature Reserve modifier: {mod.AttributeId} {mod.Value}");
+                }
+            }
+            else
+            {
+                // Debug.LogError($"[NatureReserveFix] Could not find Nature Reserve effect: {natureReserveEffectId}");
+            }
+
+            var parkEffectId = "RoomPark";
+            Effect parkEffect = Db.Get().effects.Get(parkEffectId);
+            // Debug.Log($"[NatureReserveFix] Park effect: {parkEffectId}");
+            if (parkEffect != null)
+            {
+                foreach (var mod in parkEffect.SelfModifiers)
+                {
+                    if (mod.AttributeId == "QualityOfLife")
+                    {
+                        mod.SetValue(mod.Value + Mod.Options.ParkQoLBonus);
+                        // Debug.Log($"[NatureReserveFix] Applied QoL bonus: {Mod.Options.ParkQoLBonus} to Park");
+                    }
+                    // Debug.Log($"[NatureReserveFix] Park modifier: {mod.AttributeId} {mod.Value}");
+                }
+            }
+            else
+            {
+                // Debug.LogError($"[NatureReserveFix] Could not find Park effect: {parkEffectId}");
+            }
+
             // Patch Nature Reserve (WILDPLANTS) constraint
             var wildPlantsConstraint = RoomConstraints.WILDPLANTS;
             wildPlantsConstraint.room_criteria = new System.Func<Room, bool>((room) =>
@@ -103,7 +146,7 @@ namespace NatureReserveFix
                         var wiltCondition = plant.GetComponent<WiltCondition>();
                         if (wiltCondition != null && wiltCondition.IsWilting())
                             continue;
-
+                            
                         BasicForagePlantPlanted forage = plant.GetComponent<BasicForagePlantPlanted>();
                         ReceptacleMonitor receptacle = plant.GetComponent<ReceptacleMonitor>();
                         if ((UnityEngine.Object)receptacle != (UnityEngine.Object)null && !receptacle.Replanted)
@@ -112,7 +155,6 @@ namespace NatureReserveFix
                             ++num;
                     }
                 }
-                // Debug.Log($"[NatureReserveFix] WildPlantsConstraint: healthy wild plant count = {num}, room = {room?.ToString() ?? "null"}");
                 return num >= 4;
             });
 
@@ -137,10 +179,8 @@ namespace NatureReserveFix
                             ++num;
                     }
                 }
-                // Debug.Log($"[NatureReserveFix] WildPlantConstraint: healthy wild plant count = {num}, room = {room?.ToString() ?? "null"}");
                 return num >= 2;
             });
-            // Debug.Log("[NatureReserveFix] Patched WILDPLANTS and WILDPLANT constraints for Nature Reserve and Park (OnPrefabInit).");
         }
     }
 
@@ -156,7 +196,6 @@ namespace NatureReserveFix
                 if (room?.cavity != null)
                 {
                     RoomUpdateBatcher.QueueUpdate(room.cavity);
-                    // Debug.Log($"[NatureReserveFix] Queued room update for wilted plant: {__instance.gameObject.name}");
                 }
             }
         }
@@ -174,7 +213,6 @@ namespace NatureReserveFix
                 if (room?.cavity != null)
                 {
                     RoomUpdateBatcher.QueueUpdate(room.cavity);
-                    // Debug.Log($"[NatureReserveFix] Queued room update for recovered plant: {__instance.gameObject.name}");
                 }
             }
         }
