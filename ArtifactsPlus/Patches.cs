@@ -26,32 +26,7 @@ namespace ArtifactsPlus
     public static class Patches
     {
         public static HLib.Logger logger = new HLib.Logger("ArtifactsPlus");
-        public static string ArtifactPowersConfigPath
-        {
-            get
-            {
-                try
-                {
-                    var config = ArtifactsPlusConfig.Instance; // Access the configuration using PLib's SingletonOptions
-                    //logger.LogDebug($"[ArtifactsPlus] Config object: {JsonConvert.SerializeObject(config, Formatting.Indented)}");
-
-                    var configFile = config.ArtifactConfigFile;
-                    var fullPath = Path.Combine(
-                        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), configFile
-                    );
-
-                    logger.LogDebug($"[ArtifactsPlus] Using ArtifactConfig file: {fullPath}");
-                    return fullPath;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogDebug($"[ArtifactsPlus] Failed to retrieve ArtifactConfig file: {ex.Message}");
-                    throw;
-                }
-            }
-        }
-
-        public static void OnLoad()
+         public static void OnLoad()
         {
             // PrintActiveArtifactsWithWorlds();
             Debug.Log("[ArtifactsPlus] entering Patches.OnLoad");
@@ -320,22 +295,6 @@ namespace ArtifactsPlus
             result.ShortCircuited = result.isFree ? null : "isFree";
             return result.isFree;
         }
-
-        private static bool CheckRoomSize(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
-        {
-            result.MeetsRoomSize = false; // Adjusted case to match ArtifactCriteriaResult
-            int cell = Grid.PosToCell(artifact.transform.position);
-            var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
-            var room = cavity?.room;
-
-            if (room != null && room.cavity != null)
-            {
-                result.ActualRoomSize = room.cavity.numCells; // Adjusted case to match ArtifactCriteriaResult
-                result.MeetsRoomSize = result.ActualRoomSize >= config.RoomSizeMin && result.ActualRoomSize <= config.RoomSizeMax; // Adjusted case to match ArtifactCriteriaResult
-            }
-            return result.MeetsRoomSize;
-        }
-
         private static bool CheckNeighbors(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
         {
             result.NeighborsOk = false;
@@ -352,34 +311,7 @@ namespace ArtifactsPlus
             return result.NeighborsOk;
         }
 
-        private static bool CheckDecor(GameObject artifact, ArtifactConfig config, ref ArtifactCriteriaResult result)
-        {
-            result.MeetsDecor = false; // Adjusted case to match ArtifactCriteriaResult
-            int cell = Grid.PosToCell(artifact.transform.position);
-            var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
-            var room = cavity?.room;
-
-            if (room != null && room.cavity != null)
-            {
-                int decorSum = 0;
-                int decorCount = 0;
-                foreach (var building in room.cavity.buildings)
-                {
-                    if (Grid.IsValidCell(Grid.PosToCell(building.transform.position)))
-                    {
-                        decorSum += (int)Grid.Decor[Grid.PosToCell(building.transform.position)];
-                        decorCount++;
-                    }
-                }
-                result.ActualDecor = decorCount > 0 ? (float)decorSum / decorCount : 0f; // Adjusted case to match ArtifactCriteriaResult
-
-                bool isActive = ArtifactStateTracker.ArtifactStates.TryGetValue(artifact.GetInstanceID(), out var state) && state.IsActive;
-                float requiredDecor = isActive ? config.DecorMinimum * 0.9f : config.DecorMinimum;
-                result.MeetsDecor = result.ActualDecor >= requiredDecor; // Adjusted case to match ArtifactCriteriaResult
-            }
-            return result.MeetsDecor;
-        }
-
+       
         public static void InitializeAllMinions()
         {
             allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -509,8 +441,25 @@ namespace ArtifactsPlus
 
             try
             {
-                var configText = File.ReadAllText(Patches.ArtifactPowersConfigPath);
-                var configJson = JObject.Parse(configText);
+
+                // Use PLib's GetConfigFilePath to get the config file location for the options class
+                string configPath = PeterHan.PLib.Options.POptions.GetConfigFilePath(typeof(ArtifactsPlusConfig));
+                string configFileName = "ArtifactsConfig.json";
+
+                // Get mod directory (where executing assembly is located)
+                string modDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                string modConfigPath = Path.Combine(modDir, configFileName);
+
+                // If config file does not exist in PLib config directory, copy from mod directory
+                if (!File.Exists(configPath) && File.Exists(modConfigPath))
+                {
+                    File.Copy(modConfigPath, configPath, false);
+                    Patches.logger.LogDebug("[ArtifactsPlus] Copied default config from mod directory to PLib config directory: " + configPath);
+                }
+
+                // Read config from PLib config directory
+                string configText = File.ReadAllText(configPath);
+                JObject configJson = JObject.Parse(configText);
 
                 int globalRoomSizeMin = (int)(configJson["RoomSizeMinimum"] ?? 32);
                 int globalRoomSizeMax = (int)(configJson["RoomSizeMaximum"] ?? 96);
