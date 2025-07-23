@@ -150,7 +150,7 @@ namespace ArtifactsPlus
         public bool OnPedestal;
         public bool IsActive;
         public bool IsAnalyzed;
-        public bool StateChanged; // New field added to track if the state has changed
+        public bool StateChanged; // New field to track if the state has changed
     }
 
     public class ArtifactConfig
@@ -402,12 +402,72 @@ namespace ArtifactsPlus
             }
         }
 
-        public static void LoadArtifactConfig(string configFileName = "ArtifactsConfig.json")
+        public static void LoadArtifactConfig()
         {
-            Patches.logger.LogDebug("[ArtifactsPlus] LoadArtifactConfig from embedded resource");
+            Patches.logger.LogDebug("[ArtifactsPlus] LoadArtifactConfig: loading embedded resource first, then user overrides if present.");
 
             artifactConfigMap = new Dictionary<string, ArtifactConfig>(StringComparer.OrdinalIgnoreCase);
 
+            int globalNeighbors = 1;
+            string globalScope = "InWorld";
+
+            // Helper to parse and merge config
+            void ParseAndMergeConfig(JObject configJson, bool overwriteGlobals)
+            {
+                if (configJson == null)
+                    return;
+
+                if (overwriteGlobals)
+                {
+                    if (configJson["Neighbors"] != null)
+                        globalNeighbors = (int)configJson["Neighbors"];
+                    if (configJson["Scope"] != null)
+                        globalScope = (string)configJson["Scope"];
+                }
+
+                if (configJson["Artifacts"] is JArray arr)
+                {
+                    foreach (var obj in arr)
+                    {
+                        var artifactId = (string)obj["ArtifactId"];
+                        if (artifactId == null) continue;
+
+                        var artifactConfig = new ArtifactConfig(globalScope, globalNeighbors);
+
+                        if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
+                        if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
+
+                        if (obj["Attributes"] is JObject attributes)
+                        {
+                            foreach (var prop in attributes.Properties())
+                            {
+                                if (float.TryParse(prop.Value.ToString(), out float val))
+                                    artifactConfig.Attributes[prop.Name] = val;
+                            }
+                        }
+
+                        if (obj["Effects"] is JObject effects)
+                        {
+                            foreach (var prop in effects.Properties())
+                            {
+                                float val = 0f;
+                                if (prop.Value != null && float.TryParse(prop.Value.ToString(), out float parsed))
+                                    val = parsed;
+                                artifactConfig.Effects[prop.Name] = val;
+                            }
+                        }
+
+                        // Overwrite or add
+                        artifactConfigMap[artifactId] = artifactConfig;
+                    }
+                }
+                else
+                {
+                    Patches.logger.LogDebug("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
+                }
+            }
+
+            // 1. Load embedded resource
             try
             {
                 string resourceName = "ArtifactsPlus.ArtifactsConfig.json"; // Adjust if your namespace/folder differs
@@ -423,56 +483,39 @@ namespace ArtifactsPlus
                     {
                         string configText = reader.ReadToEnd();
                         JObject configJson = JObject.Parse(configText);
-
-                        int globalNeighbors = (int)(configJson["Neighbors"] ?? 1);
-                        string globalScope = (string)(configJson["Scope"] ?? "InWorld");
-
-                        if (!(configJson["Artifacts"] is JArray arr))
-                        {
-                            Patches.logger.LogDebug("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
-                            return;
-                        }
-
-                        foreach (var obj in arr)
-                        {
-                            var artifactId = (string)obj["ArtifactId"];
-                            if (artifactId == null) continue;
-
-                            var artifactConfig = new ArtifactConfig(globalScope, globalNeighbors);
-
-                            if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
-                            if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
-
-                            if (obj["Attributes"] is JObject attributes)
-                            {
-                                foreach (var prop in attributes.Properties())
-                                {
-                                    if (float.TryParse(prop.Value.ToString(), out float val))
-                                        artifactConfig.Attributes[prop.Name] = val;
-                                }
-                            }
-
-                            if (obj["Effects"] is JObject effects)
-                            {
-                                foreach (var prop in effects.Properties())
-                                {
-                                    float val = 0f;
-                                    if (prop.Value != null && float.TryParse(prop.Value.ToString(), out float parsed))
-                                        val = parsed;
-                                    artifactConfig.Effects[prop.Name] = val;
-                                }
-                            }
-
-                            artifactConfigMap[artifactId] = artifactConfig;
-                        }
-                        Patches.logger.LogDebug($"[ArtifactsPlus] Loaded {artifactConfigMap.Count} artifact configs from embedded resource.");
+                        ParseAndMergeConfig(configJson, true);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Patches.logger.LogDebug($"[ArtifactsPlus] ERROR Failed to load artifact config: {ex}");
+                Patches.logger.LogDebug($"[ArtifactsPlus] ERROR loading embedded config: {ex}");
+                return;
             }
+
+            // 2. Load user override file if present
+            try
+            {
+                string modDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                string userConfigPath = Path.Combine(modDir, "User.ArtifactsConfig.json");
+                if (File.Exists(userConfigPath))
+                {
+                    string userConfigText = File.ReadAllText(userConfigPath);
+                    JObject userConfigJson = JObject.Parse(userConfigText);
+                    ParseAndMergeConfig(userConfigJson, true);
+                    Patches.logger.LogDebug("[ArtifactsPlus] Loaded user artifact overrides from User.ArtifactsConfig.json.");
+                }
+                else
+                {
+                    Patches.logger.LogDebug("[ArtifactsPlus] No User.ArtifactsConfig.json present.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Patches.logger.LogDebug($"[ArtifactsPlus] ERROR loading user config: {ex}");
+            }
+
+            Patches.logger.LogDebug($"[ArtifactsPlus] Final artifact config count: {artifactConfigMap.Count}");
         }
 
         public static ArtifactConfig GetArtifactConfig(string artifactId)
@@ -957,17 +1000,17 @@ namespace ArtifactsPlus
         {
             new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions)); // Register the options
 
+            // Determine logging state based on mod path
+            string modDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            bool enableCustomLog = modDir != null && modDir.IndexOf("Local", StringComparison.OrdinalIgnoreCase) >= 0;
+            Patches.logger.SetLoggingState(enableCustomLog);
+
             // Print all options to the log in JSON
             var options = ArtifactsPlusOptions.Instance;
             if (options != null)
             {
                 string optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
                 Debug.Log($"[ArtifactsPlus] Options:\n{optionsJson}");
-
-                if (options.EnableCustomLog)
-                {
-                    Patches.logger.SetLoggingState(options.EnableCustomLog);
-                }
             }
             else
             {

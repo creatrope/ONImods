@@ -10,14 +10,15 @@ namespace ArtifactsPlus
     [ConfigFile(SharedConfigLocation: true)]
     internal class ArtifactsPlusOptions : SingletonOptions<ArtifactsPlusOptions>, IOptions
     {
-        [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
-        [JsonProperty]
-        public bool EnableCustomLog { get; set; } = false;
-
         [Option("Artifact Polling Interval", "Set the interval (in ticks (60 ticks/sec)) for artifact polling.")]
         [Limit(1, 10000)]
         [JsonProperty]
         public int ArtifactPollingInterval { get; set; } = 900;
+
+        [Option("Artifact Polling Interval", "Set the interval (seconds) for artifact polling.")]
+        [Limit(1, 10000)]
+        [JsonProperty]
+        public int PollingIntervalSeconds { get; set; } = 15;
 
         [Option("Decor Minimum", "Minimum decor required for artifact activation.")]
         [Limit(0, 1000)]
