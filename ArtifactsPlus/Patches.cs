@@ -404,82 +404,70 @@ namespace ArtifactsPlus
 
         public static void LoadArtifactConfig(string configFileName = "ArtifactsConfig.json")
         {
-            Patches.logger.LogDebug($"[ArtifactsPlus] LoadArtifactConfig {configFileName}");
+            Patches.logger.LogDebug("[ArtifactsPlus] LoadArtifactConfig from embedded resource");
 
             artifactConfigMap = new Dictionary<string, ArtifactConfig>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
-                string modDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                string configPath = Path.Combine(modDir, configFileName);
-
-                // If config file does not exist, extract from embedded resource
-                if (!File.Exists(configPath))
+                string resourceName = "ArtifactsPlus.ArtifactsConfig.json"; // Adjust if your namespace/folder differs
+                var assembly = Assembly.GetExecutingAssembly();
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
                 {
-                    string resourceName = "ArtifactsPlus.ArtifactsConfig.json"; // Adjust if your namespace/folder differs
-                    var assembly = Assembly.GetExecutingAssembly();
-                    using (var stream = assembly.GetManifestResourceStream(resourceName))
+                    if (stream == null)
                     {
-                        if (stream == null)
+                        Patches.logger.LogDebug($"[ArtifactsPlus] Embedded resource '{resourceName}' not found.");
+                        return;
+                    }
+                    using (var reader = new StreamReader(stream))
+                    {
+                        string configText = reader.ReadToEnd();
+                        JObject configJson = JObject.Parse(configText);
+
+                        int globalNeighbors = (int)(configJson["Neighbors"] ?? 1);
+                        string globalScope = (string)(configJson["Scope"] ?? "InWorld");
+
+                        if (!(configJson["Artifacts"] is JArray arr))
                         {
-                            Patches.logger.LogDebug($"[ArtifactsPlus] Embedded resource '{resourceName}' not found.");
+                            Patches.logger.LogDebug("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
                             return;
                         }
-                        using (var reader = new StreamReader(stream))
+
+                        foreach (var obj in arr)
                         {
-                            string configText = reader.ReadToEnd();
-                            File.WriteAllText(configPath, configText);
-                            Patches.logger.LogDebug($"[ArtifactsPlus] Wrote embedded config to {configPath}");
+                            var artifactId = (string)obj["ArtifactId"];
+                            if (artifactId == null) continue;
+
+                            var artifactConfig = new ArtifactConfig(globalScope, globalNeighbors);
+
+                            if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
+                            if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
+
+                            if (obj["Attributes"] is JObject attributes)
+                            {
+                                foreach (var prop in attributes.Properties())
+                                {
+                                    if (float.TryParse(prop.Value.ToString(), out float val))
+                                        artifactConfig.Attributes[prop.Name] = val;
+                                }
+                            }
+
+                            if (obj["Effects"] is JObject effects)
+                            {
+                                foreach (var prop in effects.Properties())
+                                {
+                                    float val = 0f;
+                                    if (prop.Value != null && float.TryParse(prop.Value.ToString(), out float parsed))
+                                        val = parsed;
+                                    artifactConfig.Effects[prop.Name] = val;
+                                }
+                            }
+
+                            artifactConfigMap[artifactId] = artifactConfig;
                         }
+                        Patches.logger.LogDebug($"[ArtifactsPlus] Loaded {artifactConfigMap.Count} artifact configs from embedded resource.");
                     }
                 }
-
-                // Always load from the file
-                string loadedConfigText = File.ReadAllText(configPath);
-                JObject configJson = JObject.Parse(loadedConfigText);
-
-                int globalNeighbors = (int)(configJson["Neighbors"] ?? 1);
-                string globalScope = (string)(configJson["Scope"] ?? "InWorld");
-
-                if (!(configJson["Artifacts"] is JArray arr))
-                {
-                    Patches.logger.LogDebug("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
-                    return;
-                }
-
-                foreach (var obj in arr)
-                {
-                    var artifactId = (string)obj["ArtifactId"];
-                    if (artifactId == null) continue;
-
-                    var artifactConfig = new ArtifactConfig(globalScope, globalNeighbors);
-
-                    if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
-                    if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
-
-                    if (obj["Attributes"] is JObject attributes)
-                    {
-                        foreach (var prop in attributes.Properties())
-                        {
-                            if (float.TryParse(prop.Value.ToString(), out float val))
-                                artifactConfig.Attributes[prop.Name] = val;
-                        }
-                    }
-
-                    if (obj["Effects"] is JObject effects)
-                    {
-                        foreach (var prop in effects.Properties())
-                        {
-                            float val = 0f;
-                            if (prop.Value != null && float.TryParse(prop.Value.ToString(), out float parsed))
-                                val = parsed;
-                            artifactConfig.Effects[prop.Name] = val;
-                        }
-                    }
-
-                    artifactConfigMap[artifactId] = artifactConfig;
-                }
-                Patches.logger.LogDebug($"[ArtifactsPlus] Loaded {artifactConfigMap.Count} artifact configs.");
             }
             catch (Exception ex)
             {
