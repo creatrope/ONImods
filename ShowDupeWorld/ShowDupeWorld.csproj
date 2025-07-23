@@ -1,114 +1,22 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <PropertyGroup>
-    <Username>sendh</Username>
-    <UserProfile>C:\Users\$(Username)</UserProfile>
-    <ProjectName>ShowDupeWorld</ProjectName>
-    <ONIManaged>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed</ONIManaged>
-    <ONILib>$(UserProfile)\Documents\ONI\Assembly-CSharp\lib</ONILib>
-    <PLibPath>$(UserProfile)\Documents\Github\Sendhb-ONI\packages\PLib.4.17.1\lib\net471</PLibPath>
-    <Plib>$(PLibPath)\PLib.dll</Plib>
-    <DeploymentBasePath>$(UserProfile)\Documents\Klei\OxygenNotIncluded\mods\Local\</DeploymentBasePath>
-    <ILRepackExe>$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe</ILRepackExe>
-  </PropertyGroup>
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{66847C0D-F860-4ED6-B805-A76DDF86ED9C}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>$(ProjectName)</RootNamespace>
-    <AssemblyName>$(ProjectName)</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
-    <TargetFrameworkProfile />
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>$(ONIManaged)\0Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>$(ONIManaged)\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>$(ONIManaged)\Assembly-CSharp-firstpass.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>$(ONIManaged)\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="PLib">
-      <HintPath>$(PLibPath)\PLib.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="Unity.TextMeshPro">
-      <HintPath>$(ONILib)\Unity.TextMeshPro.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>$(ONIManaged)\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(ONIManaged)\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UI">
-      <HintPath>$(ONIManaged)\UnityEngine.UI.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Patches.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="mod.yaml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="mod_info.yaml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HLib\HLib.csproj">
-      <Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
-      <Name>HLib</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
-    <Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
-  </Target>
-  <Target Name="RunILRepack" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="&quot;$(ILRepackExe)&quot; /out:&quot;$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll&quot; &quot;$(MSBuildProjectDirectory)\bin\Release\HLib.dll&quot; &quot;$(Plib)&quot;" />
-  </Target>
-  <Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(Configuration)' == 'Release'">
-    <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
-    <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).pdb" />
-  </Target>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+	<PropertyGroup>
+		<ProjectName>ShowDupeWorld</ProjectName>
+		<ProjectGuid>{66847C0D-F860-4ED6-B805-A76DDF86ED9C}</ProjectGuid>
+		<RootNamespace>$(ProjectName)</RootNamespace>
+		<AssemblyName>$(ProjectName)</AssemblyName>
+		<TargetFrameworkProfile />
+	</PropertyGroup>
+	<Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+	<ItemGroup>
+		<Compile Include="Patches.cs" />
+		<Compile Include="Properties\AssemblyInfo.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\HLib\HLib.csproj">
+			<Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
+			<Name>HLib</Name>
+		</ProjectReference>
+	</ItemGroup>
+	<Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
