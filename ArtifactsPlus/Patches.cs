@@ -137,6 +137,69 @@ namespace ArtifactsPlus
 
             }
         }
+
+        public static void PrintAllArtifacts(bool? isActive = null)
+        {
+            var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
+            if (allArtifacts == null || allArtifacts.Length == 0)
+            {
+                logger.LogDebug("[ArtifactsPlus] No artifacts found in the game.");
+                return;
+            }
+
+            string header;
+            if (isActive == null)
+                header = "[ArtifactsPlus] All Artifacts:";
+            else if (isActive.Value)
+                header = "[ArtifactsPlus] Active Artifacts:";
+            else
+                header = "[ArtifactsPlus] Inactive Artifacts:";
+
+            logger.LogDebug(header);
+
+            foreach (var artifact in allArtifacts)
+            {
+                if (artifact == null)
+                    continue;
+
+                int id = artifact.GetInstanceID();
+                string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
+
+                if (isActive != null)
+                {
+                    if (!ArtifactStateTracker.ArtifactStates.TryGetValue(id, out var state) || state.IsActive != isActive.Value)
+                        continue;
+                }
+
+                logger.LogDebug($"- {artifactName}");
+            }
+        }
+
+        public static void PrintAllMinionAttributesInGame()
+        {
+            logger.LogDebug("[ArtifactsPlus] Minion Attributes in the game:");
+            var dbAttributes = Db.Get()?.Attributes;
+            if (dbAttributes == null)
+            {
+                logger.LogDebug("[ArtifactsPlus] Could not find Db.Get().Attributes.");
+                return;
+            }
+
+            var attributeFields = typeof(Database.Attributes).GetFields(BindingFlags.Public | BindingFlags.Instance);
+            var minionAttributes = attributeFields
+                .Select(f => f.GetValue(dbAttributes) as Klei.AI.Attribute)
+                .Where(a => a != null)
+                .OrderBy(a => a.Id, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var attr in minionAttributes)
+            {
+                if (attr.Description != null && attr.Description.Contains("MISSING"))
+                    logger.LogDebug($"- {attr.Id}: {attr.Name}");
+                else
+                    logger.LogDebug($"- {attr.Id}: {attr.Name} ({attr.Description})");
+            }
+            logger.LogDebug($"[ArtifactsPlus] Total minion attributes found: {minionAttributes.Count()}");
+        }
     }
 
     public class ArtifactState
@@ -734,7 +797,7 @@ namespace ArtifactsPlus
                 var config = ArtifactStateTracker.GetArtifactConfig(artifactName);
                 if (config == null)
                 {
-                    Patches.logger.LogDebug($"[ArtifactStateTracker] No configuration found for artifact '{artifactName}' (ID: {artifactId}).");
+                    Patches.logger.LogDebug($"[ArtifactState Tracker] No configuration found for artifact '{artifactName}' (ID: {artifactId}).");
                 }
             }
         }
@@ -743,7 +806,7 @@ namespace ArtifactsPlus
     public class ArtifactStatePoller : MonoBehaviour
     {
         private int tickCounter = 0;
-        private static int pollInterval; // Cache poll interval for the current save/load  
+        private static int pollInterval; // Cache poll interval for the current save/loading  
 
         void Awake()
         {
@@ -1116,22 +1179,36 @@ namespace ArtifactsPlus
 
     internal sealed class ArtifactsPlusKeybindHandler : IInputHandler
     {
-        private static PAction PrintArtifactsAction;
-        private readonly Action printArtifactsSnapshot;
+        private static PAction PrintActiveArtifactsAction;
+        private static PAction PrintAllArtifactsAction;
+        private static PAction PrintAllAttributesAction; // NEW
+        private readonly Action printActiveArtifactsSnapshot;
+        private readonly Action printAllArtifactsSnapshot;
+        private readonly Action printAllAttributesSnapshot; // NEW
 
         public string handlerName => "ArtifactsPlusKeybindHandler";
         public KInputHandler inputHandler { get; set; }
 
         internal ArtifactsPlusKeybindHandler()
         {
-            printArtifactsSnapshot = PrintArtifactsAction != null ? PrintArtifactsAction.GetKAction() : PAction.MaxAction;
+            printActiveArtifactsSnapshot = PrintActiveArtifactsAction != null ? PrintActiveArtifactsAction.GetKAction() : PAction.MaxAction;
+            printAllArtifactsSnapshot = PrintAllArtifactsAction != null ? PrintAllArtifactsAction.GetKAction() : PAction.MaxAction;
+            printAllAttributesSnapshot = PrintAllAttributesAction != null ? PrintAllAttributesAction.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
         {
-            if (e.TryConsume(printArtifactsSnapshot))
+            if (e.TryConsume(printActiveArtifactsSnapshot))
             {
-                ArtifactsPlus.Patches.PrintActiveArtifactsWithWorlds();
+                ArtifactsPlus.Patches.PrintAllArtifacts(true); // Only active artifacts
+            }
+            if (e.TryConsume(printAllArtifactsSnapshot))
+            {
+                ArtifactsPlus.Patches.PrintAllArtifacts(null); // All artifacts
+            }
+            if (e.TryConsume(printAllAttributesSnapshot))
+            {
+                ArtifactsPlus.Patches.PrintAllMinionAttributesInGame();
             }
         }
 
@@ -1145,8 +1222,12 @@ namespace ArtifactsPlus
         internal static void Register(PPatchManager manager)
         {
             manager.RegisterPatchClass(typeof(ArtifactsPlusKeybindHandler));
-            PrintArtifactsAction = new PActionManager().CreateAction(
-                "ArtifactsPlus.PrintArtifactsAction", "Print Active Artifacts", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl));
+            PrintActiveArtifactsAction = new PActionManager().CreateAction(
+                "ArtifactsPlus.PrintActiveArtifactsAction", "Print Active Artifacts", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl));
+            PrintAllArtifactsAction = new PActionManager().CreateAction(
+                "ArtifactsPlus.PrintAllArtifactsAction", "Print All Artifacts", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl));
+            PrintAllAttributesAction = new PActionManager().CreateAction(
+                "ArtifactsPlus.PrintAllAttributesAction", "Print All Attributes", new PKeyBinding(KKeyCode.F10, Modifier.Ctrl));
         }
     }
 }

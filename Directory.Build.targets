@@ -8,6 +8,7 @@
     <Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
     <Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
     <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="README.md" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
   </Target>
 
   	<Target Name="RunILRepack" AfterTargets="Build" Condition="'$(ProjectName)' != 'HLib'">

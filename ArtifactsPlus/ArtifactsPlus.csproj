@@ -24,6 +24,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="README.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="ArtifactsConfig.json" />
     <None Include="mod.yaml" />
     <None Include="mod_info.yaml" />

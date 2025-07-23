@@ -1,10 +1,10 @@
-# ArtifactsPlus 1.0.0
+__ArtifactsPlus 1.0.7__
 
 ArtifactsPlus is an ONI mod that allows artifacts to a be "activated" with user-customizable effects.  An artifact is activated when it meets certain criteria: on a pedestal, decor minimum, room size, etc.  When an artifact is activated it can have a variety of "actions". Actions can include a positive (or negative) modifier to attributes.
 
-An activated artifact "glows"(*).  If you click on a dupe, you can see the active actions its in bio tab. You can also click on a artifact to see it's modifiers.
+An activated artifact "glows".  If you click on a dupe, you can see the active actions its in bio tab. You can also click on a artifact to see it's modifiers.
 
-The ArtifactsPlus release comes with a simple ArtifactsConfig.json. By editing this file, you can customize the actions & defaults (I would love to hear your suggestions!).
+The ArtifactsPlus release comes with an internal non-user-visible ArtifactsConfig.json. See instructions below to make a persistent customized local version.
 
 The file has some global settings at the top that apply (by default) to all artifacts.
 
@@ -12,14 +12,12 @@ The artifact will only "activate" in a room between these sizes:
   "RoomSizeMinimum": 32, "RoomSizeMaximum": 96,
 
 An artifact will only "activate" in a room with this minimum amount of decor:
-  "DecorMinimum": 128,
+  "DecorMinimum": 100,
 
-The "Scope" defines the set of dupes the artifact affects when activated. The only currently supported Scope is "inWorld" which means the modifier applies to all dupes in the same world as the activated artifact.
+The only currently supported artifact scope is "inWorld" which means the modifier applies to all dupes in the same world as the activated artifact.
 
 Neighbors defines how many other activated artifacts are allowed to be in the room.  If the number is exceeded, all active artifacts become inactive.
-  "Neighbors": 2
-
-Note that JSON syntax allows all of these to be specified at the per artifact level as well, and if so specified it overrides the global value for that artifact. So you can have some artifacts with different requirements for neighbors, decor, scope, etc.
+  "Neighbors": 4
 
 The main content is an array called "Artifacts". Each entry in "Artifacts" represents a single artifact.
 
@@ -28,35 +26,97 @@ The main content is an array called "Artifacts". Each entry in "Artifacts" repre
 
       "Attributes": { "Cooking": 2, "ToiletEfficiency": 1 }
 
-Supported Attributes are:
+__Important notes__
 
-AirConsumptionRate, Art, Athletics, BionicBatteryCountCapacity, BionicBoosterSlots, Botanist, Caring, CarryAmount, Construction, Cooking, Decor, DecorExpectation, Digging, DiseaseCureSpeed, DoctoredLevel, FarmTinker, FoodExpectation, FoodQuality, GeneratorOutput, GermResistance, Immunity, Insulation, Learning, LifeSupport, Luminescence, Machinery, MachinerySpeed, MaxUnderwaterTravelCost, PowerTinker, QualityOfLife, QualityOfLifeExpectation, RadiationRecovery, RadiationResistance, Ranching, RoomTemperaturePreference, ScaldingThreshold, ScoldingThreshold, Sneezyness, SpaceNavigation, Strength, ThermalConductivityBarrier, ToiletEfficiency, Toggle, TransitTubeTravelSpeed
+ArtifactsPlus now supports persistent user configurations. There is a non-functional example sample file Sample.ArtifactsConfig.json. 
+Copy this file to User.ArtifactsConfig.json in the same directory as the mod, and edit it to your liking. You can use the attributes below, with any modifiers (which can be negative).
 
-# Important notes:
-# On Customizing ArtifactsConfig.json in 1.0.0
-
-1. Copy ArtifactsConfig.json to a new custom file (e.g MyCfg.json) in the mod directory (e.g. Mods/ArtifactsPlus/).
-   - If you are using the Steam Workshop, you can find the mod directory at: `Steam\steamapps\workshop\content\457140\` followed by the mod ID.
-   - If you are using a manual install, it will be in the `Mods/ArtifactsPlus/` directory of your ONI installation.
-2. Make changes to the custom file.
-3. When you load the game, change the mod settings to point to your new file.
-4. Updating the mod WILL erase your custom file, so my suggestion is that you make a backup, and put a shortcut to it in mod directory (or just remember to copy it back after the mod updates)
-
-# 1.0.0 Release
-
-Artifact modifiers are reapplied when an artifact becomes "active" or a dupe enters into the appropriate scope. E.g. if a dupe teleports into a world with an "inWorld" scoped artifact, the modifiers will be reapplied.
+Artifact modifiers are reapplied when an artifact becomes "active" or a dupe enters a world with activated artifacts.
 
 Internal names for attributes are used in the JSON. Note that many of these names are modified for the user facing UI we see while playing the game, via in interface called "AttributeConverter".  The exact interactions are weighted and can be unintuitive.
-
-
-The only currently supported scope is "inWorld". This means that the artifact will affect all dupes in the same world as the activated artifact. If you want to have an artifact that only affects dupes in a specific room, you can use the "RoomSizeMinimum" and "RoomSizeMaximum" settings to limit the scope.
 
 The polling interval (settable in the mod options) for checking if an artifact is active, and updating the minion status  is set to 30 seconds by default.
 If you believe an artifact should be active, but the dupe is not showing the effects, wait a few seconds!
 Note there may be performance implications/stuttering for setting polling interval  too low.
 
-Status Effects have been removed. I will add them back in in a future release.
-
 Modifiers can stack! Go ahead and collect and activate as many coffee mugs as you like!
 
-(*) There is a newly introduced bug the Prehistoric Release that is prevening the glowing, hopefully will be fixed soon!
+__List of Current InGame Artifacts (as of July 2025)__
+
+artifact_sink
+artifact_rubikscube
+artifact_obelisk
+artifact_blender
+artifact_reactormodel
+artifact_sandstone
+artifact_officemug
+artifact_okayxray
+artifact_moldavite
+artifact_vhs
+artifact_saxophone
+artifact_modernart
+artifact_honeyjar
+artifact_ameliaswatch
+artifact_teapot
+artifact_brickphone
+artifact_robotarm
+artifact_shieldgenerator
+artifact_bioluminescentrock
+artifact_grubstatue
+artifact_stethoscope
+artifact_eggrock
+artifact_hatchfossil
+artifact_rocktornado
+artifact_pacupercolator
+artifact_magmalamp
+artifact_oracle
+artifact_dnamodel
+artifact_rainboweggrock
+artifact_plasmalamp
+artifact_moodring
+artifact_solarsystem
+artifact_moonmoonmoon
+
+__List of Attributes That Can Be Modified:__
+
+AirConsumptionRate: Air Consumption Rate (Air Consumption determines how much Oxygen a Duplicant requires per minute to live.)
+Art: Creativity (Determines how quickly a Duplicant produces Artwork.)
+Athletics: Athletics (Determines a Duplicant's default runspeed.)
+BionicBatteryCountCapacity: Power Banks (The number of power banks this Bionic Duplicant can store)
+BionicBoosterSlots: Booster Slots (The number of boosters this Bionic Duplicant can install at once)
+Botanist: Agriculture (Determines how quickly and efficiently a Duplicant cultivates Plants.)
+Caring: Medicine (Determines a Duplicant's ability to care for sick peers.)
+CarryAmount: Carrying Capacity (Determines the maximum weight that a Duplicant can carry.)
+Construction: Construction (Determines a Duplicant's building Speed.)
+Cooking: Cuisine (Determines how quickly a Duplicant prepares Food.)
+Decor: Decor (Affects a Duplicant's Morale and their opinion of their surroundings.)
+DecorExpectation: Decor Morale Bonus (A Decor Morale Bonus allows Duplicants to receive Morale boosts from lower Decor values.)
+Digging: Excavation (Determines a Duplicant's mining speed.)
+DiseaseCureSpeed: Disease Recovery Speed Bonus (Recovery speed bonus is increased when another Duplicant provides medical care to the patient)
+DoctoredLevel: Treatment Received Effect
+FoodExpectation: Food Morale Bonus (A Food Morale Bonus allows Duplicants to receive Morale boosts from lower quality Food)
+GeneratorOutput: Power Output
+GermResistance: Germ Resistance (Duplicants with a higher Germ Resistance rating are less likely to contract germ-based Diseases.)
+Immunity: Immunity (Determines a Duplicant's Disease susceptibility and recovery time.)
+Insulation: Insulation (Highly Insulated Duplicants retain body heat easily, while low Insulation Duplicants are easier to keep cool.)
+Learning: Science (Determines how quickly a Duplicant conducts Research and gains Skill Points.)
+LifeSupport: Life Support (Determines how efficiently a Duplicant maintains Algae Terrariums, Deodorizers, and Water Sieves)
+Luminescence: Luminescence (Determines how much light a Duplicant emits.)
+Machinery: Machinery (Determines how quickly a Duplicant uses machines.)
+MachinerySpeed: Machinery Speed (Speed Bonus)
+MaxUnderwaterTravelCost: Underwater Movement (Determines a Duplicant's runspeed when submerged in Liquid)
+QualityOfLife: Morale (A Duplicant's Morale must exceed their Morale Need, or they'll begin to accumulate Stress.)
+QualityOfLifeExpectation: Morale Need (Dictates how high a Duplicant's Morale must be kept to prevent them from gaining Stress)
+RadiationRecovery: Radiation Absorption (The rate at which Radiation is neutralized within a Duplicant body.)
+RadiationResistance: Radiation Resistance (Determines how easily a Duplicant repels Radiation Sickness.)
+Ranching: Husbandry (Determines how efficiently a Duplicant tends Critters.)
+RoomTemperaturePreference: Temperature Preference (Determines the minimum body Temperature a Duplicant prefers to maintain.)
+ScaldingThreshold: Scalding Threshold (Determines the Temperature at which a Duplicant will get burned.)
+ScoldingThreshold: Frostbite Threshold (Determines the Temperature at which a Duplicant will get frostbitten.)
+Sneezyness: Sneeziness (Determines how frequently a Duplicant sneezes.)
+SpaceNavigation: Piloting (Determines how long it takes a Duplicant to complete a space mission.)
+Strength: Strength (Determines a Duplicant's Carrying Capacity and cleaning speed.)
+ThermalConductivityBarrier: Insulation Thickness (Determines how quickly a Duplicant retains or loses body Heat in any given area.)
+Toggle: Toggle (Determines how efficiently a Duplicant tunes machinery, flips switches, and sets sensors.)
+ToiletEfficiency: Bathroom Use Speed (Determines how long a Duplicant needs to do their "business".)
+TransitTubeTravelSpeed: Transit Speed (Determines a Duplicant's default Transit Tube travel speed.)
