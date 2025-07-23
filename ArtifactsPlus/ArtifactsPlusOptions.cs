@@ -19,6 +19,11 @@ namespace ArtifactsPlus
         [JsonProperty]
         public int ArtifactPollingInterval { get; set; } = 900;
 
+        [Option("Decor Minimum", "Minimum decor required for artifact activation.")]
+        [Limit(0, 1000)]
+        [JsonProperty]
+        public int DecorMinimum { get; set; } = 100;
+
         public IEnumerable<IOptionsEntry> CreateOptions()
         {
             return new List<IOptionsEntry>();
