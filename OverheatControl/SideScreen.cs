@@ -1,11 +1,13 @@
-using PeterHan.PLib.UI;
 using UnityEngine;
 using System.Runtime.CompilerServices;
 using HLib;
 using OverheatControl;
+using PeterHan.PLib.Actions;
 using PeterHan.PLib.Core;
-using TMPro; // Add this using directive at the top of your file
-
+using PeterHan.PLib.Options;
+using PeterHan.PLib.PatchManager;
+using PeterHan.PLib.UI;
+using TMPro;
 
 namespace OverheatControl
 {
@@ -34,7 +36,7 @@ namespace OverheatControl
             KSelectable selectable = building.gameObject.GetComponent<KSelectable>();
             if (selectable == null)
             {
-                PUtil.LogDebug("SideScreen KSelectable component is null.");
+                Patches.logger.LogDebug("SideScreen KSelectable component is null.");
             }
             else
             {
@@ -53,8 +55,8 @@ namespace OverheatControl
                     "OverheatControl",
                     "Thermal shutdown triggered: cooling",
                     "thermal shutdown status",
-                    "status_item_icon",
-                    StatusItem.IconType.Exclamation,
+                    "status_item_exclamation",
+                    StatusItem.IconType.Info, // Try Info instead of Exclamation
                     NotificationType.Bad,
                     false,
                     OverlayModes.None.ID);
@@ -67,7 +69,7 @@ namespace OverheatControl
 
         protected override void OnPrefabInit()
         {
-            PUtil.LogDebug("SimpleSideScreen OnPrefabInit called.");
+            Patches.logger.LogDebug("SimpleSideScreen OnPrefabInit called.");
             base.OnPrefabInit();
 
             panel = new PPanel("Panel")
@@ -102,7 +104,7 @@ namespace OverheatControl
             }.AddOnRealize(go =>
             {
                 idLocText = go.transform.Find("Text")?.GetComponent<TMP_Text>();
-                PUtil.LogDebug($"SimpleSideScreen OnRealize: idLocText assigned? {idLocText != null}");
+                Patches.logger.LogDebug($"SimpleSideScreen OnRealize: idLocText assigned? {idLocText != null}");
             });
 
             panel.AddChild(idLabel);
@@ -116,30 +118,30 @@ namespace OverheatControl
         {
             if (ContentContainer == null)
             {
-                PUtil.LogDebug("SideScreen ContentContainer is null.");
+                Patches.logger.LogDebug("SideScreen ContentContainer is null.");
             }
             else
             {
                 Building building = ContentContainer.GetComponent<Building>();
                 if (building == null)
-                    PUtil.LogDebug("SideScreen Building component is null.");
+                    Patches.logger.LogDebug("SideScreen Building component is null.");
                 else if (coolingStatusItem == null)
                 {
-                    PUtil.LogDebug("SideScreen coolingStatusItem is null.");
+                    Patches.logger.LogDebug("SideScreen coolingStatusItem is null.");
                 }
                 else
                 {
                     BuildingTemperatureMonitor monitor = building.gameObject.GetComponent<BuildingTemperatureMonitor>();
                     if (monitor == null)
                     {
-                        PUtil.LogDebug("SideScreen BuildingTemperatureMonitor component is null.");
+                        Patches.logger.LogDebug("SideScreen BuildingTemperatureMonitor component is null.");
                     }
                     else
                     {
                         KSelectable selectable = building.gameObject.GetComponent<KSelectable>();
                         if (selectable == null)
                         {
-                            PUtil.LogDebug("SideScreen KSelectable component is null.");
+                            Patches.logger.LogDebug("SideScreen KSelectable component is null.");
                         }
                         else
                         {

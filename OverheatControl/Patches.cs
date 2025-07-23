@@ -1,21 +1,18 @@
 using Database;
-using Epic.OnlineServices.Platform;
 using HarmonyLib;
 using KMod;
 using KSerialization;
-using Newtonsoft.Json; // Ensure this using directive is present
-using Klei; // Add this using directive for access to PrimaryElement
+using Newtonsoft.Json; 
+using Klei; 
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.UI;
 using System;
 using System.Collections.Generic; // For List<> and Dictionary<>
-using System.Runtime.CompilerServices; // For ConditionalWeakTable
 using System.Threading;
 using HLib;
 using TUNING;
 using UnityEngine;
-using static Rendering.BlockTileRenderer;
 using static GameClock; // Add this directive to access GameClock functionality
 
 namespace OverheatControl
@@ -28,7 +25,7 @@ namespace OverheatControl
 
         private static bool staticInitialized = false;
 
-        private static readonly HLib.Logger logger = new HLib.Logger("OverheatControl");
+        public static HLib.Logger logger = new HLib.Logger("OverheatControl");
         static Patches()
         {
             if (staticInitialized)
