@@ -36,12 +36,6 @@ namespace OverheatControl
 
         public static void OnLoad()
         {
-            // Determine if we are in the "Local" mod directory
-            string modDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            bool enableCustomLog = modDir != null && modDir.IndexOf("Local", StringComparison.OrdinalIgnoreCase) >= 0;
-            // Set logger state based on directory
-            Patches.logger.SetLoggingState(enableCustomLog);
-
             var options = POptions.ReadSettings<ModOptions>();
             ShutdownPercent = options?.ShutdownPercent ?? 90f;
             RestorePercent = options?.RestorePercent ?? 80f;

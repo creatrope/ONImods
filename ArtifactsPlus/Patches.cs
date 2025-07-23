@@ -200,6 +200,28 @@ namespace ArtifactsPlus
             }
             logger.LogDebug($"[ArtifactsPlus] Total minion attributes found: {minionAttributes.Count()}");
         }
+
+        public static void PrintAllKeepsakes()
+        {
+            // Find all GameObjects with the "Keepsake" tag and print their names
+            var keepsakes = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && kp.HasTag(GameTags.Keepsake))
+                .Select(kp => kp.gameObject)
+                .ToArray();
+
+            if (keepsakes.Length == 0)
+            {
+                logger.LogDebug("[ArtifactsPlus] No keepsakes found in the game.");
+                return;
+            }
+
+            logger.LogDebug("[ArtifactsPlus] All Keepsakes:");
+            foreach (var keepsake in keepsakes)
+            {
+                string keepsakeName = keepsake.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Keepsake";
+                logger.LogDebug($"- {keepsakeName}");
+            }
+        }
     }
 
     public class ArtifactState
@@ -1057,12 +1079,6 @@ namespace ArtifactsPlus
         {
             new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions)); // Register the options
 
-            // turn on logging if we are installed locally, otherwise off.
-            string modDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            bool enableCustomLog = modDir != null && modDir.IndexOf("Local", StringComparison.OrdinalIgnoreCase) >= 0;
-            Patches.logger.SetLoggingState(enableCustomLog);
-
-            // Print all options to the log in JSON
             var options = ArtifactsPlusOptions.Instance;
             if (options != null)
             {
@@ -1181,10 +1197,12 @@ namespace ArtifactsPlus
     {
         private static PAction PrintActiveArtifactsAction;
         private static PAction PrintAllArtifactsAction;
-        private static PAction PrintAllAttributesAction; // NEW
+        private static PAction PrintAllAttributesAction;
+        private static PAction PrintAllKeepsakesAction; // NEW
         private readonly Action printActiveArtifactsSnapshot;
         private readonly Action printAllArtifactsSnapshot;
-        private readonly Action printAllAttributesSnapshot; // NEW
+        private readonly Action printAllAttributesSnapshot;
+        private readonly Action printAllKeepsakesSnapshot; // NEW
 
         public string handlerName => "ArtifactsPlusKeybindHandler";
         public KInputHandler inputHandler { get; set; }
@@ -1194,6 +1212,7 @@ namespace ArtifactsPlus
             printActiveArtifactsSnapshot = PrintActiveArtifactsAction != null ? PrintActiveArtifactsAction.GetKAction() : PAction.MaxAction;
             printAllArtifactsSnapshot = PrintAllArtifactsAction != null ? PrintAllArtifactsAction.GetKAction() : PAction.MaxAction;
             printAllAttributesSnapshot = PrintAllAttributesAction != null ? PrintAllAttributesAction.GetKAction() : PAction.MaxAction;
+            printAllKeepsakesSnapshot = PrintAllKeepsakesAction != null ? PrintAllKeepsakesAction.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
@@ -1209,6 +1228,10 @@ namespace ArtifactsPlus
             if (e.TryConsume(printAllAttributesSnapshot))
             {
                 ArtifactsPlus.Patches.PrintAllMinionAttributesInGame();
+            }
+            if (e.TryConsume(printAllKeepsakesSnapshot))
+            {
+                ArtifactsPlus.Patches.PrintAllKeepsakes();
             }
         }
 
@@ -1228,6 +1251,8 @@ namespace ArtifactsPlus
                 "ArtifactsPlus.PrintAllArtifactsAction", "Print All Artifacts", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl));
             PrintAllAttributesAction = new PActionManager().CreateAction(
                 "ArtifactsPlus.PrintAllAttributesAction", "Print All Attributes", new PKeyBinding(KKeyCode.F10, Modifier.Ctrl));
+            PrintAllKeepsakesAction = new PActionManager().CreateAction(
+                "ArtifactsPlus.PrintAllKeepsakesAction", "Print All Keepsakes", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl)); // NEW
         }
     }
 }
