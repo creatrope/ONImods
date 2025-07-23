@@ -10,12 +10,7 @@ namespace ArtifactsPlus
     [ConfigFile(SharedConfigLocation: true)]
     internal class ArtifactsPlusOptions : SingletonOptions<ArtifactsPlusOptions>, IOptions
     {
-        [Option("Artifact Polling Interval", "Set the interval (in ticks (60 ticks/sec)) for artifact polling.")]
-        [Limit(1, 10000)]
-        [JsonProperty]
-        public int ArtifactPollingInterval { get; set; } = 900;
-
-        [Option("Artifact Polling Interval", "Set the interval (seconds) for artifact polling.")]
+        [Option("Artifact Polling Interval (Secs)", "Set the interval (seconds) for artifact polling.")]
         [Limit(1, 10000)]
         [JsonProperty]
         public int PollingIntervalSeconds { get; set; } = 15;

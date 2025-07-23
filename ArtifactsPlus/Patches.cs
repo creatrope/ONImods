@@ -71,14 +71,8 @@ namespace ArtifactsPlus
         {
             public static void Postfix()
             {
-                Patches.logger.LogDebug($"[ArtifactsPlus] Game_OnPrefabInit_Patch");
-
-                var options = ArtifactsPlusOptions.Instance;
-                Patches.logger.LogDebug($"[ArtifactsPlus] Artifact polling interval: {options.ArtifactPollingInterval}");
-
                 if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
                 {
-                    Patches.logger.LogDebug($"[ArtifactsPlus] AddComponent<ArtifactStatePoller>");
                     var poller = Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
                 }
             }
@@ -412,10 +406,11 @@ namespace ArtifactsPlus
             string globalScope = "InWorld";
 
             // Helper to parse and merge config
-            void ParseAndMergeConfig(JObject configJson, bool overwriteGlobals)
+            int ParseAndMergeConfig(JObject configJson, bool overwriteGlobals)
             {
+                int artifactsRead = 0;
                 if (configJson == null)
-                    return;
+                    return 0;
 
                 if (overwriteGlobals)
                 {
@@ -459,13 +454,18 @@ namespace ArtifactsPlus
 
                         // Overwrite or add
                         artifactConfigMap[artifactId] = artifactConfig;
+                        artifactsRead++;
                     }
                 }
                 else
                 {
                     Patches.logger.LogDebug("[ERROR] 'Artifacts' array missing or not an array in config JSON.");
                 }
+                return artifactsRead;
             }
+
+            int embeddedArtifacts = 0;
+            int userArtifacts = 0;
 
             // 1. Load embedded resource
             try
@@ -483,7 +483,8 @@ namespace ArtifactsPlus
                     {
                         string configText = reader.ReadToEnd();
                         JObject configJson = JObject.Parse(configText);
-                        ParseAndMergeConfig(configJson, true);
+                        embeddedArtifacts = ParseAndMergeConfig(configJson, true);
+                        Patches.logger.LogDebug($"[ArtifactsPlus] Embedded config loaded {embeddedArtifacts} artifacts.");
                     }
                 }
             }
@@ -502,8 +503,8 @@ namespace ArtifactsPlus
                 {
                     string userConfigText = File.ReadAllText(userConfigPath);
                     JObject userConfigJson = JObject.Parse(userConfigText);
-                    ParseAndMergeConfig(userConfigJson, true);
-                    Patches.logger.LogDebug("[ArtifactsPlus] Loaded user artifact overrides from User.ArtifactsConfig.json.");
+                    userArtifacts = ParseAndMergeConfig(userConfigJson, true);
+                    Patches.logger.LogDebug($"[ArtifactsPlus] Loaded {userArtifacts} user artifact overrides from User.ArtifactsConfig.json.");
                 }
                 else
                 {
@@ -512,7 +513,7 @@ namespace ArtifactsPlus
             }
             catch (Exception ex)
             {
-                Patches.logger.LogDebug($"[ArtifactsPlus] ERROR loading user config: {ex}");
+                Patches.logger.LogDebug($"[ArtifactsPlus] Error loading or parsing User.ArtifactsConfig.json: {ex}");
             }
 
             Patches.logger.LogDebug($"[ArtifactsPlus] Final artifact config count: {artifactConfigMap.Count}");
@@ -746,28 +747,21 @@ namespace ArtifactsPlus
 
         void Awake()
         {
-            Patches.logger.LogDebug($"[ArtifactStatePoller] Awake Called");
-
         }
 
         void Start()
         {
-            Patches.logger.LogDebug($"[ArtifactStatePoller] Start Called");
             var options = ArtifactsPlusOptions.Instance;
-            pollInterval = options.ArtifactPollingInterval;
+            pollInterval = options.PollingIntervalSeconds*60;
             Patches.logger.LogDebug($"[ArtifactStatePoller] Awake poll interval {pollInterval}");
         }
 
         void Update()
         {
-            //Patches.logger.LogDebug($"[ArtifactStatePoller] Update Called");
-
             tickCounter++;
 
             if (tickCounter >= pollInterval)  // ticks
             {
-                Patches.logger.LogDebug($"[ArtifactStatePoller] Update");
-
                 tickCounter = 0;
                 var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
 
