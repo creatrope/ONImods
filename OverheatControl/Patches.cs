@@ -38,15 +38,17 @@ namespace OverheatControl
 
         public static void OnLoad()
         {
-            var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
+            // Determine if we are in the "Local" mod directory
+            string modDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            bool enableCustomLog = modDir != null && modDir.IndexOf("Local", StringComparison.OrdinalIgnoreCase) >= 0;
 
-            ShutdownPercent = options.ShutdownPercent;
-            RestorePercent = options.RestorePercent;
+            ShutdownPercent = POptions.ReadSettings<ModOptions>()?.ShutdownPercent ?? 90f;
+            RestorePercent = POptions.ReadSettings<ModOptions>()?.RestorePercent ?? 80f;
 
-            // Enable or disable logger based on EnableCustomLog
-            Patches.logger.SetLoggingState(options.EnableCustomLog);
+            // Set logger state based on directory
+            Patches.logger.SetLoggingState(enableCustomLog);
 
-            string optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
+            string optionsJson = JsonConvert.SerializeObject(new { ShutdownPercent, RestorePercent, enableCustomLog }, Formatting.Indented);
             Patches.logger.LogDebug($"Settings loaded:\n{optionsJson}");
         }
 
@@ -120,10 +122,6 @@ namespace OverheatControl
 
     public class ModOptions
     {
-        [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
-        [JsonProperty]
-        public bool EnableCustomLog { get; set; }
-
         [JsonProperty]
         [Option("Shutdown %", "Shutdown @ % of Overheat Temp")]
         [Limit(5.0, 100.0)]
