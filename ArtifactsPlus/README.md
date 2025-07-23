@@ -43,80 +43,80 @@ Modifiers can stack! Go ahead and collect and activate as many coffee mugs as yo
 
 __List of Current InGame Artifacts (as of July 2025)__
 
-artifact_sink
-artifact_rubikscube
-artifact_obelisk
-artifact_blender
-artifact_reactormodel
-artifact_sandstone
-artifact_officemug
-artifact_okayxray
-artifact_moldavite
-artifact_vhs
-artifact_saxophone
-artifact_modernart
-artifact_honeyjar
-artifact_ameliaswatch
-artifact_teapot
-artifact_brickphone
-artifact_robotarm
-artifact_shieldgenerator
-artifact_bioluminescentrock
-artifact_grubstatue
-artifact_stethoscope
-artifact_eggrock
-artifact_hatchfossil
-artifact_rocktornado
-artifact_pacupercolator
-artifact_magmalamp
-artifact_oracle
-artifact_dnamodel
-artifact_rainboweggrock
-artifact_plasmalamp
-artifact_moodring
-artifact_solarsystem
-artifact_moonmoonmoon
+- **artifact_sink**
+- **artifact_rubikscube**
+- **artifact_obelisk**
+- **artifact_blender**
+- **artifact_reactormodel**
+- **artifact_sandstone**
+- **artifact_officemug**
+- **artifact_okayxray**
+- **artifact_moldavite**
+- **artifact_vhs**
+- **artifact_saxophone**
+- **artifact_modernart**
+- **artifact_honeyjar**
+- **artifact_ameliaswatch**
+- **artifact_teapot**
+- **artifact_brickphone**
+- **artifact_robotarm**
+- **artifact_shieldgenerator**
+- **artifact_bioluminescentrock**
+- **artifact_grubstatue**
+- **artifact_stethoscope**
+- **artifact_eggrock**
+- **artifact_hatchfossil**
+- **artifact_rocktornado**
+- **artifact_pacupercolator**
+- **artifact_magmalamp**
+- **artifact_oracle**
+- **artifact_dnamodel**
+- **artifact_rainboweggrock**
+- **artifact_plasmalamp**
+- **artifact_moodring**
+- **artifact_solarsystem**
+- **artifact_moonmoonmoon**
 
 __List of Attributes That Can Be Modified:__
 
-AirConsumptionRate: Air Consumption Rate (Air Consumption determines how much Oxygen a Duplicant requires per minute to live.)
-Art: Creativity (Determines how quickly a Duplicant produces Artwork.)
-Athletics: Athletics (Determines a Duplicant's default runspeed.)
-BionicBatteryCountCapacity: Power Banks (The number of power banks this Bionic Duplicant can store)
-BionicBoosterSlots: Booster Slots (The number of boosters this Bionic Duplicant can install at once)
-Botanist: Agriculture (Determines how quickly and efficiently a Duplicant cultivates Plants.)
-Caring: Medicine (Determines a Duplicant's ability to care for sick peers.)
-CarryAmount: Carrying Capacity (Determines the maximum weight that a Duplicant can carry.)
-Construction: Construction (Determines a Duplicant's building Speed.)
-Cooking: Cuisine (Determines how quickly a Duplicant prepares Food.)
-Decor: Decor (Affects a Duplicant's Morale and their opinion of their surroundings.)
-DecorExpectation: Decor Morale Bonus (A Decor Morale Bonus allows Duplicants to receive Morale boosts from lower Decor values.)
-Digging: Excavation (Determines a Duplicant's mining speed.)
-DiseaseCureSpeed: Disease Recovery Speed Bonus (Recovery speed bonus is increased when another Duplicant provides medical care to the patient)
-DoctoredLevel: Treatment Received Effect
-FoodExpectation: Food Morale Bonus (A Food Morale Bonus allows Duplicants to receive Morale boosts from lower quality Food)
-GeneratorOutput: Power Output
-GermResistance: Germ Resistance (Duplicants with a higher Germ Resistance rating are less likely to contract germ-based Diseases.)
-Immunity: Immunity (Determines a Duplicant's Disease susceptibility and recovery time.)
-Insulation: Insulation (Highly Insulated Duplicants retain body heat easily, while low Insulation Duplicants are easier to keep cool.)
-Learning: Science (Determines how quickly a Duplicant conducts Research and gains Skill Points.)
-LifeSupport: Life Support (Determines how efficiently a Duplicant maintains Algae Terrariums, Deodorizers, and Water Sieves)
-Luminescence: Luminescence (Determines how much light a Duplicant emits.)
-Machinery: Machinery (Determines how quickly a Duplicant uses machines.)
-MachinerySpeed: Machinery Speed (Speed Bonus)
-MaxUnderwaterTravelCost: Underwater Movement (Determines a Duplicant's runspeed when submerged in Liquid)
-QualityOfLife: Morale (A Duplicant's Morale must exceed their Morale Need, or they'll begin to accumulate Stress.)
-QualityOfLifeExpectation: Morale Need (Dictates how high a Duplicant's Morale must be kept to prevent them from gaining Stress)
-RadiationRecovery: Radiation Absorption (The rate at which Radiation is neutralized within a Duplicant body.)
-RadiationResistance: Radiation Resistance (Determines how easily a Duplicant repels Radiation Sickness.)
-Ranching: Husbandry (Determines how efficiently a Duplicant tends Critters.)
-RoomTemperaturePreference: Temperature Preference (Determines the minimum body Temperature a Duplicant prefers to maintain.)
-ScaldingThreshold: Scalding Threshold (Determines the Temperature at which a Duplicant will get burned.)
-ScoldingThreshold: Frostbite Threshold (Determines the Temperature at which a Duplicant will get frostbitten.)
-Sneezyness: Sneeziness (Determines how frequently a Duplicant sneezes.)
-SpaceNavigation: Piloting (Determines how long it takes a Duplicant to complete a space mission.)
-Strength: Strength (Determines a Duplicant's Carrying Capacity and cleaning speed.)
-ThermalConductivityBarrier: Insulation Thickness (Determines how quickly a Duplicant retains or loses body Heat in any given area.)
-Toggle: Toggle (Determines how efficiently a Duplicant tunes machinery, flips switches, and sets sensors.)
-ToiletEfficiency: Bathroom Use Speed (Determines how long a Duplicant needs to do their "business".)
-TransitTubeTravelSpeed: Transit Speed (Determines a Duplicant's default Transit Tube travel speed.)
+- **AirConsumptionRate**: Air Consumption Rate (Air Consumption determines how much Oxygen a Duplicant requires per minute to live.)
+- **Art**: Creativity (Determines how quickly a Duplicant produces Artwork.)
+- **Athletics**: Athletics (Determines a Duplicant's default runspeed.)
+- **BionicBatteryCountCapacity**: Power Banks (The number of power banks this Bionic Duplicant can store)
+- **BionicBoosterSlots**: Booster Slots (The number of boosters this Bionic Duplicant can install at once)
+- **Botanist**: Agriculture (Determines how quickly and efficiently a Duplicant cultivates Plants.)
+- **Caring**: Medicine (Determines a Duplicant's ability to care for sick peers.)
+- **CarryAmount**: Carrying Capacity (Determines the maximum weight that a Duplicant can carry.)
+- **Construction**: Construction (Determines a Duplicant's building Speed.)
+- **Cooking**: Cuisine (Determines how quickly a Duplicant prepares Food.)
+- **Decor**: Decor (Affects a Duplicant's Morale and their opinion of their surroundings.)
+- **DecorExpectation**: Decor Morale Bonus (A Decor Morale Bonus allows Duplicants to receive Morale boosts from lower Decor values.)
+- **Digging**: Excavation (Determines a Duplicant's mining speed.)
+- **DiseaseCureSpeed**: Disease Recovery Speed Bonus (Recovery speed bonus is increased when another Duplicant provides medical care to the patient)
+- **DoctoredLevel**: Treatment Received Effect
+- **FoodExpectation**: Food Morale Bonus (A Food Morale Bonus allows Duplicants to receive Morale boosts from lower quality Food)
+- **GeneratorOutput**: Power Output
+- **GermResistance**: Germ Resistance (Duplicants with a higher Germ Resistance rating are less likely to contract germ-based Diseases.)
+- **Immunity**: Immunity (Determines a Duplicant's Disease susceptibility and recovery time.)
+- **Insulation**: Insulation (Highly Insulated Duplicants retain body heat easily, while low Insulation Duplicants are easier to keep cool.)
+- **Learning**: Science (Determines how quickly a Duplicant conducts Research and gains Skill Points.)
+- **LifeSupport**: Life Support (Determines how efficiently a Duplicant maintains Algae Terrariums, Deodorizers, and Water Sieves)
+- **Luminescence**: Luminescence (Determines how much light a Duplicant emits.)
+- **Machinery**: Machinery (Determines how quickly a Duplicant uses machines.)
+- **MachinerySpeed**: Machinery Speed (Speed Bonus)
+- **MaxUnderwaterTravelCost**: Underwater Movement (Determines a Duplicant's runspeed when submerged in Liquid)
+- **QualityOfLife**: Morale (A Duplicant's Morale must exceed their Morale Need, or they'll begin to accumulate Stress.)
+- **QualityOfLifeExpectation**: Morale Need (Dictates how high a Duplicant's Morale must be kept to prevent them from gaining Stress)
+- **RadiationRecovery**: Radiation Absorption (The rate at which Radiation is neutralized within a Duplicant body.)
+- **RadiationResistance**: Radiation Resistance (Determines how easily a Duplicant repels Radiation Sickness.)
+- **Ranching**: Husbandry (Determines how efficiently a Duplicant tends Critters.)
+- **RoomTemperaturePreference**: Temperature Preference (Determines the minimum body Temperature a Duplicant prefers to maintain.)
+- **ScaldingThreshold**: Scalding Threshold (Determines the Temperature at which a Duplicant will get burned.)
+- **ScoldingThreshold**: Frostbite Threshold (Determines the Temperature at which a Duplicant will get frostbitten.)
+- **Sneezyness**: Sneeziness (Determines how frequently a Duplicant sneezes.)
+- **SpaceNavigation**: Piloting (Determines how long it takes a Duplicant to complete a space mission.)
+- **Strength**: Strength (Determines a Duplicant's Carrying Capacity and cleaning speed.)
+- **ThermalConductivityBarrier**: Insulation Thickness (Determines how quickly a Duplicant retains or loses body Heat in any given area.)
+- **Toggle**: Toggle (Determines how efficiently a Duplicant tunes machinery, flips switches, and sets sensors.)
+- **ToiletEfficiency**: Bathroom Use Speed (Determines how long a Duplicant needs to do their "business".)
+- **TransitTubeTravelSpeed**: Transit Speed (Determines a Duplicant's default Transit Tube travel speed.)
