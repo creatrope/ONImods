@@ -46,7 +46,8 @@ namespace ArtifactsPlus
             {
                 int cell = Grid.PosToCell(artifact.transform.position);
                 int worldId = Grid.WorldIdx[cell];
-                string worldName = ClusterManager.Instance.GetWorld(worldId)?.name ?? $"World_{worldId}";
+                var world = ClusterManager.Instance.GetWorld(worldId);
+                string worldName = world != null ? world.GetProperName() : $"World_{worldId}";
                 string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
 
                 logger.LogDebug($"- {artifactName} in {worldName}");
@@ -71,7 +72,7 @@ namespace ArtifactsPlus
             public static void Postfix()
             {
                 Patches.logger.LogDebug($"[ArtifactsPlus] Game_OnPrefabInit_Patch");
-                
+
                 var options = ArtifactsPlusOptions.Instance;
                 Patches.logger.LogDebug($"[ArtifactsPlus] Artifact polling interval: {options.ArtifactPollingInterval}");
 
@@ -401,46 +402,41 @@ namespace ArtifactsPlus
             }
         }
 
-        public static void LoadArtifactConfig()
+        public static void LoadArtifactConfig(string configFileName = "ArtifactsConfig.json")
         {
-            Patches.logger.LogDebug("[ArtifactsPlus] LoadArtifactConfig");
+            Patches.logger.LogDebug($"[ArtifactsPlus] LoadArtifactConfig {configFileName}");
 
             artifactConfigMap = new Dictionary<string, ArtifactConfig>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
-
-                // Use PLib's GetConfigFilePath to get the config file location for the options class
-                string configFileName = "ArtifactsConfig.json";
-                string optionsPath = PeterHan.PLib.Options.POptions.GetConfigFilePath(typeof(ArtifactsPlusOptions));
-                string configDirectory = Path.GetDirectoryName(optionsPath);
-                if (!Directory.Exists(configDirectory))
-                    Directory.CreateDirectory(configDirectory);
-
-                // Use PLib's GetConfigFilePath to get the config file location for the options class
-                string tgtConfigPath = Path.Combine(configDirectory, configFileName);
-
-                // Get mod directory (where executing assembly is located)
                 string modDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                string srcConfigPath = Path.Combine(modDir, configFileName);
+                string configPath = Path.Combine(modDir, configFileName);
 
-                bool tgtConfigFileExists = File.Exists(tgtConfigPath);
-                bool srcConfigFileExists = File.Exists(srcConfigPath);
-                
-                Patches.logger.LogDebug($"[ArtifactsPlus] tgtConfigPath: {tgtConfigPath}, tgtConfigFileExists: {tgtConfigFileExists}");
-                Patches.logger.LogDebug($"[ArtifactsPlus] srcConfigPath: {srcConfigPath}, srcConfigFileExists: {srcConfigFileExists}");
-                
-                if (!tgtConfigFileExists && srcConfigFileExists)
+                // If config file does not exist, extract from embedded resource
+                if (!File.Exists(configPath))
                 {
-                    Patches.logger.LogDebug($"[ArtifactsPlus] copying {srcConfigPath} to {tgtConfigPath}");
-                    File.Copy(srcConfigPath, tgtConfigPath, false);
+                    string resourceName = "ArtifactsPlus.ArtifactsConfig.json"; // Adjust if your namespace/folder differs
+                    var assembly = Assembly.GetExecutingAssembly();
+                    using (var stream = assembly.GetManifestResourceStream(resourceName))
+                    {
+                        if (stream == null)
+                        {
+                            Patches.logger.LogDebug($"[ArtifactsPlus] Embedded resource '{resourceName}' not found.");
+                            return;
+                        }
+                        using (var reader = new StreamReader(stream))
+                        {
+                            string configText = reader.ReadToEnd();
+                            File.WriteAllText(configPath, configText);
+                            Patches.logger.LogDebug($"[ArtifactsPlus] Wrote embedded config to {configPath}");
+                        }
+                    }
                 }
 
-                // Read config from PLib config directory
-                Patches.logger.LogDebug($"[ArtifactsPlus] loading {tgtConfigPath}");
-
-                string configText = File.ReadAllText(tgtConfigPath);
-                JObject configJson = JObject.Parse(configText);
+                // Always load from the file
+                string loadedConfigText = File.ReadAllText(configPath);
+                JObject configJson = JObject.Parse(loadedConfigText);
 
                 int globalNeighbors = (int)(configJson["Neighbors"] ?? 1);
                 string globalScope = (string)(configJson["Scope"] ?? "InWorld");
@@ -484,7 +480,6 @@ namespace ArtifactsPlus
                     artifactConfigMap[artifactId] = artifactConfig;
                 }
                 Patches.logger.LogDebug($"[ArtifactsPlus] Loaded {artifactConfigMap.Count} artifact configs.");
-
             }
             catch (Exception ex)
             {
@@ -892,7 +887,7 @@ namespace ArtifactsPlus
                     }
                 }
 
-                //logger.LogDebug($"[ArtifactsPlus] Updating minions who have changed worlds.");
+                Patches.logger.LogDebug($"[ArtifactsPlus] Updating minions who have changed worlds.");
 
                 var minionsWithWorldChangedFlag = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                     .Where(kp => kp != null && kp.HasTag("Minion") && kp.Tags.Any(tag => tag.Name.StartsWith("worldChanged")))
@@ -939,21 +934,30 @@ namespace ArtifactsPlus
                         }
                     }
 
-                    // logger.LogDebug($"[ArtifactsPlus] Applying Minions Artifacts From New World");
+                        int ncell = Grid.PosToCell(minion.transform.position);
+                        int worldId = Grid.WorldIdx[ncell];
 
-                    int ncell = Grid.PosToCell(minion.transform.position);
-                    int worldId = Grid.WorldIdx[ncell];
+                        var artifactsInNewWorld = ArtifactStateTracker.GetAllArtifacts()
+                            .Where(artifact =>
+                                artifact != null &&
+                                artifact.transform != null &&
+                                Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == worldId)
+                            .ToList();
 
-                    var artifactsInNewWorld = ArtifactStateTracker.GetAllArtifacts()
-                        .Where(artifact => Grid.WorldIdx[Grid.PosToCell(artifact.transform.position)] == worldId)
-                        .ToList();
-
-                    foreach (var artifact in artifactsInNewWorld)
-                    {
-                        string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-                        Patches.logger.LogDebug($"[ArtifactsPlus] ApplyArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}'.");
-                        ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
-                    }
+                        foreach (var artifact in artifactsInNewWorld)
+                        {
+                            int artifactId = artifact.GetInstanceID();
+                            string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
+                            if (ArtifactStateTracker.ArtifactStates.TryGetValue(artifactId, out var state) && state.IsActive)
+                            {
+                                Patches.logger.LogDebug($"[ArtifactsPlus] ApplyArtifactModifiersToMinion '{minionName}' Artifact '{artifactName}' (isActive={state.IsActive}).");
+                                ArtifactEffectTracker.ApplyArtifactModifiersToMinion(minion, artifact);
+                            }
+                            else
+                            {
+                                Patches.logger.LogDebug($"[ArtifactsPlus] Skipping ApplyArtifactModifiersToMinion for '{artifactName}' (isActive={state?.IsActive ?? false}).");
+                            }
+                        }
                 }
             }
         }
@@ -994,7 +998,10 @@ namespace ArtifactsPlus
 
             harmony.PatchAll();
 
-            ArtifactStateTracker.LoadArtifactConfig(); // this is the artifact config
+
+            ArtifactStateTracker.LoadArtifactConfig(); // fallback to default
+
+            ArtifactsPlusKeybindHandler.Register(new PPatchManager(harmony));
         }
     }
 
@@ -1079,6 +1086,42 @@ namespace ArtifactsPlus
     {
         public static void Postfix(string filename)
         {
+        }
+    }
+
+    internal sealed class ArtifactsPlusKeybindHandler : IInputHandler
+    {
+        private static PAction PrintArtifactsAction;
+        private readonly Action printArtifactsSnapshot;
+
+        public string handlerName => "ArtifactsPlusKeybindHandler";
+        public KInputHandler inputHandler { get; set; }
+
+        internal ArtifactsPlusKeybindHandler()
+        {
+            printArtifactsSnapshot = PrintArtifactsAction != null ? PrintArtifactsAction.GetKAction() : PAction.MaxAction;
+        }
+
+        public void OnKeyDown(KButtonEvent e)
+        {
+            if (e.TryConsume(printArtifactsSnapshot))
+            {
+                ArtifactsPlus.Patches.PrintActiveArtifactsWithWorlds();
+            }
+        }
+
+        [PLibMethod(RunAt.AfterLayerableLoad)]
+        internal static void AddKeycodeHandler()
+        {
+            KInputHandler.Add(Global.GetInputManager().GetDefaultController(),
+                new ArtifactsPlusKeybindHandler(), 512);
+        }
+
+        internal static void Register(PPatchManager manager)
+        {
+            manager.RegisterPatchClass(typeof(ArtifactsPlusKeybindHandler));
+            PrintArtifactsAction = new PActionManager().CreateAction(
+                "ArtifactsPlus.PrintArtifactsAction", "Print Active Artifacts", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl));
         }
     }
 }

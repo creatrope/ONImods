@@ -24,12 +24,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ArtifactsConfig.json" />
+    <EmbeddedResource Include="ArtifactsConfig.json" />
     <None Include="mod.yaml" />
     <None Include="mod_info.yaml" />
   </ItemGroup>
-  <Target Name="CopyArtifactsConfig" AfterTargets="Build">
-    <Copy SourceFiles="ArtifactsConfig.json" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
-  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

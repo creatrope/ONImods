@@ -23,7 +23,6 @@ namespace ArtifactsPlus
         [Limit(0, 1000)]
         [JsonProperty]
         public int DecorMinimum { get; set; } = 100;
-
         public IEnumerable<IOptionsEntry> CreateOptions()
         {
             return new List<IOptionsEntry>();
