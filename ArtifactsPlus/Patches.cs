@@ -154,7 +154,6 @@ namespace ArtifactsPlus
 
     public class ArtifactConfig
     {
-        public int DecorMinimum;
         public int Neighbors;
         public string Scope;
         public Dictionary<string, float> Attributes;
@@ -163,9 +162,8 @@ namespace ArtifactsPlus
         /// </summary>
         public Dictionary<string, float> Effects;
 
-        public ArtifactConfig(int globalDecor, string globalScope, int globalNeighbors = 1)
+        public ArtifactConfig(string globalScope, int globalNeighbors = 1)
         {
-            DecorMinimum = globalDecor;
             Neighbors = globalNeighbors;
             Scope = globalScope;
             Attributes = new Dictionary<string, float>();
@@ -178,7 +176,6 @@ namespace ArtifactsPlus
         internal static readonly Dictionary<int, ArtifactState> ArtifactStates = new Dictionary<int, ArtifactState>();
         internal static readonly HashSet<GameObject> ArtifactsOnPedestals = new HashSet<GameObject>();
 
-        private static int decorMinimum = 0;
         private static readonly string GlowChildName = "ArtifactGlowFX";
 
         private static Dictionary<string, ArtifactConfig> artifactConfigMap;
@@ -445,7 +442,6 @@ namespace ArtifactsPlus
                 string configText = File.ReadAllText(tgtConfigPath);
                 JObject configJson = JObject.Parse(configText);
 
-                int globalDecorMinimum = (int)(configJson["DecorMinimum"] ?? 0);
                 int globalNeighbors = (int)(configJson["Neighbors"] ?? 1);
                 string globalScope = (string)(configJson["Scope"] ?? "InWorld");
 
@@ -460,9 +456,8 @@ namespace ArtifactsPlus
                     var artifactId = (string)obj["ArtifactId"];
                     if (artifactId == null) continue;
 
-                    var artifactConfig = new ArtifactConfig(globalDecorMinimum, globalScope, globalNeighbors);
+                    var artifactConfig = new ArtifactConfig(globalScope, globalNeighbors);
 
-                    if (obj["DecorMinimum"] != null) artifactConfig.DecorMinimum = (int)obj["DecorMinimum"];
                     if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
                     if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
 
@@ -502,7 +497,8 @@ namespace ArtifactsPlus
             if (artifactConfigMap != null && artifactConfigMap.TryGetValue(artifactId, out var config))
                 return config;
 
-            return new ArtifactConfig(decorMinimum, "All");
+            // Return null if not found, so callers can handle missing config appropriately
+            return null;
         }
 
         private static int CountArtifactsOnPedestalsInRoom(Room room)
