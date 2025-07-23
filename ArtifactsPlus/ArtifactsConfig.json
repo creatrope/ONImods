@@ -1,7 +1,4 @@
 {
-  "RoomSizeMinimum": 32,
-  "RoomSizeMaximum": 96,
-  "DecorMinimum": 120,
   "Neighbors": 4,
   "Artifacts": [
     {

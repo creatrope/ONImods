@@ -31,16 +31,17 @@ namespace ArtifactsPlus
                 tooltip: "A decor room type.",
                 effect: null,
                 category: Db.Get().RoomTypeCategories.Park, // or Recreation if it exists
-                primary_constraint: new RoomConstraints.Constraint(
-                    (Func<KPrefabID, bool>)(bc => bc.HasTag(GameTags.Decoration)),
-                    (Func<Room, bool>)(room => CustomConstraints.CalculateDecorScore(room) >= decorMin),
-                    name: $"Minimum Decor ({decorMin})",
-                    description: $"Room must have at least {decorMin} decor."
-                ),
+                primary_constraint: RoomConstraints.DECORATIVE_ITEM_SCORE_20,
                 additional_constraints: new RoomConstraints.Constraint[] {
                     RoomConstraints.MINIMUM_SIZE_12,
                     RoomConstraints.MAXIMUM_SIZE_96,
-                    RoomConstraints.NO_INDUSTRIAL_MACHINERY
+                    RoomConstraints.NO_INDUSTRIAL_MACHINERY,
+                    new RoomConstraints.Constraint(
+                        (Func<KPrefabID, bool>)(bc => bc.HasTag(GameTags.Decoration)),
+                        (Func<Room, bool>)(room => CustomConstraints.CalculateDecorScore(room) >= decorMin),
+                        name: $"Minimum Decor ({decorMin})",
+                        description: $"Room must have at least {decorMin} decor."
+                    )
                 },
                 display_details: new RoomDetails.Detail[] { RoomDetails.SIZE, RoomDetails.BUILDING_COUNT },
                 priority: 10,
@@ -83,6 +84,7 @@ namespace ArtifactsPlus
 
             foreach (var building in room.buildings)
             {
+                if (building == null) continue; // Prevent NullReferenceException
                 buildingCount++;
                 var decorProvider = building.GetComponent<DecorProvider>();
                 if (decorProvider != null)
@@ -90,6 +92,7 @@ namespace ArtifactsPlus
             }
             foreach (var plant in room.plants)
             {
+                if (plant == null) continue; // Prevent NullReferenceException
                 plantCount++;
                 var decorProvider = plant.GetComponent<DecorProvider>();
                 if (decorProvider != null)
