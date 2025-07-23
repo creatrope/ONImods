@@ -1,10 +1,10 @@
 ﻿using ArtifactsPlus; // Add this import for ArtifactEffectTracker
 using HarmonyLib;
 using HLib;
-using Klei.AI; 
+using Klei.AI;
 using KMod;
 using KSerialization;
-using Newtonsoft.Json; 
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PeterHan.PLib.Actions;
 using PeterHan.PLib.Core;
@@ -26,28 +26,8 @@ namespace ArtifactsPlus
     public static class Patches
     {
         public static HLib.Logger logger = new HLib.Logger("ArtifactsPlus");
-         public static void OnLoad()
+        public static void OnLoad()
         {
-            // PrintActiveArtifactsWithWorlds();
-            Debug.Log("[ArtifactsPlus] entering Patches.OnLoad");
-
-            var config = ArtifactsPlusConfig.Instance;
-
-            if (config != null)
-            {
-                if (config.EnableCustomLog)
-                {
-                    logger.SetLoggingState(config.EnableCustomLog);
-                }
-                logger.LogDebug("[ArtifactsPlus] loadartifactconfig");
-                ArtifactStateTracker.LoadArtifactConfig();
-            }
-            else
-            {
-                Debug.LogError("[ArtifactsPlus] ArtifactsPlusConfig.Instance is null!");
-
-            }
-            Debug.Log("[ArtifactsPlus] exiting Patches.OnLoad");
         }
 
         public static void PrintActiveArtifactsWithWorlds()
@@ -90,14 +70,16 @@ namespace ArtifactsPlus
         {
             public static void Postfix()
             {
-                // Access the configuration using PLib's SingletonOptions
-                var config = ArtifactsPlusConfig.Instance;
+                Patches.logger.LogDebug($"[ArtifactsPlus] Game_OnPrefabInit_Patch");
+                
+                var options = ArtifactsPlusOptions.Instance;
+                Patches.logger.LogDebug($"[ArtifactsPlus] Artifact polling interval: {options.ArtifactPollingInterval}");
 
-                if (config.EnableCustomLog)
-                    logger.LogDebug("[ArtifactsPlus] Custom logging is enabled.");
-
-                logger.LogDebug($"[ArtifactsPlus] Using ArtifactConfig file: {config.ArtifactConfigFile}");
-                logger.LogDebug($"[ArtifactsPlus] Artifact polling interval: {config.ArtifactPollingInterval}");
+                if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
+                {
+                    Patches.logger.LogDebug($"[ArtifactsPlus] AddComponent<ArtifactStatePoller>");
+                    var poller = Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
+                }
             }
         }
 
@@ -106,7 +88,6 @@ namespace ArtifactsPlus
         {
             public static void Postfix()
             {
-                // Removed log message: "[ArtifactsPlus] Localization initialized."
             }
         }
 
@@ -166,7 +147,6 @@ namespace ArtifactsPlus
     public class ArtifactState
     {
         public bool OnPedestal;
-        public bool MeetsRoomSize;
         public bool IsActive;
         public bool IsAnalyzed;
         public bool StateChanged; // New field added to track if the state has changed
@@ -174,8 +154,6 @@ namespace ArtifactsPlus
 
     public class ArtifactConfig
     {
-        public int RoomSizeMin;
-        public int RoomSizeMax;
         public int DecorMinimum;
         public int Neighbors;
         public string Scope;
@@ -185,10 +163,8 @@ namespace ArtifactsPlus
         /// </summary>
         public Dictionary<string, float> Effects;
 
-        public ArtifactConfig(int globalMin, int globalMax, int globalDecor, string globalScope, int globalNeighbors = 1)
+        public ArtifactConfig(int globalDecor, string globalScope, int globalNeighbors = 1)
         {
-            RoomSizeMin = globalMin;
-            RoomSizeMax = globalMax;
             DecorMinimum = globalDecor;
             Neighbors = globalNeighbors;
             Scope = globalScope;
@@ -202,8 +178,6 @@ namespace ArtifactsPlus
         internal static readonly Dictionary<int, ArtifactState> ArtifactStates = new Dictionary<int, ArtifactState>();
         internal static readonly HashSet<GameObject> ArtifactsOnPedestals = new HashSet<GameObject>();
 
-        internal static int globalRoomSizeMin = 6;
-        internal static int globalRoomSizeMax = 32;
         private static int decorMinimum = 0;
         private static readonly string GlowChildName = "ArtifactGlowFX";
 
@@ -215,13 +189,8 @@ namespace ArtifactsPlus
         public struct ArtifactCriteriaResult
         {
             public string Scope;
-            public bool Transform; // Adjusted case
             public bool isFree;
             public bool IsAnalyzed;
-            public int ActualRoomSize; // Adjusted case
-            public bool MeetsRoomSize; // Adjusted case
-            public float ActualDecor; // Adjusted case
-            public bool MeetsDecor; // Adjusted case
             public int ArtifactCountInRoom;
             public bool NeighborsOk;
             public bool OnPedestal; // Adjusted case
@@ -311,7 +280,7 @@ namespace ArtifactsPlus
             return result.NeighborsOk;
         }
 
-       
+
         public static void InitializeAllMinions()
         {
             allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
@@ -437,32 +406,45 @@ namespace ArtifactsPlus
 
         public static void LoadArtifactConfig()
         {
+            Patches.logger.LogDebug("[ArtifactsPlus] LoadArtifactConfig");
+
             artifactConfigMap = new Dictionary<string, ArtifactConfig>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
 
                 // Use PLib's GetConfigFilePath to get the config file location for the options class
-                string configPath = PeterHan.PLib.Options.POptions.GetConfigFilePath(typeof(ArtifactsPlusConfig));
                 string configFileName = "ArtifactsConfig.json";
+                string optionsPath = PeterHan.PLib.Options.POptions.GetConfigFilePath(typeof(ArtifactsPlusOptions));
+                string configDirectory = Path.GetDirectoryName(optionsPath);
+                if (!Directory.Exists(configDirectory))
+                    Directory.CreateDirectory(configDirectory);
+
+                // Use PLib's GetConfigFilePath to get the config file location for the options class
+                string tgtConfigPath = Path.Combine(configDirectory, configFileName);
 
                 // Get mod directory (where executing assembly is located)
                 string modDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                string modConfigPath = Path.Combine(modDir, configFileName);
+                string srcConfigPath = Path.Combine(modDir, configFileName);
 
-                // If config file does not exist in PLib config directory, copy from mod directory
-                if (!File.Exists(configPath) && File.Exists(modConfigPath))
+                bool tgtConfigFileExists = File.Exists(tgtConfigPath);
+                bool srcConfigFileExists = File.Exists(srcConfigPath);
+                
+                Patches.logger.LogDebug($"[ArtifactsPlus] tgtConfigPath: {tgtConfigPath}, tgtConfigFileExists: {tgtConfigFileExists}");
+                Patches.logger.LogDebug($"[ArtifactsPlus] srcConfigPath: {srcConfigPath}, srcConfigFileExists: {srcConfigFileExists}");
+                
+                if (!tgtConfigFileExists && srcConfigFileExists)
                 {
-                    File.Copy(modConfigPath, configPath, false);
-                    Patches.logger.LogDebug("[ArtifactsPlus] Copied default config from mod directory to PLib config directory: " + configPath);
+                    Patches.logger.LogDebug($"[ArtifactsPlus] copying {srcConfigPath} to {tgtConfigPath}");
+                    File.Copy(srcConfigPath, tgtConfigPath, false);
                 }
 
                 // Read config from PLib config directory
-                string configText = File.ReadAllText(configPath);
+                Patches.logger.LogDebug($"[ArtifactsPlus] loading {tgtConfigPath}");
+
+                string configText = File.ReadAllText(tgtConfigPath);
                 JObject configJson = JObject.Parse(configText);
 
-                int globalRoomSizeMin = (int)(configJson["RoomSizeMinimum"] ?? 32);
-                int globalRoomSizeMax = (int)(configJson["RoomSizeMaximum"] ?? 96);
                 int globalDecorMinimum = (int)(configJson["DecorMinimum"] ?? 0);
                 int globalNeighbors = (int)(configJson["Neighbors"] ?? 1);
                 string globalScope = (string)(configJson["Scope"] ?? "InWorld");
@@ -478,10 +460,8 @@ namespace ArtifactsPlus
                     var artifactId = (string)obj["ArtifactId"];
                     if (artifactId == null) continue;
 
-                    var artifactConfig = new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, globalDecorMinimum, globalScope, globalNeighbors);
+                    var artifactConfig = new ArtifactConfig(globalDecorMinimum, globalScope, globalNeighbors);
 
-                    if (obj["RoomSizeMin"] != null) artifactConfig.RoomSizeMin = (int)obj["RoomSizeMin"];
-                    if (obj["RoomSizeMax"] != null) artifactConfig.RoomSizeMax = (int)obj["RoomSizeMax"];
                     if (obj["DecorMinimum"] != null) artifactConfig.DecorMinimum = (int)obj["DecorMinimum"];
                     if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
                     if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
@@ -508,10 +488,12 @@ namespace ArtifactsPlus
 
                     artifactConfigMap[artifactId] = artifactConfig;
                 }
+                Patches.logger.LogDebug($"[ArtifactsPlus] Loaded {artifactConfigMap.Count} artifact configs.");
+
             }
             catch (Exception ex)
             {
-                Patches.logger.LogDebug($"[ERROR] Failed to load artifact config: {ex}");
+                Patches.logger.LogDebug($"[ArtifactsPlus] ERROR Failed to load artifact config: {ex}");
             }
         }
 
@@ -520,7 +502,7 @@ namespace ArtifactsPlus
             if (artifactConfigMap != null && artifactConfigMap.TryGetValue(artifactId, out var config))
                 return config;
 
-            return new ArtifactConfig(globalRoomSizeMin, globalRoomSizeMax, decorMinimum, "All");
+            return new ArtifactConfig(decorMinimum, "All");
         }
 
         private static int CountArtifactsOnPedestalsInRoom(Room room)
@@ -739,37 +721,38 @@ namespace ArtifactsPlus
     {
         private int tickCounter = 0;
         private static int pollInterval; // Cache poll interval for the current save/load  
-        public ArtifactStatePoller()
+
+        void Awake()
         {
-            var config = ArtifactsPlusConfig.Instance;
-            pollInterval = config.ArtifactPollingInterval; // Read polling interval from configuration
+            Patches.logger.LogDebug($"[ArtifactStatePoller] Awake Called");
+
         }
 
-        void Awake() { }
         void Start()
         {
-            // Read and cache the poll interval once during initialization  
-            var config = ArtifactsPlusConfig.Instance;
-            pollInterval = config.ArtifactPollingInterval;
+            Patches.logger.LogDebug($"[ArtifactStatePoller] Start Called");
+            var options = ArtifactsPlusOptions.Instance;
+            pollInterval = options.ArtifactPollingInterval;
+            Patches.logger.LogDebug($"[ArtifactStatePoller] Awake poll interval {pollInterval}");
         }
 
         void Update()
         {
+            //Patches.logger.LogDebug($"[ArtifactStatePoller] Update Called");
+
             tickCounter++;
 
-            if (tickCounter >= pollInterval * 60)
+            if (tickCounter >= pollInterval)  // ticks
             {
+                Patches.logger.LogDebug($"[ArtifactStatePoller] Update");
+
                 tickCounter = 0;
                 var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
 
                 PerformIntegrityCheck();
 
                 var minionsPerWorld = new Dictionary<int, List<GameObject>>();
-
-                var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                    .Where(kp => kp != null && kp.HasTag("Minion"))
-                    .Select(kp => kp.gameObject);
-                // get an updated list of all minions per world.
+                var allMinions = ArtifactStateTracker.GetAllMinions();
 
                 foreach (var minion in allMinions)
                 {
@@ -984,7 +967,24 @@ namespace ArtifactsPlus
     {
         public override void OnLoad(Harmony harmony)
         {
-            new POptions().RegisterOptions(this, typeof(ArtifactsPlusConfig)); // Register the options
+            new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions)); // Register the options
+
+            // Print all options to the log in JSON
+            var options = ArtifactsPlusOptions.Instance;
+            if (options != null)
+            {
+                string optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
+                Debug.Log($"[ArtifactsPlus] Options:\n{optionsJson}");
+
+                if (options.EnableCustomLog)
+                {
+                    Patches.logger.SetLoggingState(options.EnableCustomLog);
+                }
+            }
+            else
+            {
+                Debug.Log("[ArtifactsPlus] Options instance is null. Ensure ArtifactsPlusOptions is properly initialized.");
+            }
 
             PUtil.InitLibrary();
 
@@ -997,6 +997,8 @@ namespace ArtifactsPlus
             }
 
             harmony.PatchAll();
+
+            ArtifactStateTracker.LoadArtifactConfig(); // this is the artifact config
         }
     }
 
@@ -1064,19 +1066,6 @@ namespace ArtifactsPlus
 
                 // Call the unregister function to remove the artifact from the pedestal tracking
                 ArtifactStateTracker.UnregisterArtifactOnPedestal(removedOccupant);
-            }
-        }
-    }
-
-    // Remove the duplicate Game_OnPrefabInit_Patch class definition
-    [HarmonyPatch(typeof(Game), "OnPrefabInit")]
-    public static class Game_OnPrefabInit_Patch
-    {
-        public static void Postfix()
-        {
-            if (Game.Instance != null && Game.Instance.gameObject.GetComponent<ArtifactStatePoller>() == null)
-            {
-                var poller = Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
             }
         }
     }

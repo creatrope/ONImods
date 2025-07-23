@@ -8,17 +8,13 @@ namespace ArtifactsPlus
 {
     [Serializable]
     [ConfigFile(SharedConfigLocation: true)]
-    internal class ArtifactsPlusConfig : SingletonOptions<ArtifactsPlusConfig>, IOptions
+    internal class ArtifactsPlusOptions : SingletonOptions<ArtifactsPlusOptions>, IOptions
     {
         [Option("Enable Custom Output Log", "Enable or disable writing the custom output log file.")]
         [JsonProperty]
         public bool EnableCustomLog { get; set; } = false;
 
-        [Option("Artifact Config File", "Set the path to the artifact configuration file.")]
-        [JsonProperty]
-        public string ArtifactConfigFile { get; set; } = "ArtifactsConfig.json";
-
-        [Option("Artifact Polling Interval", "Set the interval (in ticks) for artifact polling.")]
+        [Option("Artifact Polling Interval", "Set the interval (in ticks (60 ticks/sec)) for artifact polling.")]
         [Limit(1, 10000)]
         [JsonProperty]
         public int ArtifactPollingInterval { get; set; } = 900;
@@ -30,7 +26,7 @@ namespace ArtifactsPlus
 
         public void OnOptionsChanged()
         {
-            ArtifactsPlusConfig.Instance = this; // Update the instance manually when options change
+            ArtifactsPlusOptions.Instance = this; // Update the instance manually when options change
         }
     }
 }
