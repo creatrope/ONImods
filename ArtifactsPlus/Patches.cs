@@ -994,7 +994,7 @@ namespace ArtifactsPlus
         {
             new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions)); // Register the options
 
-            // Determine logging state based on mod path
+            // turn on logging if we are installed locally, otherwise off.
             string modDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             bool enableCustomLog = modDir != null && modDir.IndexOf("Local", StringComparison.OrdinalIgnoreCase) >= 0;
             Patches.logger.SetLoggingState(enableCustomLog);
