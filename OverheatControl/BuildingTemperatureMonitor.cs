@@ -32,7 +32,7 @@ namespace OverheatControl
             if ((UnityEngine.Object)GameClock.Instance != null)
             {
                 float time = GameClock.Instance.GetTime();
-                if ((double)time - (double)this.lastCheckTime < 5.0)
+                if ((double)time - (double)this.lastCheckTime < Patches.TemperatureCheckInterval)
                     return;
                 this.lastCheckTime = time;
             }

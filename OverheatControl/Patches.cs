@@ -22,6 +22,7 @@ namespace OverheatControl
         // Add static variables to store the settings
         public static float ShutdownPercent { get; private set; }
         public static float RestorePercent { get; private set; }
+        public static float TemperatureCheckInterval { get; private set; }
 
         private static bool staticInitialized = false;
 
@@ -38,14 +39,15 @@ namespace OverheatControl
             // Determine if we are in the "Local" mod directory
             string modDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             bool enableCustomLog = modDir != null && modDir.IndexOf("Local", StringComparison.OrdinalIgnoreCase) >= 0;
-
-            ShutdownPercent = POptions.ReadSettings<ModOptions>()?.ShutdownPercent ?? 90f;
-            RestorePercent = POptions.ReadSettings<ModOptions>()?.RestorePercent ?? 80f;
-
             // Set logger state based on directory
             Patches.logger.SetLoggingState(enableCustomLog);
 
-            string optionsJson = JsonConvert.SerializeObject(new { ShutdownPercent, RestorePercent, enableCustomLog }, Formatting.Indented);
+            var options = POptions.ReadSettings<ModOptions>();
+            ShutdownPercent = options?.ShutdownPercent ?? 90f;
+            RestorePercent = options?.RestorePercent ?? 80f;
+            TemperatureCheckInterval = options?.TemperatureCheckInterval ?? 5f;
+                      
+            string optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
             Patches.logger.LogDebug($"Settings loaded:\n{optionsJson}");
         }
 
@@ -117,6 +119,7 @@ namespace OverheatControl
         }
     }
 
+    [ConfigFile(SharedConfigLocation: true)]
     public class ModOptions
     {
         [JsonProperty]
@@ -128,6 +131,11 @@ namespace OverheatControl
         [Limit(5.0, 100.0)]
         [JsonProperty]
         public float RestorePercent { get; set; } = 80f;
+
+        [Option("Temperature Check Interval (seconds)", "How often to check building temperature for shutdown/restoration.")]
+        [Limit(1.0, 60.0)]
+        [JsonProperty]
+        public float TemperatureCheckInterval { get; set; } = 5f;
     }
 
     public class Mod : UserMod2
