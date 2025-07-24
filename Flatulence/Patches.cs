@@ -74,40 +74,18 @@ namespace FlatulenceMod
                 return _instance;
             }
         }
-
-        public bool EnableCustomLog { get; set; }
-
-        private FlatulenceConfig()
-        {
-            // Initialize default values or load from a configuration file
-            EnableCustomLog = false;
-        }
     }
 
     public class Patches
     {
-        public static HLib.Logger logger;
+        public static HLib.Logger logger = new HLib.Logger("FlatulenceMod");
 
         private static bool staticInitialized = false;
-        static Patches()
-        {
-            Patches.logger = new HLib.Logger("FlatulenceMod");
-            // Do not enable here; enable from options/config in OnLoad
-        }
-
         public static void OnLoad()
         {
             LocString.CreateLocStringKeys(typeof(STRINGS), null);
             var options = POptions.ReadSettings<ModOptions>() ?? new ModOptions();
 
-
-            if (options != null)
-            {
-                Patches.logger.SetLoggingState(options.EnableCustomLog);
-                Debug.Log($"[FlatulenceMod] Patches.logger {options.EnableCustomLog}");
-            }
-
-            // Ensure FlatulencePeriodic runs by attaching it to a GameObject
             var flatulenceGo = new GameObject("FlatulenceMod_FlatulencePeriodic");
             flatulenceGo.AddComponent<FlatulencePeriodic>();
             UnityEngine.Object.DontDestroyOnLoad(flatulenceGo);
@@ -720,10 +698,6 @@ namespace FlatulenceMod
 
     public class ModOptions
     {
-        [Option(STRINGS.OPTIONS.ENABLE_CUSTOM_OUTPUT_LOG, STRINGS.OPTIONS.ENABLE_CUSTOM_OUTPUT_LOG_DESC)]
-        [JsonProperty]
-        public bool EnableCustomLog { get; set; }
-
         [Option(STRINGS.OPTIONS.NO_FLATULENCE_PILL_RECIPE_TIME, STRINGS.OPTIONS.NO_FLATULENCE_PILL_RECIPE_TIME_DESC)]
         [JsonProperty]
         public float NoFlatulencePillRecipeTime { get; set; } = 5f;
