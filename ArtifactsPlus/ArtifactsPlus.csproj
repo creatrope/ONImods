@@ -30,6 +30,7 @@
     <EmbeddedResource Include="ArtifactsConfig.json" />
     <None Include="mod.yaml" />
     <None Include="mod_info.yaml" />
+    <None Include="Sample.ArtifactsConfig.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,0 +1,19 @@
+{
+  "Artifacts": [
+    {
+      "ArtifactId": "artifact_sink",
+      "Attributes": {
+        "Cooking": 2,
+        "ToiletEfficiency": 1
+      }
+    },
+    {
+      "ArtifactId": "artifact_rubikscube",
+      "Attributes": { "Learning": 2 }
+    },
+    {
+      "ArtifactId": "artifact_obelisk",
+      "Attributes": { "Decor": 3 }
+    }
+  ]
+}
