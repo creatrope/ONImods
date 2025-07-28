@@ -35,6 +35,10 @@ namespace NatureReserveFix
             harmony.PatchAll();
             Options = new NatureReserveFixOptions();
             new POptions().RegisterOptions(this, typeof(NatureReserveFixOptions));
+
+            var go = new GameObject("BatchRoomUpdater");
+            UnityEngine.Object.DontDestroyOnLoad(go);
+            go.AddComponent<BatchRoomUpdater>();
         }
     }
 
@@ -71,11 +75,9 @@ namespace NatureReserveFix
         }
     }
 
-    [HarmonyPatch(typeof(Game), "Update")]
-    public static class Game_Update_BatchRoomPatch
+    public class BatchRoomUpdater : MonoBehaviour
     {
-        [HarmonyPostfix]
-        public static void Postfix()
+        void Update()
         {
             RoomUpdateBatcher.ProcessBatch();
         }
