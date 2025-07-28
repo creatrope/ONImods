@@ -44,12 +44,12 @@ namespace ArtifactsPlus
                     )
                 },
                 display_details: new RoomDetails.Detail[] { RoomDetails.SIZE, RoomDetails.BUILDING_COUNT },
-                priority: 10,
+                priority: 0,
                 upgrade_paths: null,
                 single_assignee: false,
                 priority_building_use: false,
                 effects: new string[] { },
-                sortKey: 1
+                sortKey: 100
             );
             Db.Get().RoomTypes.Add(decorRoomType);
 
