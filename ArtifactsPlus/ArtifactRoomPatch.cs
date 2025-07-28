@@ -9,12 +9,7 @@ namespace ArtifactsPlus
     [HarmonyPatch(typeof(Db), "Initialize")]
     public static class DecoratedRoomTypePatch
     {
-        private static RoomConstraints.Constraint[] TESTROOM_CONSTRAINTS = new RoomConstraints.Constraint[] {
-            RoomConstraints.NO_INDUSTRIAL_MACHINERY,
-            RoomConstraints.MINIMUM_SIZE_12,
-            RoomConstraints.MAXIMUM_SIZE_64,
-            CustomConstraints.DECORATIVE_ITEM_SCORE // Use the existing decor constraint
-        };
+        public static Tag ItemPedestalTag = nameof(ItemPedestalTag).ToString().ToTag();
 
         [HarmonyPostfix]
         public static void Postfix(Db __instance)
@@ -24,24 +19,21 @@ namespace ArtifactsPlus
             // Debug print for decorMin
             Debug.Log($"[ArtifactsPlus] DecorRoom decorMin value: {decorMin}");
 
+            Debug.Log($"[ArtifactsPlus] CustomConstraints.ItemPedestalTag: {CustomConstraints.ItemPedestalTag}");
+
             var decorRoomType = new RoomType(
                 id: "DecorRoom",
                 name: "Decor Room",
                 description: "A room focused on decor. Passes all constraints.",
                 tooltip: "A decor room type.",
                 effect: null,
-                category: Db.Get().RoomTypeCategories.Park, // or Recreation if it exists
-                primary_constraint: RoomConstraints.DECORATIVE_ITEM_SCORE_20,
+                category: Db.Get().RoomTypeCategories.Park,
+                primary_constraint: CustomConstraints.PEDESTAL,
                 additional_constraints: new RoomConstraints.Constraint[] {
                     RoomConstraints.MINIMUM_SIZE_12,
                     RoomConstraints.MAXIMUM_SIZE_96,
                     RoomConstraints.NO_INDUSTRIAL_MACHINERY,
-                    new RoomConstraints.Constraint(
-                        (Func<KPrefabID, bool>)(bc => bc.HasTag(GameTags.Decoration)),
-                        (Func<Room, bool>)(room => CustomConstraints.CalculateDecorScore(room) >= decorMin),
-                        name: $"Minimum Decor ({decorMin})",
-                        description: $"Room must have at least {decorMin} decor."
-                    )
+                    CustomConstraints.DECORATIVE_ITEM_SCORE
                 },
                 display_details: new RoomDetails.Detail[] { RoomDetails.SIZE, RoomDetails.BUILDING_COUNT },
                 priority: 0,
@@ -51,17 +43,32 @@ namespace ArtifactsPlus
                 effects: new string[] { },
                 sortKey: 100
             );
-            Db.Get().RoomTypes.Add(decorRoomType);
+            Debug.Log($"[ArtifactsPlus] ItemPedestalTag: {ItemPedestalTag}");
 
-            // Debugging code to verify patch
-            var decorType = Db.Get().RoomTypes.TryGet("DecorRoom");
-            if (decorType != null)
+            if (!Patches.IsRoomsExpandedPresent)
             {
-                Debug.Log("[ArtifactsPlus] DecorRoomType successfully added: " + decorType.Id);
+                // Only add if not already present
+                if (Db.Get().RoomTypes.TryGet("DecorRoom") == null)
+                {
+                    Db.Get().RoomTypes.Add(decorRoomType);
+                    var decorType = Db.Get().RoomTypes.TryGet("DecorRoom");
+                    if (decorType != null)
+                    {
+                        Debug.Log("[ArtifactsPlus] DecorRoomType successfully added: " + decorType.Id);
+                    }
+                    else
+                    {
+                        Debug.LogError("[ArtifactsPlus] DecorRoomType NOT found after patch!");
+                    }
+                }
+                else
+                {
+                    Debug.Log("[ArtifactsPlus] DecorRoomType already exists, skipping addition.");
+                }
             }
             else
             {
-                Debug.LogError("[ArtifactsPlus] DecorRoomType NOT found after patch!");
+                Debug.Log("[ArtifactsPlus] RoomsExpanded is present, skipping DecorRoomType addition.");
             }
         }
     }
@@ -74,6 +81,14 @@ namespace ArtifactsPlus
             name: $"Minimum Decor (Configurable)",
             description: $"Room must have at least the configured minimum decor."
         );
+        public static Tag ItemPedestalTag = nameof(ItemPedestalTag).ToString().ToTag();
+
+        public static RoomConstraints.Constraint PEDESTAL = new RoomConstraints.Constraint(
+                                                                bc => bc.HasTag("ItemPedestal"),
+                                                                null,
+                                                                name: STRINGS.ROOMS.CRITERIA.PEDESTAL.NAME,
+                                                                description: STRINGS.ROOMS.CRITERIA.PEDESTAL.DESCRIPTION);
+
 
         public static int CalculateDecorScore(Room room)
         {
@@ -99,10 +114,8 @@ namespace ArtifactsPlus
                     plantDecor += (int)decorProvider.decor.GetTotalValue();
             }
             int totalDecor = buildingDecor + plantDecor;
-            //if (buildingCount > 1)
-            //    Debug.Log($"[ArtifactsPlus] DecorScore Buildings={buildingDecor}(#{buildingCount}) + Plants={plantDecor}(#{plantCount}) -> {totalDecor}");
             return totalDecor;
         }
     }
- 
+
 }

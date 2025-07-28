@@ -26,6 +26,10 @@ namespace ArtifactsPlus
     public static class Patches
     {
         public static HLib.Logger logger = new HLib.Logger("ArtifactsPlus");
+
+        // Add this static flag
+        public static bool IsRoomsExpandedPresent = false;
+
         public static void OnLoad()
         {
         }
@@ -290,9 +294,9 @@ namespace ArtifactsPlus
                 return result;
             }
 
-            if (!isInDecorRoom(artifact))
+            if (!isInActivatingRoom(artifact))
             {
-                result.ShortCircuited = "NotInDecorRoom";
+                result.ShortCircuited = "not in ActivatingRoom";
                 return result;
             }
 
@@ -303,6 +307,22 @@ namespace ArtifactsPlus
 
             result.MeetsAll = true;
             return result;
+        }
+
+        public static bool isInActivatingRoom(GameObject artifact)
+        {
+            if (artifact == null || artifact.transform == null)
+                return false;
+            int cell = Grid.PosToCell(artifact.transform.position);
+            var cavity = Game.Instance?.roomProber?.GetCavityForCell(cell);
+            var room = cavity?.room;
+            if (room != null && room.roomType != null)
+            {
+                if (room.roomType.Id == "DecorRoom" ||
+                    (room.roomType.Id != null && room.roomType.Id.IndexOf("Museum", StringComparison.OrdinalIgnoreCase) >= 0))
+                    return true;
+            }
+            return false;
         }
 
         public static bool isInDecorRoom(GameObject artifact)
@@ -737,7 +757,7 @@ namespace ArtifactsPlus
                     var config = GetArtifactConfig(artifact.GetComponent<KPrefabID>()?.PrefabTag.Name);
                     if (config == null) continue;
 
-                    bool inScope = GetMinionsInSameWorld(artifact).Contains(minion);
+                        bool inScope = GetMinionsInSameWorld(artifact).Contains(minion);
 
                     if (inScope)
                     {
@@ -1073,11 +1093,13 @@ namespace ArtifactsPlus
         }
     }
 
-    public class Mod : UserMod2
+    public class Mod : KMod.UserMod2
     {
         public override void OnLoad(Harmony harmony)
         {
-            new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions)); // Register the options
+           base.OnLoad(harmony);
+
+           new POptions().RegisterOptions(this, typeof(ArtifactsPlusOptions)); // Register the options
 
             var options = ArtifactsPlusOptions.Instance;
             if (options != null)
@@ -1106,6 +1128,34 @@ namespace ArtifactsPlus
             ArtifactStateTracker.LoadArtifactConfig(); // fallback to default
 
             ArtifactsPlusKeybindHandler.Register(new PPatchManager(harmony));
+        }
+
+        public override void OnAllModsLoaded(Harmony harmony, IReadOnlyList<KMod.Mod> mods)
+        {
+            base.OnAllModsLoaded(harmony, mods);
+            List<string> activeMods = new List<string>();
+            foreach (KMod.Mod mod in mods)
+            {
+                if (mod.IsActive())
+                {
+                    activeMods.Add(mod.staticID);
+                    // Set the flag if RoomsExpanded is present
+                    if (mod.staticID == "pether-pg.RoomsExpanded")
+                    {
+                        Patches.IsRoomsExpandedPresent = true;
+                        Patches.logger.LogDebug("[ArtifactsPlus] Detected pether-pg.RoomsExpanded mod. Setting IsRoomsExpandedPresent = true.");
+                    }
+                }
+            }
+
+            // Print the list of active mods
+            Patches.logger.LogDebug("[ArtifactsPlus] Active mods:");
+            foreach (var modId in activeMods)
+            {
+                Patches.logger.LogDebug($"- {modId}");
+            }
+
+            //CrossModManager.Initalize(activeMods);
         }
     }
 

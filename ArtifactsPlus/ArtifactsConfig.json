@@ -1,5 +1,5 @@
 {
-  "Neighbors": 4,
+  "Neighbors": 6,
   "Artifacts": [
     {
       "ArtifactId": "artifact_sink",
