@@ -24,6 +24,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Archive", "Archive", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Templates", "Templates", "{186AE015-10F6-41DD-8663-E7DB169DA089}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\mod.yaml = ..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\mod.yaml
+		..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\mod_info.yaml = ..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\mod_info.yaml
+		..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\MyTemplate.vstemplate = ..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\MyTemplate.vstemplate
+		..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\Patches.cs = ..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\Patches.cs
+		..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\Project.csproj = ..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\Project.csproj
+		..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\__TemplateIcon.ico = ..\..\Visual Studio 2022\Templates\ProjectTemplates\ONI21\__TemplateIcon.ico
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HLib", "HLib\HLib.csproj", "{F446A1C4-7859-4B1A-A508-32997511C3BF}"
 EndProject
@@ -63,11 +71,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NatureReserveFix", "NatureR
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QOL", "QOL\QOL.csproj", "{312EC64E-4F4F-4BC8-801B-53FB2D64F52E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SerializeTes", "SerializeTes\SerializeTes.csproj", "{3585D39F-5CDB-4EBB-9F3A-F4CEBCBA3208}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LifeSpeed", "LifeSpeed\LifeSpeed.csproj", "{F9883F21-D9B0-476E-816D-C28E6F376682}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CritterRename", "CritterRename\CritterRename.csproj", "{D5456564-F691-4FB7-A4F0-F11280B53DCB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CafePlus", "CafePlus\CafePlus.csproj", "{7E0A3603-E620-4334-A0E4-312FC931D951}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -127,10 +135,6 @@ Global
 		{312EC64E-4F4F-4BC8-801B-53FB2D64F52E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{312EC64E-4F4F-4BC8-801B-53FB2D64F52E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{312EC64E-4F4F-4BC8-801B-53FB2D64F52E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3585D39F-5CDB-4EBB-9F3A-F4CEBCBA3208}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3585D39F-5CDB-4EBB-9F3A-F4CEBCBA3208}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3585D39F-5CDB-4EBB-9F3A-F4CEBCBA3208}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3585D39F-5CDB-4EBB-9F3A-F4CEBCBA3208}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F9883F21-D9B0-476E-816D-C28E6F376682}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F9883F21-D9B0-476E-816D-C28E6F376682}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9883F21-D9B0-476E-816D-C28E6F376682}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -139,6 +143,10 @@ Global
 		{D5456564-F691-4FB7-A4F0-F11280B53DCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D5456564-F691-4FB7-A4F0-F11280B53DCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D5456564-F691-4FB7-A4F0-F11280B53DCB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E0A3603-E620-4334-A0E4-312FC931D951}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E0A3603-E620-4334-A0E4-312FC931D951}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E0A3603-E620-4334-A0E4-312FC931D951}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E0A3603-E620-4334-A0E4-312FC931D951}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
