@@ -29,18 +29,13 @@ namespace CafePlus
             int idx = Db.Get().Diseases.GetIndex(MilkGermId);
             if (idx == -1)
             {
-                Debug.Log("[CafePlus][GermRegistrationPatch] MilkGerm not found, adding new MilkGerm.");
                 var germ = new MilkGerm();
                 Db.Get().Diseases.Add(germ);
             }
             MilkGermIdx = Db.Get().Diseases.GetIndex(MilkGermId);
-            Debug.Log($"[CafePlus][GermRegistrationPatch] MilkGermIdx set to: {MilkGermIdx}");
 
             if (!Db.Get().effects.Exists("EspressoPlus"))
             {
-                //PrintEspressoEffect();
-
-                // Change showInUI to true so the effect appears in the minion's status
                 Effect espressoPlus = new Effect(
                     "EspressoPlus",
                     "Drank Espresso with Milk",
@@ -61,38 +56,6 @@ namespace CafePlus
                     Db.Get().effects.Add(espressoPlus);
                 }
                 var effect = Db.Get().effects.Get("EspressoPlus");
-                Debug.Log("[CafePlus][GermRegistrationPatch] EspressoPlus effect created and added to Db.");
-            }
-        }
-
-        public static void PrintEspressoEffect()
-        {
-            if (Db.Get().effects.Exists("Espresso"))
-            {
-                var espressoEffect = Db.Get().effects.Get("Espresso");
-                Debug.Log("[CafePlus] --- Espresso Effect Dump ---");
-                Debug.Log($"Id: {espressoEffect.Id}");
-                Debug.Log($"Name: {espressoEffect.Name}");
-                Debug.Log($"Description: {espressoEffect.description}");
-                Debug.Log($"Duration: {espressoEffect.duration}");
-                Debug.Log($"ShowInUI: {espressoEffect.showInUI}");
-                Debug.Log($"IsBad: {espressoEffect.isBad}");
-                Debug.Log($"CanStack: {espressoEffect.isBad}"); // No can_stack property, using isBad
-                Debug.Log($"EmoteAnim: {espressoEffect.emoteAnim}");
-                Debug.Log($"EmoteCooldown: {espressoEffect.emoteCooldown}");
-                Debug.Log($"StompGroup: {espressoEffect.stompGroup}");
-                Debug.Log($"CustomIcon: {espressoEffect.customIcon}");
-                Debug.Log($"Tag: {espressoEffect.tag}");
-                Debug.Log($"ImmunityEffectsNames: {(espressoEffect.immunityEffectsNames != null ? string.Join(",", espressoEffect.immunityEffectsNames) : "null")}");
-                Debug.Log($"Modifiers:");
-                foreach (var modifier in espressoEffect.SelfModifiers)
-                {
-                    Debug.Log($"  AttributeId: {modifier.AttributeId}, Value: {modifier.Value}, Description: {modifier.Description}");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[CafePlus] Espresso effect not found in Db.Get().effects.");
             }
         }
     }
@@ -134,20 +97,14 @@ namespace CafePlus
 
             if (contents.element == milkElement.id)
             {
-                Debug.Log($"[CafePlus] Converting Milk to Water in Espresso Machine. Mass: {contents.mass}, Temp: {contents.temperature}, Germs: {contents.diseaseCount}");
-
                 int germIdx = CafePlusGermRegistrationPatch.MilkGermIdx;
-                Debug.Log($"[CafePlus][MilkToWater_ConduitConsumerPatch] germIdx: {germIdx}");
                 if (germIdx == -1)
                 {
                     germIdx = Db.Get().Diseases.GetIndex(CafePlusGermRegistrationPatch.MilkGermId);
-                    Debug.Log($"[CafePlus][MilkToWater_ConduitConsumerPatch] germIdx (fetched): {germIdx}");
                 }
 
                 var removed = conduit_mgr.RemoveElement(cell, contents.mass);
-                Debug.Log($"[CafePlus][MilkToWater_ConduitConsumerPatch] removed.mass: {removed.mass}, removed.temperature: {removed.temperature}");
 
-                Debug.Log("[CafePlus][MilkToWater_ConduitConsumerPatch] Adding liquid to storage...");
                 storage.AddLiquid(
                     SimHashes.Water,
                     removed.mass,
@@ -170,26 +127,18 @@ namespace CafePlus
     {
         static void Postfix(EspressoMachineWorkable __instance, WorkerBase worker)
         {
-            Debug.Log("[CafePlus][EspressoMachineWorkable_OnCompleteWork] Postfix called __instance: {__instance} worker: {worker}.");
-
             Storage storage = __instance.GetComponent<Storage>();
-            Debug.Log($"[CafePlus][EspressoMachineWorkable_OnCompleteWork] storage: {storage}");
             if (storage != null)
             {
                 float amount_consumed;
                 SimUtil.DiseaseInfo disease_info1;
                 float aggregate_temperature;
-                Debug.Log("[CafePlus][EspressoMachineWorkable_OnCompleteWork] Calling storage.ConsumeAndGetDisease...");
                 storage.ConsumeAndGetDisease(GameTags.Water, EspressoMachine.WATER_MASS_PER_USE, out amount_consumed, out disease_info1, out aggregate_temperature);
 
-                Debug.Log($"[CafePlus][EspressoMachineWorkable_OnCompleteWork] amount_consumed: {amount_consumed}, disease_info1.idx: {disease_info1.idx}, disease_info1.count: {disease_info1.count}");
-
                 int milkGermIdx = CafePlusGermRegistrationPatch.MilkGermIdx;
-                Debug.Log($"[CafePlus][EspressoMachineWorkable_OnCompleteWork] milkGermIdx: {milkGermIdx}");
                 if (milkGermIdx == -1)
                 {
                     milkGermIdx = Db.Get().Diseases.GetIndex(CafePlusGermRegistrationPatch.MilkGermId);
-                    Debug.Log($"[CafePlus][EspressoMachineWorkable_OnCompleteWork] milkGermIdx (fetched): {milkGermIdx}");
                 }
 
                 var effects = worker.GetComponent<Effects>();
@@ -198,12 +147,12 @@ namespace CafePlus
                     if (disease_info1.idx == milkGermIdx && disease_info1.count > 0)
                     {
                         effects.Add("EspressoPlus", true);
-                        Debug.Log("[CafePlus] Milk germ was present in the water just consumed by EspressoMachineWorkable! EspressoPlus effect added.");
+                        Debug.Log("[CafePlus] Milk Present, EspressoPlus effect added.");
                     }
                     else
                     {
                         effects.Add("Espresso", true);
-                        Debug.Log("[CafePlus] Default Espresso effect added to worker.");
+                        Debug.Log("[CafePlus] Milk NOT Present, Espresso effect added.");
                     }
                 }
                 else
@@ -227,7 +176,6 @@ namespace CafePlus
             if (MilkElement == null)
             {
                 MilkElement = ElementLoader.FindElementByName("Milk");
-                Debug.Log($"[CafePlus][Mod] MilkElement (lazy): {MilkElement}");
                 if (MilkElement == null)
                     Debug.LogWarning("[CafePlus][Mod] MilkElement is null!");
             }
@@ -239,11 +187,10 @@ namespace CafePlus
             Debug.Log("[CafePlus][Mod] OnLoad called.");
             harmony.PatchAll();
             PUtil.InitLibrary();
-            Debug.Log("[CafePlus][Mod] PatchAll and PUtil.InitLibrary called.");
-            // Do NOT call ElementLoader.FindElementByName here!
         }
     }
 
+    // kinda weird, but this gives us a way to track the milk through the system
     public class MilkGerm : Disease
     {
         public MilkGerm()
