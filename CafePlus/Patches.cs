@@ -160,4 +160,31 @@ namespace CafePlus
             Debug.Log("[CafePlus] LastConsumedLiquidComponent ensured on EspressoMachine (AddOrGet): " + go.name);
         }
     }
+
+    [HarmonyPatch(typeof(EspressoMachineConfig), "ConfigureBuildingTemplate")]
+    public static class EspressoMachineConfig_ConfigureBuildingTemplate_AnyLiquidPatch
+    {
+        static void Postfix(GameObject go, Tag prefab_tag)
+        {
+            // Patch storage filter to accept any liquid
+            var storage = go.GetComponent<Storage>();
+            if (storage != null)
+            {
+                storage.storageFilters = new List<Tag> { GameTags.Liquid };
+                Debug.Log("[CafePlus] Patched EspressoMachine storage filter to accept any liquid.");
+            }
+
+            // Patch ConduitConsumer to accept any liquid
+            var consumer = go.GetComponent<ConduitConsumer>();
+            if (consumer != null)
+            {
+                consumer.capacityTag = GameTags.Liquid;
+                Debug.Log("[CafePlus] Patched EspressoMachine ConduitConsumer to accept and store any liquid.");
+            }
+
+            Debug.Log("[CafePlus] called AddOrGet<EspressoMachine>();");
+
+            go.AddOrGet<EspressoMachine>();
+        }
+    }
 }

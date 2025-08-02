@@ -48,6 +48,11 @@
     <None Include="mod.yaml" />
     <None Include="mod_info.yaml" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\publicized_assemblies\Assembly-CSharp.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PlatformTarget>AnyCPU</PlatformTarget>
