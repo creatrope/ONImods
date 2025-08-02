@@ -11,6 +11,7 @@ using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TUNING;
 using UnityEngine;
 using Klei;
@@ -18,14 +19,13 @@ using Klei.AI;
 
 namespace CafePlus
 {
-    // Track the last consumed Element per machine
     public class LastConsumedLiquidComponent : MonoBehaviour
     {
         public Element lastConsumedLiquid;
     }
 
     [HarmonyPatch(typeof(ConduitConsumer), "Consume")]
-    public static class MilkToWater_ConduitConsumerPatch
+    public static class ConduitConsumerPatch
     {
         static void Prefix(ConduitConsumer __instance, float dt, ConduitFlow conduit_mgr)
         {
@@ -40,14 +40,10 @@ namespace CafePlus
             if (contents.mass <= 0)
                 return;
 
-            var milkElement = Mod.GetMilkElement();
-            if (milkElement == null)
-                return;
-
             var storage = __instance.storage;
             if (storage == null)
             {
-                Debug.LogWarning("[CafePlus][MilkToWater_ConduitConsumerPatch] __instance.storage is null!");
+                Debug.LogWarning("[CafePlus][ConduitConsumerPatch] __instance.storage is null!");
                 return;
             }
             float storageCapacity = storage.capacityKg;
@@ -63,7 +59,8 @@ namespace CafePlus
             if (lastLiquidComp != null)
                 lastLiquidComp.lastConsumedLiquid = ElementLoader.FindElementByHash(contents.element);
 
-            if (contents.element == milkElement.id)
+            // Only convert the mapped element to water if it's in the mapping
+            if (LiquidEffectMap.LiquidToEffects.ContainsKey(contents.element))
             {
                 var removed = conduit_mgr.RemoveElement(cell, contents.mass);
 
@@ -80,73 +77,66 @@ namespace CafePlus
         }
     }
 
-    [HarmonyPatch(typeof(EspressoMachineWorkable), "OnCompleteWork")]
-    public static class EspressoMachineWorkable_OnCompleteWork_MilkBonusPatch
+    public static class LiquidEffectMap
     {
-        static void Postfix(EspressoMachineWorkable __instance, WorkerBase worker)
+        // Map element id to a list of effect ids
+        public static readonly Dictionary<SimHashes, List<string>> LiquidToEffects = new Dictionary<SimHashes, List<string>>
         {
-            // Print the internal name of the last consumed element
-            var go = __instance.gameObject;
-            var lastLiquidComp = go.GetComponent<LastConsumedLiquidComponent>();
-            if (lastLiquidComp != null && lastLiquidComp.lastConsumedLiquid != null)
-                Debug.Log($"[CafePlus] lastConsumedLiquid: {lastLiquidComp.lastConsumedLiquid.id}");
-            else
-                Debug.LogWarning("[CafePlus] LastConsumedLiquidComponent is missing or lastConsumedLiquid is null on this EspressoMachine!");
-
-            Storage storage = __instance.GetComponent<Storage>();
-            if (storage != null)
-            {
-                float amount_consumed;
-                float aggregate_temperature;
-                storage.ConsumeAndGetDisease(GameTags.Water, EspressoMachine.WATER_MASS_PER_USE, out amount_consumed, out SimUtil.DiseaseInfo disease_info, out aggregate_temperature);
-
-                var effects = worker.GetComponent<Effects>();
-                if (effects != null)
-                {
-                    // Compare directly to the Milk element
-                    if (lastLiquidComp != null && lastLiquidComp.lastConsumedLiquid == Mod.GetMilkElement())
-                    {
-                        //effects.Add("EspressoPlus", true);
-                        Debug.Log("[CafePlus] Milk Present, EspressoPlus effect added.");
-                    }
-                    else
-                    {
-                        //effects.Add("Espresso", true);
-                        Debug.Log("[CafePlus] Milk NOT Present, Espresso effect added.");
-                    }
-                }
-                else
-                {
-                    Debug.LogWarning("[CafePlus] Effects component not found on worker.");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[CafePlus][EspressoMachineWorkable_OnCompleteWork] storage is null!");
-            }
-        }
+            { SimHashes.Water, new List<string> { "Espresso" } },
+            { SimHashes.Milk, new List<string> { "EspressoPlus" } }, 
+            { SimHashes.Petroleum, new List<string> { "PetroleumBuzz" } },
+            { SimHashes.CrudeOil, new List<string> { "OilSlick" } }
+        };
     }
 
     public static class Mod
     {
-        public static Element MilkElement;
-
-        public static Element GetMilkElement()
-        {
-            if (MilkElement == null)
-            {
-                MilkElement = ElementLoader.FindElementByName("Milk");
-                if (MilkElement == null)
-                    Debug.LogWarning("[CafePlus][Mod] MilkElement is null!");
-            }
-            return MilkElement;
-        }
-
+ 
         public static void OnLoad(Harmony harmony)
         {
             Debug.Log("[CafePlus][Mod] OnLoad called.");
             harmony.PatchAll();
             PUtil.InitLibrary();
+        }
+
+        public static void RegisterAllEffects()
+        {
+            Debug.Log("[CafePlus][RegisterAllEffects] Entered RegisterAllEffects()");
+            var db = Db.Get();
+            if (db == null)
+            {
+                Debug.LogError("[CafePlus][RegisterAllEffects] Db.Get() returned null!");
+                return;
+            }
+            if (db.effects == null)
+            {
+                Debug.LogError("[CafePlus][RegisterAllEffects] db.effects is null!");
+                return;
+            }
+
+            var effectIds = LiquidEffectMap.LiquidToEffects.SelectMany(pair => pair.Value).Distinct().ToList();
+            Debug.Log($"[CafePlus][RegisterAllEffects] Effect IDs to register: {string.Join(", ", effectIds)}");
+
+            foreach (var effectId in effectIds)
+            {
+                Debug.Log($"[CafePlus][RegisterAllEffects] Checking effect: {effectId}");
+                if (!db.effects.Exists(effectId))
+                {
+
+                    var effect = new Effect(
+                        id: effectId,
+                        name: effectId,
+                        description: $"Effect for {effectId}",
+                        duration: 120f, // 2 minutes
+                        show_in_ui: true,
+                        is_bad: false,
+                        trigger_floating_text: true
+                    );
+                    db.effects.Add(effect);
+                    Debug.Log($"[CafePlus][RegisterAllEffects] Registered new effect: {effectId}");
+                }
+            }
+            Debug.Log("[CafePlus][RegisterAllEffects] Finished RegisterAllEffects()");
         }
     }
 
@@ -196,6 +186,7 @@ namespace CafePlus
 
             Debug.Log("[CafePlus] called AddOrGet<EspressoMachine>();");
             go.AddOrGet<EspressoMachine>();
+
         }
     }
 
@@ -244,5 +235,97 @@ namespace CafePlus
         }
 
         public Tag GetSelectedOption() => selectedOption;
+    }
+
+    [HarmonyPatch(typeof(EspressoMachineWorkable), "OnCompleteWork")]
+    public static class EspressoMachineWorkable_OnCompleteWork_CustomPrefix
+    {
+        static bool Prefix(EspressoMachineWorkable __instance, WorkerBase worker)
+        {
+            var go = __instance.gameObject;
+            var storage = __instance.GetComponent<Storage>();
+            if (storage != null)
+            {
+                float amount_consumed;
+                float aggregate_temperature;
+                SimUtil.DiseaseInfo disease_info1;
+                SimUtil.DiseaseInfo disease_info2;
+
+                // Find any available liquid in storage
+                PrimaryElement foundLiquid = null;
+                foreach (var item in storage.items)
+                {
+                    if (item is GameObject goItem)
+                    {
+                        var pe = goItem.GetComponent<PrimaryElement>();
+                        if (pe != null && pe.Element.IsLiquid)
+                        {
+                            foundLiquid = pe;
+                            break;
+                        }
+                    }
+                }
+
+                Tag liquidTag = GameTags.Water;
+                string liquidName = "None";
+                if (foundLiquid != null)
+                {
+                    liquidTag = foundLiquid.Element.tag;
+                    liquidName = foundLiquid.Element.name;
+                }
+
+                storage.ConsumeAndGetDisease(liquidTag, EspressoMachine.WATER_MASS_PER_USE, out amount_consumed, out disease_info1, out aggregate_temperature);
+                storage.ConsumeAndGetDisease(EspressoMachine.INGREDIENT_TAG, EspressoMachine.INGREDIENT_MASS_PER_USE, out amount_consumed, out disease_info2, out aggregate_temperature);
+
+                Debug.Log($"[CafePlus] Consumed liquid: {liquidName} ({liquidTag})");
+
+                GermExposureMonitor.Instance smi = worker.GetSMI<GermExposureMonitor.Instance>();
+                if (smi != null)
+                {
+                    smi.TryInjectDisease(disease_info1.idx, disease_info1.count, liquidTag, Sickness.InfectionVector.Digestion);
+                    smi.TryInjectDisease(disease_info2.idx, disease_info2.count, EspressoMachine.INGREDIENT_TAG, Sickness.InfectionVector.Digestion);
+                }
+
+                Effects effects = worker.GetComponent<Effects>();
+                if (effects != null)
+                {
+                    if (foundLiquid != null)
+                    {
+                        var elementHash = foundLiquid.Element.id;
+                        if (LiquidEffectMap.LiquidToEffects.TryGetValue(elementHash, out var effectList))
+                        {
+                            foreach (var effect in effectList)
+                            {
+                                var db = Db.Get();
+                                if (db != null && db.effects != null && db.effects.Exists(effect) != null)
+                                {
+                                    effects.Add(effect, true);
+                                    Debug.Log($"[CafePlus] Added effect '{effect}' for element {elementHash}.");
+                                }
+                                else
+                                {
+                                    Debug.LogWarning($"[CafePlus] Effect '{effect}' does not exist in db.effects (or db does not exist) and was not added.");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[CafePlus][EspressoMachineWorkable_OnCompleteWork] storage is null!");
+            }
+            // Skip the original method
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(Db), "Initialize")]
+    public static class CafePlus_Db_Initialize_Patch
+    {
+        static void Postfix()
+        {
+            CafePlus.Mod.RegisterAllEffects();
+        }
     }
 }
