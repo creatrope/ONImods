@@ -156,13 +156,21 @@ namespace CafePlus
         static void Postfix(EspressoMachine __instance)
         {
             var go = __instance.gameObject;
-            var comp = go.AddOrGet<LastConsumedLiquidComponent>();
-            Debug.Log("[CafePlus] LastConsumedLiquidComponent ensured on EspressoMachine (AddOrGet): " + go.name);
+            // Ensure the LastConsumedLiquidComponent is present
+            if (go.GetComponent<LastConsumedLiquidComponent>() == null)
+            {
+                go.AddComponent<LastConsumedLiquidComponent>();
+                Debug.Log("[CafePlus] LastConsumedLiquidComponent added to EspressoMachine: " + go.name);
+            }
+            else
+            {
+                Debug.Log("[CafePlus] LastConsumedLiquidComponent already present on EspressoMachine: " + go.name);
+            }
         }
     }
 
     [HarmonyPatch(typeof(EspressoMachineConfig), "ConfigureBuildingTemplate")]
-    public static class EspressoMachineConfig_ConfigureBuildingTemplate_AnyLiquidPatch
+    public static class EspressoMachineConfig_ConfigureBuildingTemplate_CombinedPatch
     {
         static void Postfix(GameObject go, Tag prefab_tag)
         {
@@ -182,9 +190,59 @@ namespace CafePlus
                 Debug.Log("[CafePlus] Patched EspressoMachine ConduitConsumer to accept and store any liquid.");
             }
 
-            Debug.Log("[CafePlus] called AddOrGet<EspressoMachine>();");
+            // Attach the FewOption side screen component
+            go.AddOrGet<EspressoMachineFewOptions>();
+            Debug.Log("[CafePlus] Added FewOptionSideScreen to EspressoMachine.");
 
+            Debug.Log("[CafePlus] called AddOrGet<EspressoMachine>();");
             go.AddOrGet<EspressoMachine>();
         }
+    }
+
+    [HarmonyPatch(typeof(EspressoMachine), "OnSpawn")]
+    public static class EspressoMachine_OnSpawn_AddFewOptionSideScreen
+    {
+        static void Postfix(global::EspressoMachine __instance)
+        {
+            var go = __instance.gameObject;
+            if (go.GetComponent<EspressoMachineFewOptions>() == null)
+            {
+                go.AddComponent<EspressoMachineFewOptions>();
+                Debug.Log("[CafePlus] FewOptionSideScreen added to EspressoMachine: " + go.name);
+            }
+        }
+    }
+
+    public class EspressoMachineFewOptions : KMonoBehaviour, FewOptionSideScreen.IFewOptionSideScreen
+    {
+        private static readonly FewOptionSideScreen.IFewOptionSideScreen.Option[] options = new[]
+        {
+            new FewOptionSideScreen.IFewOptionSideScreen.Option
+            {
+                tag = new Tag("Option1"),
+                labelText = "Option 1",
+                tooltipText = "First option",
+                iconSpriteColorTuple = new Tuple<UnityEngine.Sprite, UnityEngine.Color>(null, UnityEngine.Color.white)
+            },
+            new FewOptionSideScreen.IFewOptionSideScreen.Option
+            {
+                tag = new Tag("Option2"),
+                labelText = "Option 2",
+                tooltipText = "Second option",
+                iconSpriteColorTuple = new Tuple<UnityEngine.Sprite, UnityEngine.Color>(null, UnityEngine.Color.white)
+            }
+        };
+
+        private Tag selectedOption = options[0].tag;
+
+        public FewOptionSideScreen.IFewOptionSideScreen.Option[] GetOptions() => options;
+
+        public void OnOptionSelected(FewOptionSideScreen.IFewOptionSideScreen.Option option)
+        {
+            selectedOption = option.tag;
+            Debug.Log("[CafePlus] EspressoMachineFewOptions: Selected " + option.labelText);
+        }
+
+        public Tag GetSelectedOption() => selectedOption;
     }
 }
