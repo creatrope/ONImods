@@ -113,6 +113,9 @@ namespace CafePlus
 
     public class EspressoMachineFewOptions : KMonoBehaviour, FewOptionSideScreen.IFewOptionSideScreen
     {
+        [Serialize]
+        private Tag selectedOption = CafePlusRecipes.All[0].LiquidIngredient;
+
         private static readonly FewOptionSideScreen.IFewOptionSideScreen.Option[] options =
             CafePlusRecipes.All
                 .Select(recipe => new FewOptionSideScreen.IFewOptionSideScreen.Option
@@ -123,8 +126,6 @@ namespace CafePlus
                     iconSpriteColorTuple = Def.GetUISprite(recipe.LiquidIngredient),
                 })
                 .ToArray();
-
-        private Tag selectedOption = options[0].tag;
 
         public FewOptionSideScreen.IFewOptionSideScreen.Option[] GetOptions() => options;
 
@@ -147,10 +148,20 @@ namespace CafePlus
         }
 
         public Tag GetSelectedOption() => selectedOption;
+
+        protected override void OnSpawn()
+        {
+            base.OnSpawn();
+            // Restore selection to RecipeComponent on load
+            var recipeComponent = GetComponent<RecipeComponent>();
+            if (recipeComponent != null)
+            {
+                var recipe = CafePlusRecipes.All.FirstOrDefault(r => r.LiquidIngredient == selectedOption);
+                recipeComponent.SetSelectedRecipe(recipe);
+            }
+        }
     }
 
-    //[HarmonyPatch(typeof(EspressoMachineWorkable), "OnCompleteWork")]
- 
     [HarmonyPatch(typeof(Db), "Initialize")]
     public static class CafePlus_Db_Initialize_Patch
     {
@@ -308,7 +319,6 @@ namespace CafePlus
         }
     }
 
-    // Add this new component to store the selected input liquid and recipe
     public class RecipeComponent : KMonoBehaviour
     {
         [Serialize]
@@ -319,7 +329,7 @@ namespace CafePlus
 
         public CafePlusRecipe SelectedRecipe = null;
 
-        public override void OnSpawn()
+        protected override void OnSpawn()
         {
             base.OnSpawn();
             if (!string.IsNullOrEmpty(SelectedRecipeName))
