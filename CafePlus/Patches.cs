@@ -38,12 +38,13 @@ namespace CafePlus
                 Debug.LogWarning("[CafePlus] Db or db.effects is null, cannot register effects.");
                 return;
             }
+            Debug.Log("[CafePlus] RegisterAllEffects call.");
 
             foreach (var recipe in CafePlusRecipes.All)
             {
                 foreach (var effectId in recipe.Effects)
                 {
-                    if (db.effects.Exists(effectId) == null)
+                    if (!db.effects.Exists(effectId))
                     {
                         var effect = new Effect(
                             id: effectId,
@@ -167,6 +168,7 @@ namespace CafePlus
     {
         static void Postfix()
         {
+            Debug.Log("[CafePlus] CafePlus_Db_Initialize_Patch.Postfix called.");
             CafePlus.Mod.RegisterAllEffects();
         }
     }
@@ -359,10 +361,12 @@ namespace CafePlus
             var recipeComponent = __instance.GetComponent<RecipeComponent>();
             Tag inputLiquid = GameTags.Water;
             string recipeName = "Unknown";
+            List<string> effectIds = null;
             if (recipeComponent != null && recipeComponent.SelectedRecipe != null)
             {
                 inputLiquid = recipeComponent.InputLiquid;
                 recipeName = recipeComponent.SelectedRecipe.Name;
+                effectIds = recipeComponent.SelectedRecipe.Effects;
             }
 
             storage.ConsumeAndGetDisease(inputLiquid, EspressoMachine.WATER_MASS_PER_USE, out amount_consumed, out disease_info1, out aggregate_temperature);
@@ -376,6 +380,19 @@ namespace CafePlus
             }
 
             Effects effects = worker.GetComponent<Effects>();
+            if (effects != null && effectIds != null)
+            {
+                foreach (var effectId in effectIds)
+                {
+                    effects.Add(effectId, true);
+                    Debug.Log($"[CafePlus] Applied effect '{effectId}' to worker.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[CafePlus] No effects applied for recipe '{recipeName}'.");
+            }
+
             Debug.Log($"[CafePlus] Giving {recipeName} effect");
 
             // Skip original
