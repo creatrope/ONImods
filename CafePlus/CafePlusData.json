@@ -1,0 +1,126 @@
+{
+  "Recipes": [
+    {
+      "Name": "Water Espresso",
+      "LiquidIngredient": "Water",
+      "Effects": ["Espresso"],
+      "AllowedUsers": "Standard"
+    },
+    {
+      "Name": "Milk Espresso",
+      "LiquidIngredient": "Milk",
+      "Effects": ["EspressoPlus"],
+      "AllowedUsers": "Standard"
+    },
+    {
+      "Name": "Petroleum Buzz",
+      "LiquidIngredient": "Petroleum",
+      "Effects": ["PetroleumBuzz"],
+      "AllowedUsers": "Bionic"
+    },
+    {
+      "Name": "Oil Slick",
+      "LiquidIngredient": "CrudeOil",
+      "Effects": [ "OilSlick" ],
+      "AllowedUsers": "Bionic"
+    },
+    {
+      "Name": "Irish Coffee",
+      "LiquidIngredient": "Ethanol",
+      "Effects": [ "Drunk" ],
+      "AllowedUsers": "Standard"
+    }
+  ],
+  "EffectModifiers": {
+    "Espresso": [
+      {
+        "AttributeId": "QualityOfLife",
+        "Value": 4.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "Athletics",
+        "Value": 1.0,
+        "IsMultiplier": false
+      }
+    ],
+    "EspressoPlus": [
+      {
+        "AttributeId": "QualityOfLife",
+        "Value": 4.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "Athletics",
+        "Value": 1.0,
+        "IsMultiplier": false
+      }
+    ],
+    "PetroleumBuzz": [
+      {
+        "AttributeId": "QualityOfLife",
+        "Value": 4.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "Athletics",
+        "Value": 1.0,
+        "IsMultiplier": false
+      }
+    ],
+    "OilSlick": [
+      {
+        "AttributeId": "QualityOfLife",
+        "Value": 4.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "Athletics",
+        "Value": 1.0,
+        "IsMultiplier": false
+      }
+    ],
+    "Drunk": [
+      {
+        "AttributeId": "Athletics",
+        "Value": -2.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "Machinery",
+        "Value": -2.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "Learning",
+        "Value": -1.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "Strength",
+        "Value": -1.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "Digging",
+        "Value": -1.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "QualityOfLife",
+        "Value": 2.0,
+        "IsMultiplier": false
+      },
+      {
+        "AttributeId": "BladderDelta",
+        "Value": 0.2,
+        "IsMultiplier": true
+      },
+      {
+        "AttributeId": "StressReduction",
+        "Value": 0.1,
+        "IsMultiplier": true
+      }
+    ]
+  }
+}

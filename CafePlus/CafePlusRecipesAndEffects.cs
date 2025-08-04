@@ -1,117 +1,114 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using Klei;
 using Klei.AI;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace CafePlus
 {
     public class CafePlusRecipe
     {
-        public string Name { get; }
-        public Tag LiquidIngredient { get; }
-        public List<string> Effects { get; }
-        public RecipeUserType AllowedUsers { get; } // Remove 'set;' to match the type signature
+        public string Name { get; set; }
+        public string LiquidIngredient { get; set; } // Store as string for JSON, convert to Tag at runtime
+        public List<string> Effects { get; set; }
+        public RecipeUserType AllowedUsers { get; set; }
 
-        public CafePlusRecipe(string name, Tag liquidIngredient, List<string> effects, RecipeUserType allowedUsers)
-        {
-            Name = name;
-            LiquidIngredient = liquidIngredient;
-            Effects = effects;
-            AllowedUsers = allowedUsers;
-        }
+        [JsonIgnore]
+        public Tag LiquidIngredientTag => ElementLoader.FindElementByHash((SimHashes)Enum.Parse(typeof(SimHashes), LiquidIngredient)).tag;
     }
 
     public class EffectModifier
     {
-        public string AttributeId { get; }
-        public float Value { get; }
-        public bool IsMultiplier { get; }
+        public string AttributeId { get; set; }
+        public float Value { get; set; }
+        public bool IsMultiplier { get; set; }
+    }
 
-        public EffectModifier(string attributeId, float value, bool isMultiplier = false)
-        {
-            AttributeId = attributeId;
-            Value = value;
-            IsMultiplier = isMultiplier;
-        }
+    public class CafePlusData
+    {
+        public List<CafePlusRecipe> Recipes { get; set; }
+        public Dictionary<string, List<EffectModifier>> EffectModifiers { get; set; }
     }
 
     public static class CafePlusRecipes
     {
-        private static readonly Tag WaterTag = ElementLoader.FindElementByHash(SimHashes.Water).tag;
-        private static readonly Tag MilkTag = ElementLoader.FindElementByHash(SimHashes.Milk).tag;
-        private static readonly Tag PetroleumTag = ElementLoader.FindElementByHash(SimHashes.Petroleum).tag;
-        private static readonly Tag CrudeOilTag = ElementLoader.FindElementByHash(SimHashes.CrudeOil).tag;
+        public static readonly List<CafePlusRecipe> All;
+        public static readonly Dictionary<string, CafePlusRecipe> ByName;
 
-        public static readonly CafePlusRecipe WaterEspresso = new CafePlusRecipe(
-            "Water Espresso",
-            WaterTag,
-            new List<string> { "Espresso" },
-            RecipeUserType.Standard
-        );
-
-        public static readonly CafePlusRecipe MilkEspresso = new CafePlusRecipe(
-            "Milk Espresso",
-            MilkTag,
-            new List<string> { "EspressoPlus" },
-            RecipeUserType.Standard
-        );
-
-        public static readonly CafePlusRecipe PetroleumBuzz = new CafePlusRecipe(
-            "Petroleum Buzz",
-            PetroleumTag,
-            new List<string> { "PetroleumBuzz" },
-            RecipeUserType.Bionic
-        );
-
-        public static readonly CafePlusRecipe OilSlick = new CafePlusRecipe(
-            "Oil Slick",
-            CrudeOilTag,
-            new List<string> { "OilSlick" },
-            RecipeUserType.Bionic
-        );
-
-        public static readonly List<CafePlusRecipe> All = new List<CafePlusRecipe>
+        static CafePlusRecipes()
         {
-            WaterEspresso,
-            MilkEspresso,
-            PetroleumBuzz,
-            OilSlick
-        };
-
-        public static readonly Dictionary<string, CafePlusRecipe> ByName =
-            All.ToDictionary(r => r.Name, r => r);
+            var data = CafePlusDataLoader.LoadJsonResource();
+            All = data.Recipes ?? new List<CafePlusRecipe>();
+            ByName = All.ToDictionary(r => r.Name, r => r);
+        }
     }
 
     public static class CafePlusEffectModifiers
     {
-        public static readonly Dictionary<string, List<EffectModifier>> Modifiers = new Dictionary<string, List<EffectModifier>>
+        public static readonly Dictionary<string, List<EffectModifier>> Modifiers;
+
+        static CafePlusEffectModifiers()
         {
-            { "Espresso", new List<EffectModifier>
+            var data = CafePlusDataLoader.LoadJsonResource();
+            Modifiers = data.EffectModifiers ?? new Dictionary<string, List<EffectModifier>>();
+        }
+    }
+
+    public static class CafePlusDataLoader
+    {
+        private const string ResourceName = "CafePlus.CafePlusData.json";
+
+        public static CafePlusData LoadJsonResource()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            try
+            {
+                using (Stream stream = assembly.GetManifestResourceStream(ResourceName))
                 {
-                    new EffectModifier("QualityOfLife", 4f),
-                    new EffectModifier("Athletics", 1f)
-                }
-            },
-            { "EspressoPlus", new List<EffectModifier>
-                {
-                    new EffectModifier("QualityOfLife", 4f),
-                    new EffectModifier("Athletics", 1f)
-                }
-            },
-            { "PetroleumBuzz", new List<EffectModifier>
-                {
-                    new EffectModifier("QualityOfLife", 4f),
-                    new EffectModifier("Athletics", 1f)
-                }
-            },
-            { "OilSlick", new List<EffectModifier>
-                {
-                    new EffectModifier("QualityOfLife", 4f),
-                    new EffectModifier("Athletics", 1f)
+                    if (stream == null)
+                    {
+                        Debug.LogError($"[CafePlus] Embedded resource '{ResourceName}' not found.");
+                        Debug.LogError("[CafePlus] Available resources:");
+                        foreach (var res in assembly.GetManifestResourceNames())
+                            Debug.LogError("[CafePlus] Resource: " + res);
+                        return new CafePlusData
+                        {
+                            Recipes = new List<CafePlusRecipe>(),
+                            EffectModifiers = new Dictionary<string, List<EffectModifier>>()
+                        };
+                    }
+                    using (StreamReader reader = new StreamReader(stream))
+                    {
+                        string json = reader.ReadToEnd();
+                        try
+                        {
+                            return JsonConvert.DeserializeObject<CafePlusData>(json);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogError($"[CafePlus] Failed to parse CafePlusData.json: {ex}");
+                            return new CafePlusData
+                            {
+                                Recipes = new List<CafePlusRecipe>(),
+                                EffectModifiers = new Dictionary<string, List<EffectModifier>>()
+                            };
+                        }
+                    }
                 }
             }
-        };
+            catch (Exception ex)
+            {
+                Debug.LogError($"[CafePlus] Unexpected error loading CafePlusData.json: {ex}");
+                return new CafePlusData
+                {
+                    Recipes = new List<CafePlusRecipe>(),
+                    EffectModifiers = new Dictionary<string, List<EffectModifier>>()
+                };
+            }
+        }
     }
 }
