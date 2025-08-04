@@ -148,6 +148,14 @@ namespace CafePlus
             {
                 recipe = CafePlusRecipes.All.FirstOrDefault(r => r.LiquidIngredient == option.tag);
                 recipeComponent.SetSelectedRecipe(recipe);
+
+                // Update storage filter and conduit consumer to match the selected recipe
+                var storage = GetComponent<Storage>();
+                if (storage != null)
+                    storage.storageFilters = new List<Tag> { recipe.LiquidIngredient, EspressoMachine.INGREDIENT_TAG };
+                var consumer = GetComponent<ConduitConsumer>();
+                if (consumer != null)
+                    consumer.capacityTag = recipe.LiquidIngredient;
             }
 
             Debug.Log($"[CafePlus] EspressoMachineFewOptions: Selected {option.labelText}");
@@ -166,6 +174,14 @@ namespace CafePlus
             {
                 var recipe = CafePlusRecipes.All.FirstOrDefault(r => r.LiquidIngredient == selectedOption);
                 recipeComponent.SetSelectedRecipe(recipe);
+
+                // Ensure storage filter and conduit consumer are set on spawn
+                var storage = GetComponent<Storage>();
+                if (storage != null && recipe != null)
+                    storage.storageFilters = new List<Tag> { recipe.LiquidIngredient, EspressoMachine.INGREDIENT_TAG };
+                var consumer = GetComponent<ConduitConsumer>();
+                if (consumer != null && recipe != null)
+                    consumer.capacityTag = recipe.LiquidIngredient;
             }
         }
     }
