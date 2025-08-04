@@ -23,7 +23,7 @@
 	</Target>
     <ItemGroup>
     <Reference Include="0Harmony" HintPath="$(ONIManaged)\0Harmony.dll" />
-    <Reference Include="Assembly-CSharp" HintPath="$(ONIManaged)\Assembly-CSharp.dll" />
+    <Reference Include="Assembly-CSharp" HintPath="$(PublicizedPath)\Assembly-CSharp.dll" />
     <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ONIManaged)\Assembly-CSharp-firstpass.dll" />
     <Reference Include="Newtonsoft.Json" HintPath="$(ONIManaged)\Newtonsoft.Json.dll" />
     <Reference Include="PLib" HintPath="..\packages\PLib.4.17.1\lib\net471\PLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
@@ -39,4 +39,20 @@
     <Reference Include="UnityEngine.CoreModule" HintPath="$(ONIManaged)\UnityEngine.CoreModule.dll" />
     <Reference Include="UnityEngine.UI" HintPath="$(ONIManaged)\UnityEngine.UI.dll" />
   </ItemGroup>
+
+  <PropertyGroup>
+	<PublicizedPath>C:\Users\sendh\Downloads</PublicizedPath>
+    <OriginalAssembly>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll</OriginalAssembly>
+    <PublicizerExe>C:\Users\sendh\.dotnet\tools\assembly-publicizer.exe</PublicizerExe>
+    <PublicizedAssembly>$(PublicizedPath)\Assembly-CSharp.dll</PublicizedAssembly>
+    <PublicizerCmd>"$(PublicizerExe)" "$(OriginalAssembly)" -o "$(PublicizedAssembly)"</PublicizerCmd>
+  </PropertyGroup>
+
+  <Target Name="EnsurePublicizedAssembly" BeforeTargets="Build"
+        Condition="!Exists('$(PublicizedAssembly)')">
+  <Message Importance="high" Text="Publicized assembly not found. Building: $(PublicizedAssembly)" />
+  <Message Importance="high" Text="Publicizer command line: $(PublicizerCmd)" />
+  <Exec Command="$(PublicizerCmd)" ContinueOnError="false" />
+  <Message Importance="high" Text="AssemblyPublicizer execution finished." />
+</Target>
 </Project>
