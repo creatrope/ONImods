@@ -205,12 +205,14 @@ namespace CafePlus
             var recipeComponent = smi.GetComponent<RecipeComponent>();
             if (storage == null || recipeComponent == null)
             {
+                if (recipeComponent == null)
+                    Debug.LogError("[CafePlus] ERROR: RecipeComponent is missing in IsReadyPostfix!");
                 __result = false;
                 return;
             }
 
-            // Use InputLiquid from RecipeComponent if valid, otherwise fallback to water
-            Tag inputLiquid = recipeComponent.InputLiquid.IsValid ? recipeComponent.InputLiquid : GameTags.Water;
+            // Use InputLiquid from RecipeComponent if valid, otherwise fallback to DirtyWater
+            Tag inputLiquid = recipeComponent.InputLiquid.IsValid ? recipeComponent.InputLiquid : GameTags.DirtyWater;
 
             PrimaryElement primaryElement = storage.FindPrimaryElement(ElementLoader.GetElement(inputLiquid).id);
 
@@ -256,11 +258,15 @@ namespace CafePlus
             descs.Add(ingredientDesc);
 
             // Use InputLiquid from RecipeComponent instead of FewOptions
-            Tag inputLiquid = GameTags.Water; // fallback
+            Tag inputLiquid = GameTags.DirtyWater; // fallback
             var recipeComponent = __instance.GetComponent<RecipeComponent>();
             if (recipeComponent != null)
             {
                 inputLiquid = recipeComponent.InputLiquid;
+            }
+            else
+            {
+                Debug.LogError("[CafePlus] ERROR: RecipeComponent is missing in GetDescriptors!");
             }
 
             // Inline AddRequirementDesc logic for inputLiquid
@@ -289,7 +295,7 @@ namespace CafePlus
     public class RecipeComponent : KMonoBehaviour
     {
         [Serialize]
-        public Tag InputLiquid = GameTags.Water; // Default fallback
+        public Tag InputLiquid = GameTags.DirtyWater; // Default fallback
 
         [Serialize]
         public string SelectedRecipeName = null;
@@ -306,7 +312,7 @@ namespace CafePlus
         public void SetSelectedRecipe(CafePlusRecipe recipe)
         {
             SelectedRecipe = recipe;
-            InputLiquid = recipe != null ? recipe.LiquidIngredient : GameTags.Water;
+            InputLiquid = recipe != null ? recipe.LiquidIngredient : GameTags.DirtyWater;
             SelectedRecipeName = recipe?.Name;
         }
     }
@@ -324,7 +330,7 @@ namespace CafePlus
 
             // Use selected recipe's input liquid
             var recipeComponent = __instance.GetComponent<RecipeComponent>();
-            Tag inputLiquid = GameTags.Water;
+            Tag inputLiquid = GameTags.DirtyWater;
             string recipeName = "Unknown";
             List<string> effectIds = null;
             if (recipeComponent != null && recipeComponent.SelectedRecipe != null)
@@ -410,6 +416,7 @@ namespace CafePlus
             var recipeComponent = smi.master.GetComponent<RecipeComponent>();
             if (recipeComponent == null)
             {
+                Debug.LogError("[CafePlus] ERROR: RecipeComponent is missing in CreateChore!");
                 Debug.Log("[CafePlus][Precondition] RecipeComponent is null on master.");
                 return;
             }
@@ -440,5 +447,5 @@ namespace CafePlus
             Debug.Log("[CafePlus] Added user type precondition to EspressoMachine chore.");
         }
     }
- }
+}
 
