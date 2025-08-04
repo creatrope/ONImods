@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ProjectName>CafePlus</ProjectName>
-    <ProjectGuid>{7e0a3603-e620-4334-a0e4-312fc931d951}</ProjectGuid>
+    <ProjectName>ONI21a</ProjectName>
+    <ProjectGuid>{d4c62e1d-2f5e-4e21-b0e5-df5f23fc9091}</ProjectGuid>
     <RootNamespace>$(ProjectName)</RootNamespace>
     <AssemblyName>$(ProjectName)</AssemblyName>
     <TargetFrameworkProfile />
@@ -22,7 +22,7 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup>
-    <ProjectGuid>{7E0A3603-E620-4334-A0E4-312FC931D951}</ProjectGuid>
+    <ProjectGuid>{D4C62E1D-2F5E-4E21-B0E5-DF5F23FC9091}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>$(ProjectName)</RootNamespace>
@@ -34,7 +34,6 @@
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <ItemGroup>
-    <Compile Include="EspressoMachineHelpers.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

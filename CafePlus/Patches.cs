@@ -16,82 +16,13 @@ using TUNING;
 using UnityEngine;
 using Klei;
 using Klei.AI;
+using STRINGS; // Add this namespace to access UI constants
 
 namespace CafePlus
 {
-    public class LastConsumedLiquidComponent : MonoBehaviour
+     public static class Mod
     {
-        public Element lastConsumedLiquid;
-    }
 
-    [HarmonyPatch(typeof(ConduitConsumer), "Consume")]
-    public static class ConduitConsumerPatch
-    {
-        static void Prefix(ConduitConsumer __instance, float dt, ConduitFlow conduit_mgr)
-        {
-            var go = __instance.gameObject;
-            if (go == null || go.GetComponent<EspressoMachine>() == null)
-                return;
-
-            var building = __instance.GetComponent<Building>();
-            var cell = building.GetUtilityInputCell();
-            var contents = conduit_mgr.GetContents(cell);
-
-            if (contents.mass <= 0)
-                return;
-
-            var storage = __instance.storage;
-            if (storage == null)
-            {
-                Debug.LogWarning("[CafePlus][ConduitConsumerPatch] __instance.storage is null!");
-                return;
-            }
-            float storageCapacity = storage.capacityKg;
-            float storageMass = storage.MassStored();
-
-            if (storageMass >= storageCapacity)
-            {
-                return;
-            }
-
-            // Save the actual Element reference
-            var lastLiquidComp = go.GetComponent<LastConsumedLiquidComponent>();
-            if (lastLiquidComp != null)
-                lastLiquidComp.lastConsumedLiquid = ElementLoader.FindElementByHash(contents.element);
-
-            // Only convert the mapped element to water if it's in the mapping
-            if (LiquidEffectMap.LiquidToEffects.ContainsKey(contents.element))
-            {
-                var removed = conduit_mgr.RemoveElement(cell, contents.mass);
-
-                storage.AddLiquid(
-                    SimHashes.Water,
-                    removed.mass,
-                    removed.temperature,
-                    byte.MinValue, // No disease/germ
-                    0,
-                    __instance.keepZeroMassObject,
-                    false
-                );
-            }
-        }
-    }
-
-    public static class LiquidEffectMap
-    {
-        // Map element id to a list of effect ids
-        public static readonly Dictionary<SimHashes, List<string>> LiquidToEffects = new Dictionary<SimHashes, List<string>>
-        {
-            { SimHashes.Water, new List<string> { "Espresso" } },
-            { SimHashes.Milk, new List<string> { "EspressoPlus" } }, 
-            { SimHashes.Petroleum, new List<string> { "PetroleumBuzz" } },
-            { SimHashes.CrudeOil, new List<string> { "OilSlick" } }
-        };
-    }
-
-    public static class Mod
-    {
- 
         public static void OnLoad(Harmony harmony)
         {
             Debug.Log("[CafePlus][Mod] OnLoad called.");
@@ -101,60 +32,32 @@ namespace CafePlus
 
         public static void RegisterAllEffects()
         {
-            Debug.Log("[CafePlus][RegisterAllEffects] Entered RegisterAllEffects()");
             var db = Db.Get();
-            if (db == null)
+            if (db == null || db.effects == null)
             {
-                Debug.LogError("[CafePlus][RegisterAllEffects] Db.Get() returned null!");
-                return;
-            }
-            if (db.effects == null)
-            {
-                Debug.LogError("[CafePlus][RegisterAllEffects] db.effects is null!");
+                Debug.LogWarning("[CafePlus] Db or db.effects is null, cannot register effects.");
                 return;
             }
 
-            var effectIds = LiquidEffectMap.LiquidToEffects.SelectMany(pair => pair.Value).Distinct().ToList();
-            Debug.Log($"[CafePlus][RegisterAllEffects] Effect IDs to register: {string.Join(", ", effectIds)}");
-
-            foreach (var effectId in effectIds)
+            foreach (var recipe in CafePlusRecipes.All)
             {
-                Debug.Log($"[CafePlus][RegisterAllEffects] Checking effect: {effectId}");
-                if (!db.effects.Exists(effectId))
+                foreach (var effectId in recipe.Effects)
                 {
-
-                    var effect = new Effect(
-                        id: effectId,
-                        name: effectId,
-                        description: $"Effect for {effectId}",
-                        duration: 120f, // 2 minutes
-                        show_in_ui: true,
-                        is_bad: false,
-                        trigger_floating_text: true
-                    );
-                    db.effects.Add(effect);
-                    Debug.Log($"[CafePlus][RegisterAllEffects] Registered new effect: {effectId}");
+                    if (db.effects.Exists(effectId) == null)
+                    {
+                        var effect = new Effect(
+                            id: effectId,
+                            name: effectId,
+                            description: $"CafePlus effect: {effectId}",
+                            duration: 15f,
+                            show_in_ui: true,
+                            trigger_floating_text: true,
+                            is_bad: false
+                        );
+                        db.effects.Add(effect);
+                        Debug.Log($"[CafePlus] Registered new effect: {effectId}");
+                    }
                 }
-            }
-            Debug.Log("[CafePlus][RegisterAllEffects] Finished RegisterAllEffects()");
-        }
-    }
-
-    [HarmonyPatch(typeof(EspressoMachine), "OnSpawn")]
-    public static class EspressoMachine_OnSpawn_AddLastConsumedLiquidComponent
-    {
-        static void Postfix(EspressoMachine __instance)
-        {
-            var go = __instance.gameObject;
-            // Ensure the LastConsumedLiquidComponent is present
-            if (go.GetComponent<LastConsumedLiquidComponent>() == null)
-            {
-                go.AddComponent<LastConsumedLiquidComponent>();
-                Debug.Log("[CafePlus] LastConsumedLiquidComponent added to EspressoMachine: " + go.name);
-            }
-            else
-            {
-                Debug.Log("[CafePlus] LastConsumedLiquidComponent already present on EspressoMachine: " + go.name);
             }
         }
     }
@@ -184,6 +87,10 @@ namespace CafePlus
             go.AddOrGet<EspressoMachineFewOptions>();
             Debug.Log("[CafePlus] Added FewOptionSideScreen to EspressoMachine.");
 
+            // Add RecipeComponent to the prefab
+            go.AddOrGet<RecipeComponent>();
+            Debug.Log("[CafePlus] Added RecipeComponent to EspressoMachine.");
+
             Debug.Log("[CafePlus] called AddOrGet<EspressoMachine>();");
             go.AddOrGet<EspressoMachine>();
 
@@ -206,23 +113,16 @@ namespace CafePlus
 
     public class EspressoMachineFewOptions : KMonoBehaviour, FewOptionSideScreen.IFewOptionSideScreen
     {
-        private static readonly FewOptionSideScreen.IFewOptionSideScreen.Option[] options = new[]
-        {
-            new FewOptionSideScreen.IFewOptionSideScreen.Option
-            {
-                tag = new Tag("Option1"),
-                labelText = "Option 1",
-                tooltipText = "First option",
-                iconSpriteColorTuple = new Tuple<UnityEngine.Sprite, UnityEngine.Color>(null, UnityEngine.Color.white)
-            },
-            new FewOptionSideScreen.IFewOptionSideScreen.Option
-            {
-                tag = new Tag("Option2"),
-                labelText = "Option 2",
-                tooltipText = "Second option",
-                iconSpriteColorTuple = new Tuple<UnityEngine.Sprite, UnityEngine.Color>(null, UnityEngine.Color.white)
-            }
-        };
+        private static readonly FewOptionSideScreen.IFewOptionSideScreen.Option[] options =
+            CafePlusRecipes.All
+                .Select(recipe => new FewOptionSideScreen.IFewOptionSideScreen.Option
+                {
+                    tag = recipe.LiquidIngredient,
+                    labelText = recipe.Name,
+                    tooltipText = $"Brew with {recipe.Name} ({string.Join(", ", recipe.Effects)})",
+                    iconSpriteColorTuple = new Tuple<UnityEngine.Sprite, UnityEngine.Color>(null, UnityEngine.Color.white)
+                })
+                .ToArray();
 
         private Tag selectedOption = options[0].tag;
 
@@ -231,95 +131,26 @@ namespace CafePlus
         public void OnOptionSelected(FewOptionSideScreen.IFewOptionSideScreen.Option option)
         {
             selectedOption = option.tag;
-            Debug.Log("[CafePlus] EspressoMachineFewOptions: Selected " + option.labelText);
+
+            // Set InputLiquid and SelectedRecipe in RecipeComponent
+            var recipeComponent = GetComponent<RecipeComponent>();
+            CafePlusRecipe recipe = null;
+            if (recipeComponent != null)
+            {
+                recipe = CafePlusRecipes.All.FirstOrDefault(r => r.LiquidIngredient == option.tag);
+                recipeComponent.SetSelectedRecipe(recipe);
+            }
+
+            Debug.Log($"[CafePlus] EspressoMachineFewOptions: Selected {option.labelText}");
+            Debug.Log($"[CafePlus] Selected InputLiquid: {option.tag}");
+            Debug.Log($"[CafePlus] Selected Recipe: {(recipe != null ? recipe.Name : "null")}");
         }
 
         public Tag GetSelectedOption() => selectedOption;
     }
 
-    [HarmonyPatch(typeof(EspressoMachineWorkable), "OnCompleteWork")]
-    public static class EspressoMachineWorkable_OnCompleteWork_CustomPrefix
-    {
-        static bool Prefix(EspressoMachineWorkable __instance, WorkerBase worker)
-        {
-            var go = __instance.gameObject;
-            var storage = __instance.GetComponent<Storage>();
-            if (storage != null)
-            {
-                float amount_consumed;
-                float aggregate_temperature;
-                SimUtil.DiseaseInfo disease_info1;
-                SimUtil.DiseaseInfo disease_info2;
-
-                // Find any available liquid in storage
-                PrimaryElement foundLiquid = null;
-                foreach (var item in storage.items)
-                {
-                    if (item is GameObject goItem)
-                    {
-                        var pe = goItem.GetComponent<PrimaryElement>();
-                        if (pe != null && pe.Element.IsLiquid)
-                        {
-                            foundLiquid = pe;
-                            break;
-                        }
-                    }
-                }
-
-                Tag liquidTag = GameTags.Water;
-                string liquidName = "None";
-                if (foundLiquid != null)
-                {
-                    liquidTag = foundLiquid.Element.tag;
-                    liquidName = foundLiquid.Element.name;
-                }
-
-                storage.ConsumeAndGetDisease(liquidTag, EspressoMachine.WATER_MASS_PER_USE, out amount_consumed, out disease_info1, out aggregate_temperature);
-                storage.ConsumeAndGetDisease(EspressoMachine.INGREDIENT_TAG, EspressoMachine.INGREDIENT_MASS_PER_USE, out amount_consumed, out disease_info2, out aggregate_temperature);
-
-                Debug.Log($"[CafePlus] Consumed liquid: {liquidName} ({liquidTag})");
-
-                GermExposureMonitor.Instance smi = worker.GetSMI<GermExposureMonitor.Instance>();
-                if (smi != null)
-                {
-                    smi.TryInjectDisease(disease_info1.idx, disease_info1.count, liquidTag, Sickness.InfectionVector.Digestion);
-                    smi.TryInjectDisease(disease_info2.idx, disease_info2.count, EspressoMachine.INGREDIENT_TAG, Sickness.InfectionVector.Digestion);
-                }
-
-                Effects effects = worker.GetComponent<Effects>();
-                if (effects != null)
-                {
-                    if (foundLiquid != null)
-                    {
-                        var elementHash = foundLiquid.Element.id;
-                        if (LiquidEffectMap.LiquidToEffects.TryGetValue(elementHash, out var effectList))
-                        {
-                            foreach (var effect in effectList)
-                            {
-                                var db = Db.Get();
-                                if (db != null && db.effects != null && db.effects.Exists(effect) != null)
-                                {
-                                    effects.Add(effect, true);
-                                    Debug.Log($"[CafePlus] Added effect '{effect}' for element {elementHash}.");
-                                }
-                                else
-                                {
-                                    Debug.LogWarning($"[CafePlus] Effect '{effect}' does not exist in db.effects (or db does not exist) and was not added.");
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[CafePlus][EspressoMachineWorkable_OnCompleteWork] storage is null!");
-            }
-            // Skip the original method
-            return false;
-        }
-    }
-
+    //[HarmonyPatch(typeof(EspressoMachineWorkable), "OnCompleteWork")]
+ 
     [HarmonyPatch(typeof(Db), "Initialize")]
     public static class CafePlus_Db_Initialize_Patch
     {
@@ -328,4 +159,226 @@ namespace CafePlus
             CafePlus.Mod.RegisterAllEffects();
         }
     }
+
+    public class CafePlusRecipe
+    {
+        public string Name { get; }
+        public Tag LiquidIngredient { get; }
+        public List<string> Effects { get; }
+
+        public CafePlusRecipe(string name, Tag liquidIngredient, List<string> effects)
+        {
+            Name = name;
+            LiquidIngredient = liquidIngredient;
+            Effects = effects;
+        }
+    }
+
+    public static class CafePlusRecipes
+    {
+        private static readonly Tag WaterTag = ElementLoader.FindElementByHash(SimHashes.Water).tag;
+        private static readonly Tag MilkTag = ElementLoader.FindElementByHash(SimHashes.Milk).tag;
+        private static readonly Tag PetroleumTag = ElementLoader.FindElementByHash(SimHashes.Petroleum).tag;
+        private static readonly Tag CrudeOilTag = ElementLoader.FindElementByHash(SimHashes.CrudeOil).tag;
+
+        public static readonly CafePlusRecipe WaterEspresso = new CafePlusRecipe(
+            "Water Espresso",
+             WaterTag,
+            new List<string> { "Espresso" }
+        );
+
+        public static readonly CafePlusRecipe MilkEspresso = new CafePlusRecipe(
+            "Milk Espresso",
+            MilkTag,
+            new List<string> { "EspressoPlus" }
+        );
+
+        public static readonly CafePlusRecipe PetroleumBuzz = new CafePlusRecipe(
+            "Petroleum Buzz",
+            PetroleumTag,
+            new List<string> { "PetroleumBuzz" }
+        );
+
+        public static readonly CafePlusRecipe OilSlick = new CafePlusRecipe(
+            "Oil Slick",
+            CrudeOilTag,
+            new List<string> { "OilSlick" }
+        );
+
+        public static readonly List<CafePlusRecipe> All = new List<CafePlusRecipe>
+        {
+            WaterEspresso,
+            MilkEspresso,
+            PetroleumBuzz,
+            OilSlick
+        };
+
+        // Optional: Map by name for quick lookup
+        public static readonly Dictionary<string, CafePlusRecipe> ByName =
+            All.ToDictionary(r => r.Name, r => r);
+    }
+
+     [HarmonyPatch(typeof(EspressoMachine.States), "IsReady")]
+    public static class EspressoMachine_States_IsReady_Prefix
+    {
+        static bool Prefix(EspressoMachine.StatesInstance smi, ref bool __result)
+        {
+            var machine = smi.master;
+            if (machine == null)
+            {
+                __result = false;
+                return false;
+            }
+
+            var storage = machine.GetComponent<Storage>();
+            var recipeComponent = machine.GetComponent<RecipeComponent>();
+            if (storage == null || recipeComponent == null)
+            {
+                __result = false;
+                return false;
+            }
+
+            // Use InputLiquid from RecipeComponent
+            Tag inputLiquid = recipeComponent.InputLiquid;
+
+            PrimaryElement primaryElement = storage.FindPrimaryElement(ElementLoader.GetElement(inputLiquid).id);
+
+            bool hasLiquid = primaryElement != null && primaryElement.Mass >= EspressoMachine.WATER_MASS_PER_USE;
+            bool hasIngredient = storage.GetAmountAvailable(EspressoMachine.INGREDIENT_TAG) >= EspressoMachine.INGREDIENT_MASS_PER_USE;
+
+            __result = hasLiquid && hasIngredient;
+            return false; // Skip original
+        }
+    }
+
+    [HarmonyPatch(typeof(EspressoMachine), "IGameObjectEffectDescriptor.GetDescriptors")]
+    public static class EspressoMachine_GetDescriptors_Prefix
+    {
+        static bool Prefix(EspressoMachine __instance, GameObject go, ref List<Descriptor> __result)
+        {
+            var descs = new List<Descriptor>();
+            Descriptor descriptor = new Descriptor();
+            descriptor.SetupDescriptor(
+                UI.BUILDINGEFFECTS.RECREATION,
+                UI.BUILDINGEFFECTS.TOOLTIPS.RECREATION,
+                Descriptor.DescriptorType.Effect
+            );
+            descs.Add(descriptor);
+
+            Effect.AddModifierDescriptions(__instance.gameObject, descs, "Espresso", true);
+
+            // Inline AddRequirementDesc logic for INGREDIENT_TAG
+            string ingredientName = EspressoMachine.INGREDIENT_TAG.ProperName();
+            Descriptor ingredientDesc = new Descriptor();
+            ingredientDesc.SetupDescriptor(
+                string.Format(
+                    UI.BUILDINGEFFECTS.ELEMENTCONSUMEDPERUSE,
+                    ingredientName,
+                    GameUtil.GetFormattedMass(EspressoMachine.INGREDIENT_MASS_PER_USE, floatFormat: "{0:0.##}")
+                ),
+                string.Format(
+                    UI.BUILDINGEFFECTS.TOOLTIPS.ELEMENTCONSUMEDPERUSE,
+                    ingredientName,
+                    GameUtil.GetFormattedMass(EspressoMachine.INGREDIENT_MASS_PER_USE, floatFormat: "{0:0.##}")
+                ),
+                Descriptor.DescriptorType.Requirement
+            );
+            descs.Add(ingredientDesc);
+
+            // Use InputLiquid from RecipeComponent instead of FewOptions
+            Tag inputLiquid = GameTags.Water; // fallback
+            var recipeComponent = __instance.GetComponent<RecipeComponent>();
+            if (recipeComponent != null)
+            {
+                inputLiquid = recipeComponent.InputLiquid;
+            }
+
+            // Inline AddRequirementDesc logic for inputLiquid
+            string liquidName = inputLiquid.ProperName();
+            Descriptor liquidDesc = new Descriptor();
+            liquidDesc.SetupDescriptor(
+                string.Format(
+                    UI.BUILDINGEFFECTS.ELEMENTCONSUMEDPERUSE,
+                    liquidName,
+                    GameUtil.GetFormattedMass(EspressoMachine.WATER_MASS_PER_USE, floatFormat: "{0:0.##}")
+                ),
+                string.Format(
+                    UI.BUILDINGEFFECTS.TOOLTIPS.ELEMENTCONSUMEDPERUSE,
+                    liquidName,
+                    GameUtil.GetFormattedMass(EspressoMachine.WATER_MASS_PER_USE, floatFormat: "{0:0.##}")
+                ),
+                Descriptor.DescriptorType.Requirement
+            );
+            descs.Add(liquidDesc);
+
+            __result = descs;
+            return false; // Skip original
+        }
+    }
+
+    // Add this new component to store the selected input liquid and recipe
+    public class RecipeComponent : KMonoBehaviour
+    {
+        public Tag InputLiquid = GameTags.Water; // Default fallback
+        public CafePlusRecipe SelectedRecipe = null;
+
+        public void SetInputLiquid(Tag tag)
+        {
+            InputLiquid = tag;
+        }
+        public Tag GetInputLiquid()
+        {
+            return InputLiquid;
+        }
+
+        public void SetSelectedRecipe(CafePlusRecipe recipe)
+        {
+            SelectedRecipe = recipe;
+            InputLiquid = recipe != null ? recipe.LiquidIngredient : GameTags.Water;
+        }
+        public CafePlusRecipe GetSelectedRecipe()
+        {
+            return SelectedRecipe;
+        }
+    }
+
+    [HarmonyPatch(typeof(EspressoMachine), "OnCompleteWork")]
+    public static class EspressoMachine_OnCompleteWork_Prefix
+    {
+        static bool Prefix(EspressoMachine __instance, WorkerBase worker)
+        {
+            var storage = __instance.GetComponent<Storage>();
+            float amount_consumed;
+            float aggregate_temperature;
+            SimUtil.DiseaseInfo disease_info1;
+            SimUtil.DiseaseInfo disease_info2;
+
+            // Use selected recipe's input liquid
+            var recipeComponent = __instance.GetComponent<RecipeComponent>();
+            Tag inputLiquid = GameTags.Water;
+            string recipeName = "Unknown";
+            if (recipeComponent != null && recipeComponent.SelectedRecipe != null)
+            {
+                inputLiquid = recipeComponent.InputLiquid;
+                recipeName = recipeComponent.SelectedRecipe.Name;
+            }
+
+            storage.ConsumeAndGetDisease(inputLiquid, EspressoMachine.WATER_MASS_PER_USE, out amount_consumed, out disease_info1, out aggregate_temperature);
+            storage.ConsumeAndGetDisease(EspressoMachine.INGREDIENT_TAG, EspressoMachine.INGREDIENT_MASS_PER_USE, out amount_consumed, out disease_info2, out aggregate_temperature);
+
+            GermExposureMonitor.Instance smi = worker.GetSMI<GermExposureMonitor.Instance>();
+            if (smi != null)
+            {
+                smi.TryInjectDisease(disease_info1.idx, disease_info1.count, inputLiquid, Sickness.InfectionVector.Digestion);
+                smi.TryInjectDisease(disease_info2.idx, disease_info2.count, EspressoMachine.INGREDIENT_TAG, Sickness.InfectionVector.Digestion);
+            }
+
+            Effects effects = worker.GetComponent<Effects>();
+            Debug.Log($"[CafePlus] Giving {recipeName} effect");
+
+            // Skip original
+            return false;
+        }
+    }
 }
+
