@@ -178,12 +178,14 @@ namespace CafePlus
         public string Name { get; }
         public Tag LiquidIngredient { get; }
         public List<string> Effects { get; }
+        public RecipeUserType AllowedUsers { get; }
 
-        public CafePlusRecipe(string name, Tag liquidIngredient, List<string> effects)
+        public CafePlusRecipe(string name, Tag liquidIngredient, List<string> effects, RecipeUserType allowedUsers)
         {
             Name = name;
             LiquidIngredient = liquidIngredient;
             Effects = effects;
+            AllowedUsers = allowedUsers;
         }
     }
 
@@ -196,26 +198,30 @@ namespace CafePlus
 
         public static readonly CafePlusRecipe WaterEspresso = new CafePlusRecipe(
             "Water Espresso",
-             WaterTag,
-            new List<string> { "Espresso" }
+            WaterTag,
+            new List<string> { "Espresso" },
+            RecipeUserType.Standard
         );
 
         public static readonly CafePlusRecipe MilkEspresso = new CafePlusRecipe(
             "Milk Espresso",
             MilkTag,
-            new List<string> { "EspressoPlus" }
+            new List<string> { "EspressoPlus" },
+            RecipeUserType.Standard
         );
 
         public static readonly CafePlusRecipe PetroleumBuzz = new CafePlusRecipe(
             "Petroleum Buzz",
             PetroleumTag,
-            new List<string> { "PetroleumBuzz" }
+            new List<string> { "PetroleumBuzz" },
+            RecipeUserType.Bionic
         );
 
         public static readonly CafePlusRecipe OilSlick = new CafePlusRecipe(
             "Oil Slick",
             CrudeOilTag,
-            new List<string> { "OilSlick" }
+            new List<string> { "OilSlick" },
+            RecipeUserType.Bionic
         );
 
         public static readonly List<CafePlusRecipe> All = new List<CafePlusRecipe>
@@ -399,5 +405,82 @@ namespace CafePlus
             return false;
         }
     }
+
+    [Flags]
+    public enum RecipeUserType
+    {
+        None = 0,
+        Standard = 1 << 0,
+        Bionic = 1 << 1,
+        // Add more types here as needed
+        All = Standard | Bionic
+    }
+
+    public static class RecipeUserTypeUtil
+    {
+        public static bool IsWorkerAllowed(WorkerBase worker, RecipeUserType allowed)
+        {
+            // Use GameTags.Minions.Models.Bionic and GameTags.Minions.Models.Standard for model checks
+            Tag minionModel = GameTags.Minions.Models.Standard;
+            if (worker != null && worker.gameObject != null)
+            {
+                // Check for bionic tag on the minion's tags
+                var tagComponent = worker.gameObject.GetComponent<KPrefabID>();
+                if (tagComponent != null && tagComponent.HasTag(GameTags.Minions.Models.Bionic))
+                    minionModel = GameTags.Minions.Models.Bionic;
+            }
+
+            if ((allowed & RecipeUserType.Bionic) != 0 && minionModel == GameTags.Minions.Models.Bionic)
+                return true;
+            if ((allowed & RecipeUserType.Standard) != 0 && minionModel == GameTags.Minions.Models.Standard)
+                return true;
+            return false;
+        }
+    }
+
+    [HarmonyPatch(typeof(EspressoMachine.States), nameof(EspressoMachine.States.CreateChore))]
+    public static class EspressoMachine_States_CreateChore_Patch
+    {
+        static void Postfix(EspressoMachine.StatesInstance smi, Chore __result)
+        {
+            if (__result == null)
+            {
+                Debug.Log("[CafePlus][Precondition] __result is null, skipping precondition.");
+                return;
+            }
+            var recipeComponent = smi.master.GetComponent<RecipeComponent>();
+            if (recipeComponent == null)
+            {
+                Debug.Log("[CafePlus][Precondition] RecipeComponent is null on master.");
+                return;
+            }
+            if (recipeComponent.SelectedRecipe == null)
+            {
+                Debug.Log("[CafePlus][Precondition] SelectedRecipe is null.");
+                return;
+            }
+
+            __result.AddPrecondition(
+                new Chore.Precondition
+                {
+                    id = "CafePlus:AllowedUserType",
+                    description = "Worker must match recipe allowed user type",
+                    fn = (ref Chore.Precondition.Context context, object data) =>
+                    {
+                        var worker = context.consumerState.worker;
+                        var go = worker?.gameObject;
+                        var tagComponent = go?.GetComponent<KPrefabID>();
+                        var hasBionicTag = tagComponent != null && tagComponent.HasTag(GameTags.Minions.Models.Bionic);
+                        var minionModel = hasBionicTag ? GameTags.Minions.Models.Bionic : GameTags.Minions.Models.Standard;
+                        var allowed = recipeComponent.SelectedRecipe.AllowedUsers;
+                        bool allowedResult = RecipeUserTypeUtil.IsWorkerAllowed(worker, allowed);
+                        return allowedResult;
+                    }
+                }
+            );
+            Debug.Log("[CafePlus] Added user type precondition to EspressoMachine chore.");
+        }
+    }
+
 }
 
