@@ -20,9 +20,8 @@ using STRINGS; // Add this namespace to access UI constants
 
 namespace CafePlus
 {
-     public static class Mod
+    public static class Mod
     {
-
         public static void OnLoad(Harmony harmony)
         {
             Debug.Log("[CafePlus][Mod] OnLoad called.");
@@ -55,6 +54,14 @@ namespace CafePlus
                             trigger_floating_text: true,
                             is_bad: false
                         );
+                        // Add modifiers if defined
+                        if (CafePlusEffectModifiers.Modifiers.TryGetValue(effectId, out var modifiers))
+                        {
+                            foreach (var mod in modifiers)
+                            {
+                                effect.Add(new AttributeModifier(mod.AttributeId, mod.Value, effectId, is_multiplier: mod.IsMultiplier));
+                            }
+                        }
                         db.effects.Add(effect);
                         Debug.Log($"[CafePlus] Registered new effect: {effectId}");
                     }
@@ -171,70 +178,6 @@ namespace CafePlus
             Debug.Log("[CafePlus] CafePlus_Db_Initialize_Patch.Postfix called.");
             CafePlus.Mod.RegisterAllEffects();
         }
-    }
-
-    public class CafePlusRecipe
-    {
-        public string Name { get; }
-        public Tag LiquidIngredient { get; }
-        public List<string> Effects { get; }
-        public RecipeUserType AllowedUsers { get; }
-
-        public CafePlusRecipe(string name, Tag liquidIngredient, List<string> effects, RecipeUserType allowedUsers)
-        {
-            Name = name;
-            LiquidIngredient = liquidIngredient;
-            Effects = effects;
-            AllowedUsers = allowedUsers;
-        }
-    }
-
-    public static class CafePlusRecipes
-    {
-        private static readonly Tag WaterTag = ElementLoader.FindElementByHash(SimHashes.Water).tag;
-        private static readonly Tag MilkTag = ElementLoader.FindElementByHash(SimHashes.Milk).tag;
-        private static readonly Tag PetroleumTag = ElementLoader.FindElementByHash(SimHashes.Petroleum).tag;
-        private static readonly Tag CrudeOilTag = ElementLoader.FindElementByHash(SimHashes.CrudeOil).tag;
-
-        public static readonly CafePlusRecipe WaterEspresso = new CafePlusRecipe(
-            "Water Espresso",
-            WaterTag,
-            new List<string> { "Espresso" },
-            RecipeUserType.Standard
-        );
-
-        public static readonly CafePlusRecipe MilkEspresso = new CafePlusRecipe(
-            "Milk Espresso",
-            MilkTag,
-            new List<string> { "EspressoPlus" },
-            RecipeUserType.Standard
-        );
-
-        public static readonly CafePlusRecipe PetroleumBuzz = new CafePlusRecipe(
-            "Petroleum Buzz",
-            PetroleumTag,
-            new List<string> { "PetroleumBuzz" },
-            RecipeUserType.Bionic
-        );
-
-        public static readonly CafePlusRecipe OilSlick = new CafePlusRecipe(
-            "Oil Slick",
-            CrudeOilTag,
-            new List<string> { "OilSlick" },
-            RecipeUserType.Bionic
-        );
-
-        public static readonly List<CafePlusRecipe> All = new List<CafePlusRecipe>
-        {
-            WaterEspresso,
-            MilkEspresso,
-            PetroleumBuzz,
-            OilSlick
-        };
-
-        // Optional: Map by name for quick lookup
-        public static readonly Dictionary<string, CafePlusRecipe> ByName =
-            All.ToDictionary(r => r.Name, r => r);
     }
 
     [HarmonyPatch(typeof(EspressoMachine.States), nameof(EspressoMachine.States.IsReady))]
@@ -475,12 +418,11 @@ namespace CafePlus
                         var allowed = recipeComponent.SelectedRecipe.AllowedUsers;
                         bool allowedResult = RecipeUserTypeUtil.IsWorkerAllowed(worker, allowed);
                         return allowedResult;
-                    }
+                    },
                 }
             );
             Debug.Log("[CafePlus] Added user type precondition to EspressoMachine chore.");
         }
     }
-
-}
+ }
 
