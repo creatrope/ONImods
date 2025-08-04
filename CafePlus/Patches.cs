@@ -120,7 +120,7 @@ namespace CafePlus
                     tag = recipe.LiquidIngredient,
                     labelText = recipe.Name,
                     tooltipText = $"Brew with {recipe.Name} ({string.Join(", ", recipe.Effects)})",
-                    iconSpriteColorTuple = new Tuple<UnityEngine.Sprite, UnityEngine.Color>(null, UnityEngine.Color.white)
+                    iconSpriteColorTuple = Def.GetUISprite(recipe.LiquidIngredient),
                 })
                 .ToArray();
 
@@ -218,28 +218,21 @@ namespace CafePlus
             All.ToDictionary(r => r.Name, r => r);
     }
 
-     [HarmonyPatch(typeof(EspressoMachine.States), "IsReady")]
-    public static class EspressoMachine_States_IsReady_Prefix
+    [HarmonyPatch(typeof(EspressoMachine.States), nameof(EspressoMachine.States.IsReady))]
+    public static class IsReadyPostfix
     {
-        static bool Prefix(EspressoMachine.StatesInstance smi, ref bool __result)
+        static void Postfix(EspressoMachine.StatesInstance smi, ref bool __result)
         {
-            var machine = smi.master;
-            if (machine == null)
-            {
-                __result = false;
-                return false;
-            }
-
-            var storage = machine.GetComponent<Storage>();
-            var recipeComponent = machine.GetComponent<RecipeComponent>();
+            var storage = smi.GetComponent<Storage>();
+            var recipeComponent = smi.GetComponent<RecipeComponent>();
             if (storage == null || recipeComponent == null)
             {
                 __result = false;
-                return false;
+                return;
             }
 
-            // Use InputLiquid from RecipeComponent
-            Tag inputLiquid = recipeComponent.InputLiquid;
+            // Use InputLiquid from RecipeComponent if valid, otherwise fallback to water
+            Tag inputLiquid = recipeComponent.InputLiquid.IsValid ? recipeComponent.InputLiquid : GameTags.Water;
 
             PrimaryElement primaryElement = storage.FindPrimaryElement(ElementLoader.GetElement(inputLiquid).id);
 
@@ -247,7 +240,6 @@ namespace CafePlus
             bool hasIngredient = storage.GetAmountAvailable(EspressoMachine.INGREDIENT_TAG) >= EspressoMachine.INGREDIENT_MASS_PER_USE;
 
             __result = hasLiquid && hasIngredient;
-            return false; // Skip original
         }
     }
 
@@ -319,33 +311,33 @@ namespace CafePlus
     // Add this new component to store the selected input liquid and recipe
     public class RecipeComponent : KMonoBehaviour
     {
+        [Serialize]
         public Tag InputLiquid = GameTags.Water; // Default fallback
+
+        [Serialize]
+        public string SelectedRecipeName = null;
+
         public CafePlusRecipe SelectedRecipe = null;
 
-        public void SetInputLiquid(Tag tag)
+        public override void OnSpawn()
         {
-            InputLiquid = tag;
-        }
-        public Tag GetInputLiquid()
-        {
-            return InputLiquid;
+            base.OnSpawn();
+            if (!string.IsNullOrEmpty(SelectedRecipeName))
+                SelectedRecipe = CafePlusRecipes.ByName.TryGetValue(SelectedRecipeName, out var recipe) ? recipe : null;
         }
 
         public void SetSelectedRecipe(CafePlusRecipe recipe)
         {
             SelectedRecipe = recipe;
             InputLiquid = recipe != null ? recipe.LiquidIngredient : GameTags.Water;
-        }
-        public CafePlusRecipe GetSelectedRecipe()
-        {
-            return SelectedRecipe;
+            SelectedRecipeName = recipe?.Name;
         }
     }
 
-    [HarmonyPatch(typeof(EspressoMachine), "OnCompleteWork")]
+    [HarmonyPatch(typeof(EspressoMachineWorkable), nameof(EspressoMachineWorkable.OnCompleteWork))]
     public static class EspressoMachine_OnCompleteWork_Prefix
     {
-        static bool Prefix(EspressoMachine __instance, WorkerBase worker)
+        public static bool Prefix(EspressoMachineWorkable __instance, WorkerBase worker)
         {
             var storage = __instance.GetComponent<Storage>();
             float amount_consumed;
