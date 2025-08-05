@@ -11,7 +11,7 @@ using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
-using STRINGS; // Add this namespace to access UI constants
+using STRINGS;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,12 +26,30 @@ namespace CafePlus
     {
         public static void OnLoad(Harmony harmony)
         {
-            Debug.Log("[CafePlus][Mod] OnLoad called.");
             harmony.PatchAll();
             PUtil.InitLibrary();
         }
 
-        public static void RegisterAllEffects()
+        public static void PrintLoadedRecipes()
+        {
+            Debug.Log("[CafePlus] Loaded Recipes:");
+            foreach (var recipe in CafePlusRecipes.All)
+            {
+                string recipeName = recipe.Recipe ?? "null";
+                string effectName = recipe.EffectName ?? "null";
+                string liquid = recipe.LiquidIngredient.IsValid ? recipe.LiquidIngredient.ToString() : "null";
+                string allowed = recipe.AllowedUsers ?? "null";
+                string modifiers = "";
+                if (recipe.Effect?.Modifiers != null && recipe.Effect.Modifiers.Count > 0)
+                {
+                    modifiers = " Modifiers: " + string.Join(", ",
+                        recipe.Effect.Modifiers.Select(m => $"{m.Key}={m.Value:+0.##;-0.##;0}"));
+                }
+                Debug.Log($"[CafePlus] Recipe: Name={recipeName}, Effect={effectName}, Liquid={liquid}, AllowedUsers={allowed}{modifiers}");
+            }
+        }
+
+        public static void RegisterAllRecipes()
         {
             var db = Db.Get();
             if (db == null || db.effects == null)
@@ -39,7 +57,7 @@ namespace CafePlus
 
             foreach (var recipe in CafePlusRecipes.All)
             {
-                var effectId = recipe.EffectName;
+                var effectId = recipe.Effect?.Name;
                 if (string.IsNullOrEmpty(effectId))
                     continue;
 
@@ -54,47 +72,12 @@ namespace CafePlus
                         trigger_floating_text: true,
                         is_bad: false
                     );
-                    if (recipe.Modifiers != null)
+                    if (recipe.Effect?.Modifiers != null)
                     {
-                        foreach (var mod in recipe.Modifiers)
+                        foreach (var mod in recipe.Effect.Modifiers)
                             effect.Add(new AttributeModifier(mod.Key, mod.Value, effectId));
                     }
-                    // Add this loop to register the modifier effects as well
-                    if (CafePlusEffectModifiers.Modifiers.ContainsKey(recipe.EffectName))
-                    {
-                        foreach (var mod in CafePlusEffectModifiers.Modifiers[recipe.EffectName])
-                        {
-                            effect.Add(new AttributeModifier(mod.AttributeId, mod.Value, effectId));
-                        }
-                    }
                     db.effects.Add(effect);
-                }
-            }
-
-            // Dump all recipes and effects after registration
-            Debug.Log("[CafePlus] ===== CafePlusRecipes.All =====");
-            foreach (var recipe in CafePlusRecipes.All)
-            {
-                Debug.Log($"[CafePlus][Recipe] EffectName: {recipe.EffectName}, LiquidIngredient: {recipe.LiquidIngredient}, AllowedUsers: {recipe.AllowedUsers}");
-                if (recipe.Modifiers != null)
-                {
-                    foreach (var mod in recipe.Modifiers)
-                        Debug.Log($"[CafePlus][Recipe]   Modifier: {mod.Key} = {mod.Value}");
-                }
-                if (recipe.Effects != null)
-                {
-                    Debug.Log($"[CafePlus][Recipe]   Effects: {string.Join(", ", recipe.Effects)}");
-                }
-            }
-
-            Debug.Log("[CafePlus] ===== Db Effects =====");
-            foreach (var effect in db.effects.resources)
-            {
-                Debug.Log($"[CafePlus][Effect] Id: {effect.Id}, Name: {effect.Name}, Desc: {effect.description}, Duration: {effect.duration}");
-                if (effect.SelfModifiers != null)
-                {
-                    foreach (var mod in effect.SelfModifiers)
-                        Debug.Log($"[CafePlus][Effect]   Modifier: {mod.AttributeId} = {mod.Value}");
                 }
             }
         }
@@ -105,33 +88,22 @@ namespace CafePlus
     {
         static void Postfix(GameObject go, Tag prefab_tag)
         {
-            // Patch storage filter to accept any liquid
             var storage = go.GetComponent<Storage>();
             if (storage != null)
             {
                 storage.storageFilters = new List<Tag> { GameTags.Liquid };
-                Debug.Log("[CafePlus] Patched EspressoMachine storage filter to accept any liquid.");
             }
 
-            // Patch ConduitConsumer to accept any liquid
             var consumer = go.GetComponent<ConduitConsumer>();
             if (consumer != null)
             {
                 consumer.capacityTag = GameTags.Liquid;
-                Debug.Log("[CafePlus] Patched EspressoMachine ConduitConsumer to accept and store any liquid.");
             }
 
-            // Attach the FewOption side screen component
             go.AddOrGet<EspressoMachineFewOptions>();
-            Debug.Log("[CafePlus] Added FewOptionSideScreen to EspressoMachine.");
-
-            // Add RecipeComponent to the prefab
             go.AddOrGet<RecipeComponent>();
-            Debug.Log("[CafePlus] Added RecipeComponent to EspressoMachine.");
-
-            Debug.Log("[CafePlus] called AddOrGet<EspressoMachine>();");
             go.AddOrGet<EspressoMachine>();
-
+            go.AddOrGet<EspressoMachineWorkable>();
         }
     }
 
@@ -141,11 +113,7 @@ namespace CafePlus
         static void Postfix(global::EspressoMachine __instance)
         {
             var go = __instance.gameObject;
-            if (go.GetComponent<EspressoMachineFewOptions>() == null)
-            {
-                go.AddComponent<EspressoMachineFewOptions>();
-                Debug.Log("[CafePlus] FewOptionSideScreen added to EspressoMachine: " + go.name);
-            }
+            go.AddOrGet<EspressoMachineFewOptions>();
         }
     }
 
@@ -159,13 +127,16 @@ namespace CafePlus
                 .Select(recipe =>
                 {
                     string effectName = recipe.EffectName;
-                    var modifiers = recipe.Modifiers;
                     string tooltip = $"Brew {effectName}";
-                    if (modifiers != null && modifiers.Count > 0)
+                    if (recipe.Effect?.Modifiers != null && recipe.Effect.Modifiers.Count > 0)
                     {
                         tooltip += "\nModifiers:";
-                        tooltip += "\n  • " + string.Join(", ", modifiers.Select(m => $"{m.Key} {(m.Value >= 0 ? "+" : "")}{m.Value}"));
+                        foreach (var mod in recipe.Effect.Modifiers)
+                        {
+                            tooltip += $"\n  {mod.Key}: {mod.Value:+0.##;-0.##;0}";
+                        }
                     }
+
                     return new FewOptionSideScreen.IFewOptionSideScreen.Option
                     {
                         tag = new Tag(effectName),
@@ -198,7 +169,7 @@ namespace CafePlus
 
             Debug.Log($"[CafePlus] EspressoMachineFewOptions: Selected {option.labelText}");
             Debug.Log($"[CafePlus] Selected InputLiquid: {(recipe != null ? recipe.LiquidIngredient : "null")}");
-            Debug.Log($"[CafePlus] Selected Recipe: {(recipe != null ? recipe.Name.ToString() : "null")}");
+            Debug.Log($"[CafePlus] Selected Recipe: {(recipe != null ? recipe.EffectName : "null")}");
         }
 
         public Tag GetSelectedOption() => selectedOption;
@@ -206,15 +177,12 @@ namespace CafePlus
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            // Restore selection to RecipeComponent on load
             var recipeComponent = GetComponent<RecipeComponent>();
             if (recipeComponent != null)
             {
-                // Use selectedOption.Name for lookup
                 var recipe = CafePlusRecipes.ByName.TryGetValue(selectedOption.Name, out var found) ? found : null;
                 recipeComponent.SetSelectedRecipe(recipe);
 
-                // Ensure storage filter and conduit consumer are set on spawn
                 var storage = GetComponent<Storage>();
                 if (storage != null && recipe != null)
                     storage.storageFilters = new List<Tag> { recipe.LiquidIngredient, EspressoMachine.INGREDIENT_TAG };
@@ -230,7 +198,8 @@ namespace CafePlus
     {
         static void Postfix()
         {
-            CafePlus.Mod.RegisterAllEffects();
+            CafePlus.Mod.RegisterAllRecipes();
+            CafePlus.Mod.PrintLoadedRecipes();
         }
     }
 
@@ -249,13 +218,13 @@ namespace CafePlus
                 return;
             }
 
-            // Use InputLiquid from RecipeComponent if valid, otherwise fallback to DirtyWater
             Tag inputLiquid = recipeComponent.InputLiquid.IsValid ? recipeComponent.InputLiquid : GameTags.DirtyWater;
-
             PrimaryElement primaryElement = storage.FindPrimaryElement(ElementLoader.GetElement(inputLiquid).id);
 
             bool hasLiquid = primaryElement != null && primaryElement.Mass >= EspressoMachine.WATER_MASS_PER_USE;
             bool hasIngredient = storage.GetAmountAvailable(EspressoMachine.INGREDIENT_TAG) >= EspressoMachine.INGREDIENT_MASS_PER_USE;
+
+            Debug.Log($"[CafePlus][IsReady] InputLiquid={inputLiquid}, Mass={(primaryElement != null ? primaryElement.Mass.ToString() : "null")}, HasLiquid={hasLiquid}, HasIngredient={hasIngredient}");
 
             __result = hasLiquid && hasIngredient;
         }
@@ -277,7 +246,6 @@ namespace CafePlus
 
             Effect.AddModifierDescriptions(__instance.gameObject, descs, "Espresso", true);
 
-            // Inline AddRequirementDesc logic for INGREDIENT_TAG
             string ingredientName = EspressoMachine.INGREDIENT_TAG.ProperName();
             Descriptor ingredientDesc = new Descriptor();
             ingredientDesc.SetupDescriptor(
@@ -295,8 +263,7 @@ namespace CafePlus
             );
             descs.Add(ingredientDesc);
 
-            // Use InputLiquid from RecipeComponent instead of FewOptions
-            Tag inputLiquid = GameTags.DirtyWater; // fallback
+            Tag inputLiquid = GameTags.DirtyWater;
             var recipeComponent = __instance.GetComponent<RecipeComponent>();
             if (recipeComponent != null)
             {
@@ -307,7 +274,6 @@ namespace CafePlus
                 Debug.LogError("[CafePlus] ERROR: RecipeComponent is missing in GetDescriptors!");
             }
 
-            // Inline AddRequirementDesc logic for inputLiquid
             string liquidName = inputLiquid.ProperName();
             Descriptor liquidDesc = new Descriptor();
             liquidDesc.SetupDescriptor(
@@ -326,14 +292,14 @@ namespace CafePlus
             descs.Add(liquidDesc);
 
             __result = descs;
-            return false; // Skip original
+            return false;
         }
     }
 
     public class RecipeComponent : KMonoBehaviour
     {
         [Serialize]
-        public Tag InputLiquid = GameTags.DirtyWater; // Default fallback
+        public Tag InputLiquid = GameTags.DirtyWater;
 
         [Serialize]
         public string SelectedRecipeName = null;
@@ -350,8 +316,8 @@ namespace CafePlus
         public void SetSelectedRecipe(CafePlusRecipe recipe)
         {
             SelectedRecipe = recipe;
-            InputLiquid = recipe != null ? recipe.LiquidIngredient : GameTags.DirtyWater;
-            SelectedRecipeName = recipe?.EffectName; // Use EffectName instead of Name
+            InputLiquid = recipe != null ? recipe.LiquidIngredient: GameTags.DirtyWater;
+            SelectedRecipeName = recipe?.EffectName;
         }
     }
 
@@ -366,7 +332,6 @@ namespace CafePlus
             SimUtil.DiseaseInfo disease_info1;
             SimUtil.DiseaseInfo disease_info2;
 
-            // Use selected recipe's input liquid
             var recipeComponent = __instance.GetComponent<RecipeComponent>();
             Tag inputLiquid = GameTags.DirtyWater;
             string recipeName = "Unknown";
@@ -397,7 +362,6 @@ namespace CafePlus
                 }
             }
 
-            // Skip original
             return false;
         }
     }
@@ -406,11 +370,9 @@ namespace CafePlus
     {
         public static bool IsWorkerAllowed(WorkerBase worker, RecipeUserType allowed)
         {
-            // Use GameTags.Minions.Models.Bionic and GameTags.Minions.Models.Standard for model checks
             Tag minionModel = GameTags.Minions.Models.Standard;
             if (worker != null && worker.gameObject != null)
             {
-                // Check for bionic tag on the minion's tags
                 var tagComponent = worker.gameObject.GetComponent<KPrefabID>();
                 if (tagComponent != null && tagComponent.HasTag(GameTags.Minions.Models.Bionic))
                     minionModel = GameTags.Minions.Models.Bionic;
@@ -461,7 +423,9 @@ namespace CafePlus
                         var minionModel = hasBionicTag ? GameTags.Minions.Models.Bionic : GameTags.Minions.Models.Standard;
 
                         var recipe = recipeComponent.SelectedRecipe;
-                        var allowed = recipe != null ? recipe.AllowedUsers : RecipeUserType.None;
+                        var allowed = recipe != null && Enum.TryParse(recipe.AllowedUsers, out RecipeUserType parsedAllowedUsers)
+? parsedAllowedUsers
+: RecipeUserType.None;
                         bool allowedResult = RecipeUserTypeUtil.IsWorkerAllowed(worker, allowed);
                         return allowedResult;
                     },
@@ -481,20 +445,23 @@ namespace CafePlus
 
     public class CafePlusRecipe
     {
-        // Name is now a dictionary: effect name -> modifiers
-        public Dictionary<string, Dictionary<string, float>> Name { get; set; }
-        public string LiquidIngredient { get; set; }
-        public RecipeUserType AllowedUsers { get; set; }
+        public string Recipe { get; set; }
+        public EffectData Effect { get; set; }
+        public Tag LiquidIngredient { get; set; }
+
+        public string AllowedUsers { get; set; }
 
         [JsonIgnore]
-        public string EffectName => Name?.Keys.FirstOrDefault();
+        public List<string> Effects => Effect != null && !string.IsNullOrEmpty(Effect.Name) ? new List<string> { Effect.Name } : new List<string>();
 
         [JsonIgnore]
-        public Dictionary<string, float> Modifiers => Name?.Values.FirstOrDefault();
+        public string EffectName => Effect?.Name;
+    }
 
-        // Add this property to fix the error
-        [JsonIgnore]
-        public List<string> Effects => Name?.Keys.ToList();
+    public class EffectData
+    {
+        public string Name { get; set; }
+        public Dictionary<string, float> Modifiers { get; set; }
     }
 
     public class CafePlusData
@@ -511,7 +478,19 @@ namespace CafePlus
         {
             var data = CafePlusDataLoader.LoadJsonResource();
             All = data.Recipes ?? new List<CafePlusRecipe>();
-            // Use EffectName as the key
+            // Convert string to Tag using FindElement and add debug logging
+            foreach (var recipe in All)
+            {
+                if (recipe.LiquidIngredient != null && recipe.LiquidIngredient.IsValid)
+                {
+                    Debug.Log($"[CafePlus][RecipeLoad] Recipe '{recipe.Recipe}': LiquidIngredient='{recipe.LiquidIngredient}' is valid.");
+                }
+                else
+                {
+                    recipe.LiquidIngredient = Tag.Invalid;
+                    Debug.LogWarning($"[CafePlus][RecipeLoad] Recipe '{recipe.Recipe}': LiquidIngredient is null or invalid, using Tag.Invalid.");
+                }
+            }
             ByName = All.ToDictionary(r => r.EffectName, r => r);
         }
     }
@@ -525,7 +504,6 @@ namespace CafePlus
         {
             CafePlusData baseData = null;
 
-            // 1. Load embedded config
             var assembly = Assembly.GetExecutingAssembly();
             try
             {
@@ -554,7 +532,6 @@ namespace CafePlus
                 };
             }
 
-            // 2. Try to load user override and merge
             try
             {
                 string exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
@@ -565,12 +542,15 @@ namespace CafePlus
                     string userJson = File.ReadAllText(userConfigPath);
                     var userData = JsonConvert.DeserializeObject<CafePlusData>(userJson);
 
-                    // Merge recipes: overwrite or add
-                    var recipeDict = baseData.Recipes.ToDictionary(r => r.Name, r => r);
+                    var recipeDict = baseData.Recipes
+                        .Where(r => !string.IsNullOrEmpty(r.EffectName))
+                        .ToDictionary(r => r.EffectName, r => r);
                     if (userData.Recipes != null)
                     {
-                        foreach (var recipe in userData.Recipes)
-                            recipeDict[recipe.Name] = recipe;
+                        foreach (var recipe in userData.Recipes.Where(r => !string.IsNullOrEmpty(r.EffectName)))
+                        {
+                            recipeDict[recipe.EffectName] = recipe;
+                        }
                     }
                     baseData.Recipes = recipeDict.Values.ToList();
                 }
@@ -588,9 +568,6 @@ namespace CafePlus
     {
         public static readonly Dictionary<string, List<EffectModifier>> Modifiers = new Dictionary<string, List<EffectModifier>>
         {
-            // Example modifiers
-            { "Effect1", new List<EffectModifier> { new EffectModifier { AttributeId = "Attribute1", Value = 5f, IsMultiplier = false } } },
-            { "Effect2", new List<EffectModifier> { new EffectModifier { AttributeId = "Attribute2", Value = 2f, IsMultiplier = true } } }
         };
     }
 

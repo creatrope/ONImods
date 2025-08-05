@@ -1,8 +1,10 @@
 {
   "Recipes": [
     {
-      "Name": {
-        "Espresso": {
+      "Recipe": "Espresso",
+      "Effect": {
+        "Name": "Espresso Buzz",
+        "Modifiers": {
           "QualityOfLife": 4.0,
           "Athletics": 1.0
         }
@@ -11,8 +13,10 @@
       "AllowedUsers": "Standard"
     },
     {
-      "Name": {
-        "Gravitano": {
+      "Recipe": "Gravitano",
+      "Effect": {
+        "Name": "Gravitano Buzz",
+        "Modifiers": {
           "QualityOfLife": 4.0,
           "Decor": 1.0
         }
@@ -21,8 +25,10 @@
       "AllowedUsers": "Standard"
     },
     {
-      "Name": {
-        "Moocchiato": {
+      "Recipe": "Moocchiato",
+      "Effect": {
+        "Name": "Moocchiato Buzz",
+        "Modifiers": {
           "QualityOfLife": 3.0,
           "Learning": 1.0
         }
@@ -31,8 +37,10 @@
       "AllowedUsers": "Standard"
     },
     {
-      "Name": {
-        "Petroccino": {
+      "Recipe": "Petroccino",
+      "Effect": {
+        "Name": "Petroccino Buzz",
+        "Modifiers": {
           "QualityOfLife": 2.0,
           "Digging": 1.0,
           "CarryAmount": 0.1
@@ -42,8 +50,10 @@
       "AllowedUsers": "Bionic"
     },
     {
-      "Name": {
-        "Cafe Au Lube": {
+      "Recipe": "Cafe Au Lube",
+      "Effect": {
+        "Name": "Cafe Au Lube Buzz",
+        "Modifiers": {
           "QualityOfLife": 2.0,
           "Machinery": 1.0
         }
