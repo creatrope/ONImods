@@ -48,7 +48,7 @@
     <PublicizerCmd>"$(PublicizerExe)" "$(OriginalAssembly)" -o "$(PublicizedAssembly)"</PublicizerCmd>
   </PropertyGroup>
 
-  <Target Name="EnsurePublicizedAssembly" BeforeTargets="Build"
+  <Target Name="EnsurePublicizedAssembly" BeforeTargets="ResolveAssemblyReferences"
         Inputs="$(OriginalAssembly)" Outputs="$(PublicizedAssembly)">
   <Message Importance="high" Text="Publicized assembly missing or out of date. Building: $(PublicizedAssembly)" />
   <Message Importance="high" Text="Publicizer command line: $(PublicizerCmd)" />

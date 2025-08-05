@@ -621,7 +621,7 @@ namespace ArtifactsPlus
                 Patches.logger.LogDebug($"[ArtifactsPlus] Error loading or parsing User.ArtifactsConfig.json: {ex}");
             }
 
-            Patches.logger.LogDebug($"[ArtifactsPlus] Final artifact config count: {artifactConfigMap.Count}");
+            Debug.Log($"[ArtifactsPlus] Loaded {embeddedArtifacts} default artifact configs, {userArtifacts} user artifact overrides, total {artifactConfigMap.Count}.");
         }
 
         public static ArtifactConfig GetArtifactConfig(string artifactId)
