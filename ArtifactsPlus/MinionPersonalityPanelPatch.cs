@@ -30,12 +30,9 @@ namespace ArtifactsPlus
     {
         private static void Postfix(MinionPersonalityPanel __instance, GameObject target)
         {
-            // Call IsValidTarget from this file
             if (!IsValidTarget(target))
-            {
-                Patches.logger.LogDebug("[MinionPersonalityPanel_OnSelectTarget_Patch] Target is not a valid minion.");
                 return;
-            }
+
             string minionName = target.GetComponent<MinionIdentity>()?.GetProperName() ?? target.name;
             Patches.logger.LogDebug($"[MinionPersonalityPanel_OnSelectTarget_Patch] found a minion: {minionName}");
 
@@ -57,6 +54,26 @@ namespace ArtifactsPlus
     {
         static void Postfix()
         {
+        }
+    }
+
+    public class MinionWorldTracker : MonoBehaviour
+    {
+        public int CurrentWorldId { get; private set; }
+
+        public void UpdateWorldId()
+        {
+            if (gameObject != null && gameObject.transform != null)
+            {
+                int cell = Grid.PosToCell(gameObject.transform.position);
+                if (Grid.IsValidCell(cell))
+                    CurrentWorldId = Grid.WorldIdx[cell];
+            }
+        }
+
+        private void Awake()
+        {
+            UpdateWorldId();
         }
     }
 }

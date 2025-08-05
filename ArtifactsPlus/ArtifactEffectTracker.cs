@@ -21,7 +21,7 @@ namespace ArtifactsPlus
         {
             try
             {
-    
+
                 ArtifactStateTracker.LoadArtifactConfig();
 
                 Patches.logger.LogDebug($"[ArtifactsPlus] onLoad: update the state of the artifacts");
@@ -133,11 +133,24 @@ namespace ArtifactsPlus
             }
         }
 
-        public static void RemoveArtifactModifiersToMinion(GameObject minion, GameObject artifact)
+        public static void RemoveArtifactModifiersFromMinion(GameObject minion)
+        {
+            var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
+            foreach (var artifact in allArtifacts)
+            {
+                if (artifact != null)
+                {
+                    RemoveArtifactModifiersFromMinion(minion, artifact);
+                }
+            }
+        }
+
+        // Removes modifiers for a specific artifact from the minion
+        public static void RemoveArtifactModifiersFromMinion(GameObject minion, GameObject artifact)
         {
             if (minion == null || artifact == null)
             {
-                Patches.logger.LogDebug("RemoveArtifactModifiersToMinion: Minion or artifact is null.");
+                Patches.logger.LogDebug("RemoveArtifactModifiersFromMinion: Minion or artifact is null.");
                 return;
             }
 
@@ -146,13 +159,13 @@ namespace ArtifactsPlus
             var minionModifiers = minion.GetComponent<MinionModifiers>();
             if (minionModifiers == null)
             {
-                Patches.logger.LogDebug($"RemoveArtifactModifiersToMinion: Minion '{minion.name}' does not have a MinionModifiers component.");
+                Patches.logger.LogDebug($"RemoveArtifactModifiersFromMinion: Minion '{minion.name}' does not have a MinionModifiers component.");
                 return;
             }
 
             if (minionModifiers.attributes == null)
             {
-                Patches.logger.LogDebug($"RemoveArtifactModifiersToMinion: Minion '{minion.name}' does not have any attributes.");
+                Patches.logger.LogDebug($"RemoveArtifactModifiersFromMinion: Minion '{minion.name}' does not have any attributes.");
                 return;
             }
 
@@ -164,17 +177,13 @@ namespace ArtifactsPlus
                     continue;
                 }
 
-                for (int i = attrInstance.Modifiers.size - 1; i >= 0; i--) // Iterate in reverse to safely remove items
+                for (int i = attrInstance.Modifiers.size - 1; i >= 0; i--)
                 {
                     var currentModifier = attrInstance.Modifiers[i];
                     string descriptionCB = currentModifier.DescriptionCB?.Invoke();
-                    if (descriptionCB != null)
+                    if (descriptionCB != null && descriptionCB.Equals(artifactInstanceId.ToString(), StringComparison.OrdinalIgnoreCase))
                     {
-                        if (descriptionCB.Equals(artifactInstanceId.ToString(), StringComparison.OrdinalIgnoreCase))
-                        {
-                            //Patches.logger.LogDebug($"Removing Modifier: ID='{currentModifier.AttributeId}', Value='{currentModifier.Value}', Description='{currentModifier.Description}', DescriptionCB='{descriptionCB}'");
-                            attrInstance.Remove(currentModifier); // Safely remove the modifier
-                        }
+                        attrInstance.Remove(currentModifier);
                     }
                 }
             }
@@ -254,5 +263,5 @@ namespace ArtifactsPlus
                 .Select(kp => kp.gameObject)
                 .ToList();
         }
-    }
+    }   
 }

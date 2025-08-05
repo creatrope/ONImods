@@ -28,7 +28,7 @@ namespace ArtifactsPlus
 
             if (!IsValidForTarget(target))
             {
-                Patches.logger.LogDebug("[ArtifactPedestalPanel_OnSelectTarget_Patch] Target is not a valid pedestal.");
+                //Patches.logger.LogDebug("[ArtifactPedestalPanel_OnSelectTarget_Patch] Target is not a valid pedestal.");
                 return;
             }
 
@@ -83,7 +83,7 @@ namespace ArtifactsPlus
         private static bool IsValidForTarget(GameObject target)
         {
             bool isPedestal = target != null && target.GetComponent<ItemPedestal>() != null;
-            Patches.logger.LogDebug($"[ArtifactPedestalPanel_OnSelectTarget_Patch] IsValidForTarget called for '{target?.name ?? "null"}' (Type: {target?.GetType().Name ?? "null"}), Has ItemPedestal: {isPedestal}");
+            //Patches.logger.LogDebug($"[ArtifactPedestalPanel_OnSelectTarget_Patch] IsValidForTarget called for '{target?.name ?? "null"}' (Type: {target?.GetType().Name ?? "null"}), Has ItemPedestal: {isPedestal}");
             return isPedestal;
         }
     }
