@@ -35,45 +35,66 @@ namespace CafePlus
         {
             var db = Db.Get();
             if (db == null || db.effects == null)
-            {
-                Debug.LogWarning("[CafePlus] Db or db.effects is null, cannot register effects.");
                 return;
-            }
-            Debug.Log("[CafePlus] RegisterAllEffects call.");
 
             foreach (var recipe in CafePlusRecipes.All)
             {
-                foreach (var effectId in recipe.Effects)
+                var effectId = recipe.EffectName;
+                if (string.IsNullOrEmpty(effectId))
+                    continue;
+
+                if (!db.effects.Exists(effectId))
                 {
-                    if (!db.effects.Exists(effectId))
+                    var effect = new Effect(
+                        id: effectId,
+                        name: effectId,
+                        description: $"CafePlus effect: {effectId}",
+                        duration: 15f,
+                        show_in_ui: true,
+                        trigger_floating_text: true,
+                        is_bad: false
+                    );
+                    if (recipe.Modifiers != null)
                     {
-                        var effect = new Effect(
-                            id: effectId,
-                            name: effectId,
-                            description: $"CafePlus effect: {effectId}",
-                            duration: 15f,
-                            show_in_ui: true,
-                            trigger_floating_text: true,
-                            is_bad: false
-                        );
-                        // Add modifiers if defined
-                        if (CafePlusEffectModifiers.Modifiers.TryGetValue(effectId, out var modifiers))
-                        {
-                            foreach (var mod in modifiers)
-                                effect.Add(new AttributeModifier(mod.AttributeId, mod.Value, effectId, is_multiplier: mod.IsMultiplier));
-                        }
-
-                        // Find the recipe that owns this effect
-                        var owningRecipe = CafePlusRecipes.All.FirstOrDefault(r => r.Effects.Contains(effectId));
-                        if (owningRecipe?.EffectModifiers != null)
-                        {
-                            foreach (var mod in owningRecipe.EffectModifiers)
-                                effect.Add(new AttributeModifier(mod.AttributeId, mod.Value, effectId, is_multiplier: mod.IsMultiplier));
-                        }
-
-                        db.effects.Add(effect);
-                        Debug.Log($"[CafePlus] Registered new effect: {effectId}");
+                        foreach (var mod in recipe.Modifiers)
+                            effect.Add(new AttributeModifier(mod.Key, mod.Value, effectId));
                     }
+                    // Add this loop to register the modifier effects as well
+                    if (CafePlusEffectModifiers.Modifiers.ContainsKey(recipe.EffectName))
+                    {
+                        foreach (var mod in CafePlusEffectModifiers.Modifiers[recipe.EffectName])
+                        {
+                            effect.Add(new AttributeModifier(mod.AttributeId, mod.Value, effectId));
+                        }
+                    }
+                    db.effects.Add(effect);
+                }
+            }
+
+            // Dump all recipes and effects after registration
+            Debug.Log("[CafePlus] ===== CafePlusRecipes.All =====");
+            foreach (var recipe in CafePlusRecipes.All)
+            {
+                Debug.Log($"[CafePlus][Recipe] EffectName: {recipe.EffectName}, LiquidIngredient: {recipe.LiquidIngredient}, AllowedUsers: {recipe.AllowedUsers}");
+                if (recipe.Modifiers != null)
+                {
+                    foreach (var mod in recipe.Modifiers)
+                        Debug.Log($"[CafePlus][Recipe]   Modifier: {mod.Key} = {mod.Value}");
+                }
+                if (recipe.Effects != null)
+                {
+                    Debug.Log($"[CafePlus][Recipe]   Effects: {string.Join(", ", recipe.Effects)}");
+                }
+            }
+
+            Debug.Log("[CafePlus] ===== Db Effects =====");
+            foreach (var effect in db.effects.resources)
+            {
+                Debug.Log($"[CafePlus][Effect] Id: {effect.Id}, Name: {effect.Name}, Desc: {effect.description}, Duration: {effect.duration}");
+                if (effect.SelfModifiers != null)
+                {
+                    foreach (var mod in effect.SelfModifiers)
+                        Debug.Log($"[CafePlus][Effect]   Modifier: {mod.AttributeId} = {mod.Value}");
                 }
             }
         }
@@ -131,46 +152,24 @@ namespace CafePlus
     public class EspressoMachineFewOptions : KMonoBehaviour, FewOptionSideScreen.IFewOptionSideScreen
     {
         [Serialize]
-        private Tag selectedOption = CafePlusRecipes.All[0].LiquidIngredient;
+        private Tag selectedOption = new Tag(CafePlusRecipes.All[0].EffectName);
 
         private static readonly FewOptionSideScreen.IFewOptionSideScreen.Option[] options =
             CafePlusRecipes.All
                 .Select(recipe =>
                 {
-                    // Build a rich tooltip with effect names and their modifiers
-                    string tooltip = $"Brew {recipe.Name}";
-                    if (recipe.Effects != null && recipe.Effects.Count > 0)
+                    string effectName = recipe.EffectName;
+                    var modifiers = recipe.Modifiers;
+                    string tooltip = $"Brew {effectName}";
+                    if (modifiers != null && modifiers.Count > 0)
                     {
-                        tooltip += "\nEffects:";
-                        foreach (var effectId in recipe.Effects)
-                        {
-                            // Try to get effect from database for a nice name/desc
-                            var dbEffect = Db.Get()?.effects?.Get(effectId);
-                            string effectName = dbEffect != null ? dbEffect.Name : effectId;
-                            string effectDesc = dbEffect != null ? dbEffect.description : "";
-                            tooltip += $"\n  • {effectName}";
-                            if (!string.IsNullOrEmpty(effectDesc))
-                                tooltip += $": {effectDesc}";
-                            // Show modifiers if present
-                            if (CafePlusEffectModifiers.Modifiers.TryGetValue(effectId, out var mods) && mods != null && mods.Count > 0)
-                            {
-                                tooltip += " (";
-                                tooltip += string.Join(", ", mods.Select(m => $"{m.AttributeId} {(m.IsMultiplier ? "x" : "+")}{m.Value}"));
-                                tooltip += ")";
-                            }
-                        }
+                        tooltip += "\nModifiers:";
+                        tooltip += "\n  • " + string.Join(", ", modifiers.Select(m => $"{m.Key} {(m.Value >= 0 ? "+" : "")}{m.Value}"));
                     }
-                    // Show recipe-level effect modifiers
-                    if (recipe.EffectModifiers != null && recipe.EffectModifiers.Count > 0)
-                    {
-                        tooltip += "\nRecipe Modifiers:";
-                        tooltip += "\n  • " + string.Join(", ", recipe.EffectModifiers.Select(m => $"{m.AttributeId} {(m.IsMultiplier ? "x" : "+")}{m.Value}"));
-                    }
-
                     return new FewOptionSideScreen.IFewOptionSideScreen.Option
                     {
-                        tag = new Tag(recipe.Name),
-                        labelText = recipe.Name,
+                        tag = new Tag(effectName),
+                        labelText = effectName,
                         tooltipText = tooltip,
                         iconSpriteColorTuple = Def.GetUISprite(recipe.LiquidIngredient),
                     };
@@ -182,17 +181,13 @@ namespace CafePlus
         public void OnOptionSelected(FewOptionSideScreen.IFewOptionSideScreen.Option option)
         {
             selectedOption = option.tag;
-
-            // Set InputLiquid and SelectedRecipe in RecipeComponent
             var recipeComponent = GetComponent<RecipeComponent>();
             CafePlusRecipe recipe = null;
             if (recipeComponent != null)
             {
-                // Use recipe name (option.tag.Name) for lookup
                 recipe = CafePlusRecipes.ByName.TryGetValue(option.tag.Name, out var found) ? found : null;
                 recipeComponent.SetSelectedRecipe(recipe);
 
-                // Update storage filter and conduit consumer to match the selected recipe
                 var storage = GetComponent<Storage>();
                 if (storage != null && recipe != null)
                     storage.storageFilters = new List<Tag> { recipe.LiquidIngredient, EspressoMachine.INGREDIENT_TAG };
@@ -203,7 +198,7 @@ namespace CafePlus
 
             Debug.Log($"[CafePlus] EspressoMachineFewOptions: Selected {option.labelText}");
             Debug.Log($"[CafePlus] Selected InputLiquid: {(recipe != null ? recipe.LiquidIngredient : "null")}");
-            Debug.Log($"[CafePlus] Selected Recipe: {(recipe != null ? recipe.Name : "null")}");
+            Debug.Log($"[CafePlus] Selected Recipe: {(recipe != null ? recipe.Name.ToString() : "null")}");
         }
 
         public Tag GetSelectedOption() => selectedOption;
@@ -356,7 +351,7 @@ namespace CafePlus
         {
             SelectedRecipe = recipe;
             InputLiquid = recipe != null ? recipe.LiquidIngredient : GameTags.DirtyWater;
-            SelectedRecipeName = recipe?.Name;
+            SelectedRecipeName = recipe?.EffectName; // Use EffectName instead of Name
         }
     }
 
@@ -379,7 +374,7 @@ namespace CafePlus
             if (recipeComponent != null && recipeComponent.SelectedRecipe != null)
             {
                 inputLiquid = recipeComponent.InputLiquid;
-                recipeName = recipeComponent.SelectedRecipe.Name;
+                recipeName = recipeComponent.SelectedRecipe.EffectName;
                 effectIds = recipeComponent.SelectedRecipe.Effects;
             }
 
@@ -399,15 +394,8 @@ namespace CafePlus
                 foreach (var effectId in effectIds)
                 {
                     effects.Add(effectId, true);
-                    Debug.Log($"[CafePlus] Applied effect '{effectId}' to worker.");
                 }
             }
-            else
-            {
-                Debug.LogWarning($"[CafePlus] No effects applied for recipe '{recipeName}'.");
-            }
-
-            Debug.Log($"[CafePlus] Giving {recipeName} effect");
 
             // Skip original
             return false;
@@ -493,18 +481,20 @@ namespace CafePlus
 
     public class CafePlusRecipe
     {
-        public string Name { get; set; }
+        // Name is now a dictionary: effect name -> modifiers
+        public Dictionary<string, Dictionary<string, float>> Name { get; set; }
         public string LiquidIngredient { get; set; }
-        public List<string> Effects { get; set; }
         public RecipeUserType AllowedUsers { get; set; }
-        public List<EffectModifier> EffectModifiers { get; set; } // NEW
-    }
 
-    public class EffectModifier
-    {
-        public string AttributeId { get; set; }
-        public float Value { get; set; }
-        public bool IsMultiplier { get; set; }
+        [JsonIgnore]
+        public string EffectName => Name?.Keys.FirstOrDefault();
+
+        [JsonIgnore]
+        public Dictionary<string, float> Modifiers => Name?.Values.FirstOrDefault();
+
+        // Add this property to fix the error
+        [JsonIgnore]
+        public List<string> Effects => Name?.Keys.ToList();
     }
 
     public class CafePlusData
@@ -521,7 +511,8 @@ namespace CafePlus
         {
             var data = CafePlusDataLoader.LoadJsonResource();
             All = data.Recipes ?? new List<CafePlusRecipe>();
-            ByName = All.ToDictionary(r => r.Name, r => r);
+            // Use EffectName as the key
+            ByName = All.ToDictionary(r => r.EffectName, r => r);
         }
     }
 
@@ -589,23 +580,6 @@ namespace CafePlus
                 Debug.LogError($"[CafePlus] Error loading/merging user config: {ex}");
             }
 
-            // Dump all data after loading and merging
-            Debug.Log("[CafePlus] Dumping all loaded recipes and effects:");
-            foreach (var recipe in baseData.Recipes)
-            {
-                Debug.Log($"[CafePlus] Recipe: {recipe.Name}");
-                Debug.Log($"  LiquidIngredient: {recipe.LiquidIngredient}");
-                Debug.Log($"  AllowedUsers: {recipe.AllowedUsers}");
-                Debug.Log($"  Effects: {string.Join(", ", recipe.Effects ?? new List<string>())}");
-                if (recipe.EffectModifiers != null)
-                {
-                    foreach (var mod in recipe.EffectModifiers)
-                    {
-                        Debug.Log($"    Modifier: AttributeId={mod.AttributeId}, Value={mod.Value}, IsMultiplier={mod.IsMultiplier}");
-                    }
-                }
-            }
-
             return baseData;
         }
     }
@@ -618,6 +592,13 @@ namespace CafePlus
             { "Effect1", new List<EffectModifier> { new EffectModifier { AttributeId = "Attribute1", Value = 5f, IsMultiplier = false } } },
             { "Effect2", new List<EffectModifier> { new EffectModifier { AttributeId = "Attribute2", Value = 2f, IsMultiplier = true } } }
         };
+    }
+
+    public class EffectModifier
+    {
+        public string AttributeId { get; set; }
+        public float Value { get; set; }
+        public bool IsMultiplier { get; set; }
     }
 }
 

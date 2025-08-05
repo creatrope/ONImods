@@ -1,89 +1,55 @@
 {
   "Recipes": [
     {
-      "Name": "Espresso",
-      "LiquidIngredient": "Water",
-      "Effects": [ "Espresso" ],
-      "AllowedUsers": "Standard",
-      "EffectModifiers": [
-        {
-          "AttributeId": "QualityOfLife",
-          "Value": 4.0
-        },
-        {
-          "AttributeId": "Athletics",
-          "Value": 1.0
+      "Name": {
+        "Espresso": {
+          "QualityOfLife": 4.0,
+          "Athletics": 1.0
         }
-      ]
+      },
+      "LiquidIngredient": "Water",
+      "AllowedUsers": "Standard"
     },
     {
-      "Name": "Gravitano",
-      "LiquidIngredient": "Water",
-      "Effects": [ "Gravitano" ],
-      "AllowedUsers": "Standard",
-      "EffectModifiers": [
-        {
-          "AttributeId": "QualityOfLife",
-          "Value": 4.0
-        },
-        {
-          "AttributeId": "Decor",
-          "Value": 1.0
+      "Name": {
+        "Gravitano": {
+          "QualityOfLife": 4.0,
+          "Decor": 1.0
         }
-      ]
+      },
+      "LiquidIngredient": "Water",
+      "AllowedUsers": "Standard"
     },
     {
-      "Name": "Moocchiato",
+      "Name": {
+        "Moocchiato": {
+          "QualityOfLife": 3.0,
+          "Learning": 1.0
+        }
+      },
       "LiquidIngredient": "Milk",
-      "Effects": [ "Moocchiato" ],
-      "AllowedUsers": "Standard",
-      "EffectModifiers": [
-        {
-          "AttributeId": "QualityOfLife",
-          "Value": 3.0
-        },
-        {
-          "AttributeId": "Learning",
-          "Value": 1.0
-        }
-      ]
+      "AllowedUsers": "Standard"
     },
     {
-      "Name": "Petroccino",
+      "Name": {
+        "Petroccino": {
+          "QualityOfLife": 2.0,
+          "Digging": 1.0,
+          "CarryAmount": 0.1
+        }
+      },
       "LiquidIngredient": "Petroleum",
-      "Effects": [ "Petroccino" ],
-      "AllowedUsers": "Bionic",
-      "EffectModifiers": [
-        {
-          "AttributeId": "QualityOfLife",
-          "Value": 2.0
-        },
-        {
-          "AttributeId": "Digging",
-          "Value": 1.0
-        },
-        {
-          "AttributeId": "CarryAmount",
-          "Value": ".1",
-          "isMultiplier": true
-        }
-      ]
+      "AllowedUsers": "Bionic"
     },
     {
-      "Name": "Cafe Au Lube",
-      "LiquidIngredient": "CrudeOil",
-      "Effects": [ "Cafe Au Lube" ],
-      "AllowedUsers": "Bionic",
-      "EffectModifiers": [
-        {
-          "AttributeId": "QualityOfLife",
-          "Value": 2.0
-        },
-        {
-          "AttributeId": "Machinery",
-          "Value": 1.0
+      "Name": {
+        "Cafe Au Lube": {
+          "QualityOfLife": 2.0,
+          "Machinery": 1.0
         }
-      ]
+      },
+      "LiquidIngredient": "CrudeOil",
+      "AllowedUsers": "Bionic"
     }
   ]
 }
