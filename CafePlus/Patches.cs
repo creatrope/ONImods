@@ -1,6 +1,8 @@
 using Database;
 using HarmonyLib;
 using HLib;
+using Klei;
+using Klei.AI;
 using KMod;
 using KSerialization;
 using Newtonsoft.Json;
@@ -9,14 +11,14 @@ using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
+using STRINGS; // Add this namespace to access UI constants
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using TUNING;
 using UnityEngine;
-using Klei;
-using Klei.AI;
-using STRINGS; // Add this namespace to access UI constants
 
 namespace CafePlus
 {
@@ -58,10 +60,17 @@ namespace CafePlus
                         if (CafePlusEffectModifiers.Modifiers.TryGetValue(effectId, out var modifiers))
                         {
                             foreach (var mod in modifiers)
-                            {
                                 effect.Add(new AttributeModifier(mod.AttributeId, mod.Value, effectId, is_multiplier: mod.IsMultiplier));
-                            }
                         }
+
+                        // Find the recipe that owns this effect
+                        var owningRecipe = CafePlusRecipes.All.FirstOrDefault(r => r.Effects.Contains(effectId));
+                        if (owningRecipe?.EffectModifiers != null)
+                        {
+                            foreach (var mod in owningRecipe.EffectModifiers)
+                                effect.Add(new AttributeModifier(mod.AttributeId, mod.Value, effectId, is_multiplier: mod.IsMultiplier));
+                        }
+
                         db.effects.Add(effect);
                         Debug.Log($"[CafePlus] Registered new effect: {effectId}");
                     }
@@ -126,12 +135,45 @@ namespace CafePlus
 
         private static readonly FewOptionSideScreen.IFewOptionSideScreen.Option[] options =
             CafePlusRecipes.All
-                .Select(recipe => new FewOptionSideScreen.IFewOptionSideScreen.Option
+                .Select(recipe =>
                 {
-                    tag = recipe.LiquidIngredient,
-                    labelText = recipe.Name,
-                    tooltipText = $"Brew with {recipe.Name} ({string.Join(", ", recipe.Effects)})",
-                    iconSpriteColorTuple = Def.GetUISprite(recipe.LiquidIngredient),
+                    // Build a rich tooltip with effect names and their modifiers
+                    string tooltip = $"Brew {recipe.Name}";
+                    if (recipe.Effects != null && recipe.Effects.Count > 0)
+                    {
+                        tooltip += "\nEffects:";
+                        foreach (var effectId in recipe.Effects)
+                        {
+                            // Try to get effect from database for a nice name/desc
+                            var dbEffect = Db.Get()?.effects?.Get(effectId);
+                            string effectName = dbEffect != null ? dbEffect.Name : effectId;
+                            string effectDesc = dbEffect != null ? dbEffect.description : "";
+                            tooltip += $"\n  • {effectName}";
+                            if (!string.IsNullOrEmpty(effectDesc))
+                                tooltip += $": {effectDesc}";
+                            // Show modifiers if present
+                            if (CafePlusEffectModifiers.Modifiers.TryGetValue(effectId, out var mods) && mods != null && mods.Count > 0)
+                            {
+                                tooltip += " (";
+                                tooltip += string.Join(", ", mods.Select(m => $"{m.AttributeId} {(m.IsMultiplier ? "x" : "+")}{m.Value}"));
+                                tooltip += ")";
+                            }
+                        }
+                    }
+                    // Show recipe-level effect modifiers
+                    if (recipe.EffectModifiers != null && recipe.EffectModifiers.Count > 0)
+                    {
+                        tooltip += "\nRecipe Modifiers:";
+                        tooltip += "\n  • " + string.Join(", ", recipe.EffectModifiers.Select(m => $"{m.AttributeId} {(m.IsMultiplier ? "x" : "+")}{m.Value}"));
+                    }
+
+                    return new FewOptionSideScreen.IFewOptionSideScreen.Option
+                    {
+                        tag = new Tag(recipe.Name),
+                        labelText = recipe.Name,
+                        tooltipText = tooltip,
+                        iconSpriteColorTuple = Def.GetUISprite(recipe.LiquidIngredient),
+                    };
                 })
                 .ToArray();
 
@@ -146,20 +188,21 @@ namespace CafePlus
             CafePlusRecipe recipe = null;
             if (recipeComponent != null)
             {
-                recipe = CafePlusRecipes.All.FirstOrDefault(r => r.LiquidIngredient == option.tag);
+                // Use recipe name (option.tag.Name) for lookup
+                recipe = CafePlusRecipes.ByName.TryGetValue(option.tag.Name, out var found) ? found : null;
                 recipeComponent.SetSelectedRecipe(recipe);
 
                 // Update storage filter and conduit consumer to match the selected recipe
                 var storage = GetComponent<Storage>();
-                if (storage != null)
+                if (storage != null && recipe != null)
                     storage.storageFilters = new List<Tag> { recipe.LiquidIngredient, EspressoMachine.INGREDIENT_TAG };
                 var consumer = GetComponent<ConduitConsumer>();
-                if (consumer != null)
+                if (consumer != null && recipe != null)
                     consumer.capacityTag = recipe.LiquidIngredient;
             }
 
             Debug.Log($"[CafePlus] EspressoMachineFewOptions: Selected {option.labelText}");
-            Debug.Log($"[CafePlus] Selected InputLiquid: {option.tag}");
+            Debug.Log($"[CafePlus] Selected InputLiquid: {(recipe != null ? recipe.LiquidIngredient : "null")}");
             Debug.Log($"[CafePlus] Selected Recipe: {(recipe != null ? recipe.Name : "null")}");
         }
 
@@ -172,7 +215,8 @@ namespace CafePlus
             var recipeComponent = GetComponent<RecipeComponent>();
             if (recipeComponent != null)
             {
-                var recipe = CafePlusRecipes.All.FirstOrDefault(r => r.LiquidIngredient == selectedOption);
+                // Use selectedOption.Name for lookup
+                var recipe = CafePlusRecipes.ByName.TryGetValue(selectedOption.Name, out var found) ? found : null;
                 recipeComponent.SetSelectedRecipe(recipe);
 
                 // Ensure storage filter and conduit consumer are set on spawn
@@ -191,7 +235,6 @@ namespace CafePlus
     {
         static void Postfix()
         {
-            Debug.Log("[CafePlus] CafePlus_Db_Initialize_Patch.Postfix called.");
             CafePlus.Mod.RegisterAllEffects();
         }
     }
@@ -371,16 +414,6 @@ namespace CafePlus
         }
     }
 
-    [Flags]
-    public enum RecipeUserType
-    {
-        None = 0,
-        Standard = 1 << 0,
-        Bionic = 1 << 1,
-        // Add more types here as needed
-        All = Standard | Bionic
-    }
-
     public static class RecipeUserTypeUtil
     {
         public static bool IsWorkerAllowed(WorkerBase worker, RecipeUserType allowed)
@@ -438,7 +471,9 @@ namespace CafePlus
                         var tagComponent = go?.GetComponent<KPrefabID>();
                         var hasBionicTag = tagComponent != null && tagComponent.HasTag(GameTags.Minions.Models.Bionic);
                         var minionModel = hasBionicTag ? GameTags.Minions.Models.Bionic : GameTags.Minions.Models.Standard;
-                        var allowed = recipeComponent.SelectedRecipe.AllowedUsers;
+
+                        var recipe = recipeComponent.SelectedRecipe;
+                        var allowed = recipe != null ? recipe.AllowedUsers : RecipeUserType.None;
                         bool allowedResult = RecipeUserTypeUtil.IsWorkerAllowed(worker, allowed);
                         return allowedResult;
                     },
@@ -446,6 +481,143 @@ namespace CafePlus
             );
             Debug.Log("[CafePlus] Added user type precondition to EspressoMachine chore.");
         }
+    }
+
+    public enum RecipeUserType
+    {
+        None = 0,
+        Standard = 1 << 0,
+        Bionic = 1 << 1,
+        All = Standard | Bionic
+    }
+
+    public class CafePlusRecipe
+    {
+        public string Name { get; set; }
+        public string LiquidIngredient { get; set; }
+        public List<string> Effects { get; set; }
+        public RecipeUserType AllowedUsers { get; set; }
+        public List<EffectModifier> EffectModifiers { get; set; } // NEW
+    }
+
+    public class EffectModifier
+    {
+        public string AttributeId { get; set; }
+        public float Value { get; set; }
+        public bool IsMultiplier { get; set; }
+    }
+
+    public class CafePlusData
+    {
+        public List<CafePlusRecipe> Recipes { get; set; }
+    }
+
+    public static class CafePlusRecipes
+    {
+        public static readonly List<CafePlusRecipe> All;
+        public static readonly Dictionary<string, CafePlusRecipe> ByName;
+
+        static CafePlusRecipes()
+        {
+            var data = CafePlusDataLoader.LoadJsonResource();
+            All = data.Recipes ?? new List<CafePlusRecipe>();
+            ByName = All.ToDictionary(r => r.Name, r => r);
+        }
+    }
+
+    public static class CafePlusDataLoader
+    {
+        private const string EmbeddedResourceName = "CafePlus.CafePlusConfig.json";
+        private const string UserConfigFileName = "User.CafePlusConfig.json";
+
+        public static CafePlusData LoadJsonResource()
+        {
+            CafePlusData baseData = null;
+
+            // 1. Load embedded config
+            var assembly = Assembly.GetExecutingAssembly();
+            try
+            {
+                using (Stream stream = assembly.GetManifestResourceStream(EmbeddedResourceName))
+                {
+                    if (stream != null)
+                    {
+                        using (StreamReader reader = new StreamReader(stream))
+                        {
+                            string json = reader.ReadToEnd();
+                            baseData = JsonConvert.DeserializeObject<CafePlusData>(json);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[CafePlus] Error loading embedded config: {ex}");
+            }
+
+            if (baseData == null)
+            {
+                baseData = new CafePlusData
+                {
+                    Recipes = new List<CafePlusRecipe>(),
+                };
+            }
+
+            // 2. Try to load user override and merge
+            try
+            {
+                string exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                string userConfigPath = Path.Combine(exeDir, UserConfigFileName);
+                if (File.Exists(userConfigPath))
+                {
+                    Debug.Log($"[CafePlus] Loading user config: {userConfigPath}");
+                    string userJson = File.ReadAllText(userConfigPath);
+                    var userData = JsonConvert.DeserializeObject<CafePlusData>(userJson);
+
+                    // Merge recipes: overwrite or add
+                    var recipeDict = baseData.Recipes.ToDictionary(r => r.Name, r => r);
+                    if (userData.Recipes != null)
+                    {
+                        foreach (var recipe in userData.Recipes)
+                            recipeDict[recipe.Name] = recipe;
+                    }
+                    baseData.Recipes = recipeDict.Values.ToList();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[CafePlus] Error loading/merging user config: {ex}");
+            }
+
+            // Dump all data after loading and merging
+            Debug.Log("[CafePlus] Dumping all loaded recipes and effects:");
+            foreach (var recipe in baseData.Recipes)
+            {
+                Debug.Log($"[CafePlus] Recipe: {recipe.Name}");
+                Debug.Log($"  LiquidIngredient: {recipe.LiquidIngredient}");
+                Debug.Log($"  AllowedUsers: {recipe.AllowedUsers}");
+                Debug.Log($"  Effects: {string.Join(", ", recipe.Effects ?? new List<string>())}");
+                if (recipe.EffectModifiers != null)
+                {
+                    foreach (var mod in recipe.EffectModifiers)
+                    {
+                        Debug.Log($"    Modifier: AttributeId={mod.AttributeId}, Value={mod.Value}, IsMultiplier={mod.IsMultiplier}");
+                    }
+                }
+            }
+
+            return baseData;
+        }
+    }
+
+    public static class CafePlusEffectModifiers
+    {
+        public static readonly Dictionary<string, List<EffectModifier>> Modifiers = new Dictionary<string, List<EffectModifier>>
+        {
+            // Example modifiers
+            { "Effect1", new List<EffectModifier> { new EffectModifier { AttributeId = "Attribute1", Value = 5f, IsMultiplier = false } } },
+            { "Effect2", new List<EffectModifier> { new EffectModifier { AttributeId = "Attribute2", Value = 2f, IsMultiplier = true } } }
+        };
     }
 }
 

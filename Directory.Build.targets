@@ -49,8 +49,8 @@
   </PropertyGroup>
 
   <Target Name="EnsurePublicizedAssembly" BeforeTargets="Build"
-        Condition="!Exists('$(PublicizedAssembly)')">
-  <Message Importance="high" Text="Publicized assembly not found. Building: $(PublicizedAssembly)" />
+        Inputs="$(OriginalAssembly)" Outputs="$(PublicizedAssembly)">
+  <Message Importance="high" Text="Publicized assembly missing or out of date. Building: $(PublicizedAssembly)" />
   <Message Importance="high" Text="Publicizer command line: $(PublicizerCmd)" />
   <Exec Command="$(PublicizerCmd)" ContinueOnError="false" />
   <Message Importance="high" Text="AssemblyPublicizer execution finished." />

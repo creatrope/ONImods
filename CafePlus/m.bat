@@ -1,1 +1,3 @@
-"C:\Users\sendh\Documents\GitHub\Sendhb-ONI\packages\ILRepack.2.0.18\tools\ILRepack.exe" /out:"C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\CafePlus\CafePlus.dll" /internalize /target:library /lib:"C:\Users\sendh\Documents\GitHub\Sendhb-ONI\CafePlus\bin\Release" "C:\Users\sendh\Documents\GitHub\Sendhb-ONI\CafePlus\bin\Release\CafePlus.dll" "..\packages\PLib.4.17.1\lib\net471\PLib.dll" "..\HLib\bin\Release\HLib.dll"
+C:\Users\sendh\.dotnet\tools\assembly-publicizer.exe "C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll"
+
+

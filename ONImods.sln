@@ -76,6 +76,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CritterRename", "CritterRename\CritterRename.csproj", "{D5456564-F691-4FB7-A4F0-F11280B53DCB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CafePlus", "CafePlus\CafePlus.csproj", "{7E0A3603-E620-4334-A0E4-312FC931D951}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F446A1C4-7859-4B1A-A508-32997511C3BF} = {F446A1C4-7859-4B1A-A508-32997511C3BF}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
