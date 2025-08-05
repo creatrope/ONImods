@@ -3,7 +3,7 @@
     {
       "Recipe": "Espresso",
       "Effect": {
-        "Name": "Espresso Buzz",
+        "Name": "Espresso",
         "Duration": 180.0,
         "Modifiers": {
           "QualityOfLife": 4.0,
@@ -16,7 +16,7 @@
     {
       "Recipe": "Gravitano",
       "Effect": {
-        "Name": "Gravitano Buzz",
+        "Name": "Gravitano Kick",
         "Duration": 240.0,
         "Modifiers": {
           "QualityOfLife": 4.0,
@@ -29,7 +29,7 @@
     {
       "Recipe": "Moocchiato",
       "Effect": {
-        "Name": "Moocchiato Buzz",
+        "Name": "Moocchiato Boost",
         "Duration": 225.0,
         "Modifiers": {
           "QualityOfLife": 3.0,
@@ -42,7 +42,7 @@
     {
       "Recipe": "Petroccino",
       "Effect": {
-        "Name": "Petroccino Buzz",
+        "Name": "Petroccino Charge",
         "Duration": 300.0,
         "Modifiers": {
           "QualityOfLife": 2.0,
@@ -56,7 +56,7 @@
     {
       "Recipe": "Cafe Au Lube",
       "Effect": {
-        "Name": "Cafe Au Lube Buzz",
+        "Name": "Cafe Au Lube Perk",
         "Duration": 240.0,
         "Modifiers": {
           "QualityOfLife": 2.0,

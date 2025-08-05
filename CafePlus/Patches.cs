@@ -399,18 +399,38 @@ namespace CafePlus
         static void Postfix(EspressoMachine.StatesInstance smi, Chore __result)
         {
             if (__result == null)
-            {
                 return;
-            }
             var recipeComponent = smi.master.GetComponent<RecipeComponent>();
             if (recipeComponent == null)
-            {
                 return;
-            }
             if (recipeComponent.SelectedRecipe == null)
-            {
                 return;
-            }
+
+            // Prevent dupes from using the machine if they have ANY CafePlus effect
+            __result.AddPrecondition(
+                new Chore.Precondition
+                {
+                    id = "CafePlus:HasNoCafePlusEffect",
+                    description = "Worker must not have any CafePlus drink effect",
+                    fn = (ref Chore.Precondition.Context context, object data) =>
+                    {
+                        var worker = context.consumerState.worker;
+                        if (worker == null)
+                            return false;
+                        var effects = worker.GetComponent<Effects>();
+                        if (effects == null)
+                            return true;
+
+                        // Check if the worker has any CafePlus effect
+                        foreach (var effectName in CafePlusRecipes.ByName.Keys)
+                        {
+                            if (effects.HasEffect(effectName))
+                                return false;
+                        }
+                        return true;
+                    }
+                }
+            );
 
             __result.AddPrecondition(
                 new Chore.Precondition
@@ -427,8 +447,8 @@ namespace CafePlus
 
                         var recipe = recipeComponent.SelectedRecipe;
                         var allowed = recipe != null && Enum.TryParse(recipe.AllowedUsers, out RecipeUserType parsedAllowedUsers)
-? parsedAllowedUsers
-: RecipeUserType.None;
+                            ? parsedAllowedUsers
+                            : RecipeUserType.None;
                         bool allowedResult = RecipeUserTypeUtil.IsWorkerAllowed(worker, allowed);
                         return allowedResult;
                     },
