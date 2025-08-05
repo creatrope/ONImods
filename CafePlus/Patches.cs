@@ -39,13 +39,14 @@ namespace CafePlus
                 string effectName = recipe.EffectName ?? "null";
                 string liquid = recipe.LiquidIngredient.IsValid ? recipe.LiquidIngredient.ToString() : "null";
                 string allowed = recipe.AllowedUsers ?? "null";
+                string duration = recipe.Effect != null ? $"{recipe.Effect.Duration:0.##}s" : "null";
                 string modifiers = "";
                 if (recipe.Effect?.Modifiers != null && recipe.Effect.Modifiers.Count > 0)
                 {
                     modifiers = " Modifiers: " + string.Join(", ",
                         recipe.Effect.Modifiers.Select(m => $"{m.Key}={m.Value:+0.##;-0.##;0}"));
                 }
-                Debug.Log($"[CafePlus] Recipe: Name={recipeName}, Effect={effectName}, Liquid={liquid}, AllowedUsers={allowed}{modifiers}");
+                Debug.Log($"[CafePlus] Recipe: Name={recipeName}, Effect={effectName}, Duration={duration}, Liquid={liquid}, AllowedUsers={allowed}{modifiers}");
             }
         }
 
@@ -63,11 +64,12 @@ namespace CafePlus
 
                 if (!db.effects.Exists(effectId))
                 {
+                    float duration = recipe.Effect?.Duration > 0 ? recipe.Effect.Duration : 15f;
                     var effect = new Effect(
                         id: effectId,
                         name: effectId,
                         description: $"CafePlus effect: {effectId}",
-                        duration: 15f,
+                        duration: duration,
                         show_in_ui: true,
                         trigger_floating_text: true,
                         is_bad: false
@@ -128,6 +130,10 @@ namespace CafePlus
                 {
                     string effectName = recipe.EffectName;
                     string tooltip = $"Brew {effectName}";
+                    if (recipe.Effect != null)
+                    {
+                        tooltip += $"\nDuration: {recipe.Effect.Duration:0.##}s";
+                    }
                     if (recipe.Effect?.Modifiers != null && recipe.Effect.Modifiers.Count > 0)
                     {
                         tooltip += "\nModifiers:";
@@ -298,7 +304,20 @@ namespace CafePlus
         {
             base.OnSpawn();
             if (!string.IsNullOrEmpty(SelectedRecipeName))
+            {
                 SelectedRecipe = CafePlusRecipes.ByName.TryGetValue(SelectedRecipeName, out var recipe) ? recipe : null;
+            }
+            else
+            {
+                // Find the first water-based espresso recipe
+                SelectedRecipe = CafePlusRecipes.All
+                    .FirstOrDefault(r => r.Recipe == "Espresso" && r.LiquidIngredient == GameTags.Water);
+                if (SelectedRecipe != null)
+                {
+                    InputLiquid = SelectedRecipe.LiquidIngredient;
+                    SelectedRecipeName = SelectedRecipe.EffectName;
+                }
+            }
         }
 
         public void SetSelectedRecipe(CafePlusRecipe recipe)
@@ -445,6 +464,7 @@ namespace CafePlus
     {
         public string Name { get; set; }
         public Dictionary<string, float> Modifiers { get; set; }
+        public float Duration { get; set; }
     }
 
     public class CafePlusData
