@@ -166,10 +166,6 @@ namespace CafePlus
                 if (consumer != null && recipe != null)
                     consumer.capacityTag = recipe.LiquidIngredient;
             }
-
-            Debug.Log($"[CafePlus] EspressoMachineFewOptions: Selected {option.labelText}");
-            Debug.Log($"[CafePlus] Selected InputLiquid: {(recipe != null ? recipe.LiquidIngredient : "null")}");
-            Debug.Log($"[CafePlus] Selected Recipe: {(recipe != null ? recipe.EffectName : "null")}");
         }
 
         public Tag GetSelectedOption() => selectedOption;
@@ -212,8 +208,6 @@ namespace CafePlus
             var recipeComponent = smi.GetComponent<RecipeComponent>();
             if (storage == null || recipeComponent == null)
             {
-                if (recipeComponent == null)
-                    Debug.LogError("[CafePlus] ERROR: RecipeComponent is missing in IsReadyPostfix!");
                 __result = false;
                 return;
             }
@@ -223,8 +217,6 @@ namespace CafePlus
 
             bool hasLiquid = primaryElement != null && primaryElement.Mass >= EspressoMachine.WATER_MASS_PER_USE;
             bool hasIngredient = storage.GetAmountAvailable(EspressoMachine.INGREDIENT_TAG) >= EspressoMachine.INGREDIENT_MASS_PER_USE;
-
-            Debug.Log($"[CafePlus][IsReady] InputLiquid={inputLiquid}, Mass={(primaryElement != null ? primaryElement.Mass.ToString() : "null")}, HasLiquid={hasLiquid}, HasIngredient={hasIngredient}");
 
             __result = hasLiquid && hasIngredient;
         }
@@ -269,10 +261,6 @@ namespace CafePlus
             {
                 inputLiquid = recipeComponent.InputLiquid;
             }
-            else
-            {
-                Debug.LogError("[CafePlus] ERROR: RecipeComponent is missing in GetDescriptors!");
-            }
 
             string liquidName = inputLiquid.ProperName();
             Descriptor liquidDesc = new Descriptor();
@@ -316,7 +304,7 @@ namespace CafePlus
         public void SetSelectedRecipe(CafePlusRecipe recipe)
         {
             SelectedRecipe = recipe;
-            InputLiquid = recipe != null ? recipe.LiquidIngredient: GameTags.DirtyWater;
+            InputLiquid = recipe != null ? recipe.LiquidIngredient : GameTags.DirtyWater;
             SelectedRecipeName = recipe?.EffectName;
         }
     }
@@ -393,19 +381,15 @@ namespace CafePlus
         {
             if (__result == null)
             {
-                Debug.Log("[CafePlus][Precondition] __result is null, skipping precondition.");
                 return;
             }
             var recipeComponent = smi.master.GetComponent<RecipeComponent>();
             if (recipeComponent == null)
             {
-                Debug.LogError("[CafePlus] ERROR: RecipeComponent is missing in CreateChore!");
-                Debug.Log("[CafePlus][Precondition] RecipeComponent is null on master.");
                 return;
             }
             if (recipeComponent.SelectedRecipe == null)
             {
-                Debug.Log("[CafePlus][Precondition] SelectedRecipe is null.");
                 return;
             }
 
@@ -431,7 +415,6 @@ namespace CafePlus
                     },
                 }
             );
-            Debug.Log("[CafePlus] Added user type precondition to EspressoMachine chore.");
         }
     }
 
@@ -478,17 +461,11 @@ namespace CafePlus
         {
             var data = CafePlusDataLoader.LoadJsonResource();
             All = data.Recipes ?? new List<CafePlusRecipe>();
-            // Convert string to Tag using FindElement and add debug logging
             foreach (var recipe in All)
             {
-                if (recipe.LiquidIngredient != null && recipe.LiquidIngredient.IsValid)
-                {
-                    Debug.Log($"[CafePlus][RecipeLoad] Recipe '{recipe.Recipe}': LiquidIngredient='{recipe.LiquidIngredient}' is valid.");
-                }
-                else
+                if (recipe.LiquidIngredient == null || !recipe.LiquidIngredient.IsValid)
                 {
                     recipe.LiquidIngredient = Tag.Invalid;
-                    Debug.LogWarning($"[CafePlus][RecipeLoad] Recipe '{recipe.Recipe}': LiquidIngredient is null or invalid, using Tag.Invalid.");
                 }
             }
             ByName = All.ToDictionary(r => r.EffectName, r => r);
@@ -519,9 +496,8 @@ namespace CafePlus
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogError($"[CafePlus] Error loading embedded config: {ex}");
             }
 
             if (baseData == null)
@@ -538,7 +514,6 @@ namespace CafePlus
                 string userConfigPath = Path.Combine(exeDir, UserConfigFileName);
                 if (File.Exists(userConfigPath))
                 {
-                    Debug.Log($"[CafePlus] Loading user config: {userConfigPath}");
                     string userJson = File.ReadAllText(userConfigPath);
                     var userData = JsonConvert.DeserializeObject<CafePlusData>(userJson);
 
@@ -555,9 +530,8 @@ namespace CafePlus
                     baseData.Recipes = recipeDict.Values.ToList();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Debug.LogError($"[CafePlus] Error loading/merging user config: {ex}");
             }
 
             return baseData;
