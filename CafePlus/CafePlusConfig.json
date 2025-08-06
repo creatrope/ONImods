@@ -11,21 +11,35 @@
         }
       },
       "LiquidIngredient": "Water",
-      "SolidIngredient": "SpiceNut",
+      "SolidIngredients": [ "SpiceNut" ],
       "AllowedUsers": "All"
     },
     {
-      "Recipe": "Gravitano",
+      "Recipe": "Mushroom Gravitano",
       "Effect": {
         "Name": "Gravitano Kick",
         "Duration": 240.0,
         "Modifiers": {
           "QualityOfLife": 4.0,
-          "Decor": 1.0
+          "Immunity": 1.0
         }
       },
       "LiquidIngredient": "Water",
-      "SolidIngredient": "Mushroom",
+      "SolidIngredients": [ "Mushroom" ],
+      "AllowedUsers": "Standard"
+    },
+    {
+      "Recipe": "Muckroot Moocchiato",
+      "Effect": {
+        "Name": "Moocchiato Boost",
+        "Duration": 140.0,
+        "Modifiers": {
+          "QualityOfLife": 3.0,
+          "Learning": 1.0
+        }
+      },
+      "LiquidIngredient": "Milk",
+      "SolidIngredients": [ "BasicForagePlant" ],
       "AllowedUsers": "Standard"
     },
     {
@@ -39,7 +53,7 @@
         }
       },
       "LiquidIngredient": "Milk",
-      "SolidIngredient": "BasicPlantFood",
+      "SolidIngredients": [ "SpiceNut" ],
       "AllowedUsers": "Standard"
     },
     {
@@ -54,7 +68,7 @@
         }
       },
       "LiquidIngredient": "Petroleum",
-      "SolidIngredient": "SpiceNut",
+      "SolidIngredients": [ "SpiceNut" ],
       "AllowedUsers": "Bionic"
     },
     {
@@ -63,12 +77,12 @@
         "Name": "Cafe Au Lube Perk",
         "Duration": 240.0,
         "Modifiers": {
-          "QualityOfLife": 2.0,
+          "QualityOfLife": 3.0,
           "Machinery": 1.0
         }
       },
       "LiquidIngredient": "CrudeOil",
-      "SolidIngredient": "SpiceNut",
+      "SolidIngredients": [ "SpiceNut" ],
       "AllowedUsers": "Bionic"
     }
   ]

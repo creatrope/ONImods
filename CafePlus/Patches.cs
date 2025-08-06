@@ -149,13 +149,17 @@ namespace CafePlus
 
         private static readonly FewOptionSideScreen.IFewOptionSideScreen.Option[] options =
             CafePlusRecipes.All
+                .OrderBy(r => r.LiquidIngredient == GameTags.Water ? 0 : 1)
+                .ThenBy(r => r.LiquidIngredient.Name)
+                .ThenBy(r => r.Recipe)
                 .Select(recipe =>
                 {
                     string recipeName = recipe.Recipe;
                     string effectName = recipe.EffectName;
                     string liquidName = recipe.LiquidIngredient.IsValid ? recipe.LiquidIngredient.ProperName() : "None";
                     string solidName = recipe.SolidIngredient.IsValid ? recipe.SolidIngredient.ProperName() : "None";
-                    string tooltip = $"Brew {effectName}\nIngredients: {liquidName} (liquid), {solidName} (solid)";
+                    string allowedUsers = recipe.AllowedUsers ?? "All";
+                    string tooltip = $"Brew {effectName}\nIngredients: {liquidName} (liquid), {solidName} (solid)\nAllowed Users: {allowedUsers}";
                     if (recipe.Effect != null)
                     {
                         tooltip += $"\nDuration: {recipe.Effect.Duration:0.##}s";
@@ -393,6 +397,13 @@ namespace CafePlus
 
         public void SetSelectedRecipe(CafePlusRecipe recipe)
         {
+            // Dump all storage contents when changing recipe
+            var storage = GetComponent<Storage>();
+            if (storage != null)
+            {
+                storage.DropAll(false, false, default);
+            }
+
             SelectedRecipe = recipe;
             InputLiquid = recipe != null ? recipe.LiquidIngredient : GameTags.DirtyWater;
             SelectedRecipeName = recipe?.Recipe; // Use Recipe name
@@ -567,7 +578,7 @@ namespace CafePlus
         public string Recipe { get; set; }
         public EffectData Effect { get; set; }
         public Tag LiquidIngredient { get; set; }
-        public Tag SolidIngredient { get; set; } // <-- Add this line
+        public List<Tag> SolidIngredients { get; set; } // Use a list for JSON compatibility
 
         public string AllowedUsers { get; set; }
 
@@ -576,6 +587,9 @@ namespace CafePlus
 
         [JsonIgnore]
         public string EffectName => Effect?.Name;
+
+        [JsonIgnore]
+        public Tag SolidIngredient => SolidIngredients != null && SolidIngredients.Count > 0 ? SolidIngredients[0] : Tag.Invalid;
     }
 
     public class EffectData
