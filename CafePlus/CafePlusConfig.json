@@ -11,7 +11,8 @@
         }
       },
       "LiquidIngredient": "Water",
-      "AllowedUsers": "Standard"
+      "SolidIngredient": "SpiceNut",
+      "AllowedUsers": "All"
     },
     {
       "Recipe": "Gravitano",
@@ -24,6 +25,7 @@
         }
       },
       "LiquidIngredient": "Water",
+      "SolidIngredient": "Mushroom",
       "AllowedUsers": "Standard"
     },
     {
@@ -37,6 +39,7 @@
         }
       },
       "LiquidIngredient": "Milk",
+      "SolidIngredient": "BasicPlantFood",
       "AllowedUsers": "Standard"
     },
     {
@@ -51,6 +54,7 @@
         }
       },
       "LiquidIngredient": "Petroleum",
+      "SolidIngredient": "SpiceNut",
       "AllowedUsers": "Bionic"
     },
     {
@@ -64,6 +68,7 @@
         }
       },
       "LiquidIngredient": "CrudeOil",
+      "SolidIngredient": "SpiceNut",
       "AllowedUsers": "Bionic"
     }
   ]

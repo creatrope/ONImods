@@ -38,6 +38,7 @@ namespace CafePlus
                 string recipeName = recipe.Recipe ?? "null";
                 string effectName = recipe.EffectName ?? "null";
                 string liquid = recipe.LiquidIngredient.IsValid ? recipe.LiquidIngredient.ToString() : "null";
+                string solid = recipe.SolidIngredient.IsValid ? recipe.SolidIngredient.ToString() : "null";
                 string allowed = recipe.AllowedUsers ?? "null";
                 string duration = recipe.Effect != null ? $"{recipe.Effect.Duration:0.##}s" : "null";
                 string modifiers = "";
@@ -46,7 +47,7 @@ namespace CafePlus
                     modifiers = " Modifiers: " + string.Join(", ",
                         recipe.Effect.Modifiers.Select(m => $"{m.Key}={m.Value:+0.##;-0.##;0}"));
                 }
-                Debug.Log($"[CafePlus] Recipe: Name={recipeName}, Effect={effectName}, Duration={duration}, Liquid={liquid}, AllowedUsers={allowed}{modifiers}");
+                Debug.Log($"[CafePlus] Recipe: Name={recipeName}, Effect={effectName}, Duration={duration}, Liquid={liquid}, Solid={solid}, AllowedUsers={allowed}{modifiers}");
             }
         }
 
@@ -84,6 +85,28 @@ namespace CafePlus
             }
         }
     }
+
+    [HarmonyPatch(typeof(EspressoMachineConfig), "ConfigureBuildingTemplate")]
+    public static class EspressoMachineConfig_ManualDeliveryKG_Patch
+    {
+        static void Postfix(GameObject go, Tag prefab_tag)
+        {
+            var delivery = go.GetComponent<ManualDeliveryKG>();
+            var storage = go.GetComponent<Storage>();
+            var recipeComponent = go.GetComponent<RecipeComponent>();
+            if (delivery != null && storage != null && recipeComponent != null && recipeComponent.SelectedRecipe != null)
+            {
+                Tag solid = recipeComponent.SelectedRecipe.SolidIngredient.IsValid
+                    ? recipeComponent.SelectedRecipe.SolidIngredient
+                    : EspressoMachine.INGREDIENT_TAG;
+                Debug.Log($"[CafePlus][DEBUG] Setting storage filter to solid ingredient: {solid}");
+                storage.storageFilters = new List<Tag> { solid };
+                Debug.Log($"[CafePlus][DEBUG] Setting delivery.RequestedItemTag to: {solid}");
+                delivery.RequestedItemTag = solid;
+            }
+        }
+    }
+
 
     [HarmonyPatch(typeof(EspressoMachineConfig), "ConfigureBuildingTemplate")]
     public static class EspressoMachineConfig_ConfigureBuildingTemplate_CombinedPatch
@@ -129,7 +152,9 @@ namespace CafePlus
                 .Select(recipe =>
                 {
                     string effectName = recipe.EffectName;
-                    string tooltip = $"Brew {effectName}";
+                    string liquidName = recipe.LiquidIngredient.IsValid ? recipe.LiquidIngredient.ProperName() : "None";
+                    string solidName = recipe.SolidIngredient.IsValid ? recipe.SolidIngredient.ProperName() : "None";
+                    string tooltip = $"Brew {effectName}\nIngredients: {liquidName} (liquid), {solidName} (solid)";
                     if (recipe.Effect != null)
                     {
                         tooltip += $"\nDuration: {recipe.Effect.Duration:0.##}s";
@@ -166,8 +191,19 @@ namespace CafePlus
                 recipeComponent.SetSelectedRecipe(recipe);
 
                 var storage = GetComponent<Storage>();
+                var delivery = GetComponent<ManualDeliveryKG>();
                 if (storage != null && recipe != null)
-                    storage.storageFilters = new List<Tag> { recipe.LiquidIngredient, EspressoMachine.INGREDIENT_TAG };
+                {
+                    var solid = recipe.SolidIngredient.IsValid ? recipe.SolidIngredient : EspressoMachine.INGREDIENT_TAG;
+                    Debug.Log($"[CafePlus][DEBUG] OnOptionSelected: Setting storage filter to solid ingredient: {solid}");
+                    storage.storageFilters = new List<Tag> { solid };
+                    if (delivery != null)
+                    {
+                        Debug.Log($"[CafePlus][DEBUG] OnOptionSelected: Setting delivery.RequestedItemTag to: {solid}");
+                        delivery.RequestedItemTag = solid;
+                        ManualDeliveryKGExtensions.ForceManualDeliveryUpdate(delivery); 
+                    }
+                }
                 var consumer = GetComponent<ConduitConsumer>();
                 if (consumer != null && recipe != null)
                     consumer.capacityTag = recipe.LiquidIngredient;
@@ -175,6 +211,19 @@ namespace CafePlus
         }
 
         public Tag GetSelectedOption() => selectedOption;
+
+        private void UpdateManualDeliveryTag()
+        {
+            var delivery = GetComponent<ManualDeliveryKG>();
+            var recipeComponent = GetComponent<RecipeComponent>();
+            if (delivery != null && recipeComponent != null && recipeComponent.SelectedRecipe != null)
+            {
+                Tag solid = recipeComponent.SelectedRecipe.SolidIngredient.IsValid
+                    ? recipeComponent.SelectedRecipe.SolidIngredient
+                    : EspressoMachine.INGREDIENT_TAG;
+                delivery.RequestedItemTag = solid;
+            }
+        }
 
         protected override void OnSpawn()
         {
@@ -186,12 +235,24 @@ namespace CafePlus
                 recipeComponent.SetSelectedRecipe(recipe);
 
                 var storage = GetComponent<Storage>();
+                var delivery = GetComponent<ManualDeliveryKG>();
                 if (storage != null && recipe != null)
-                    storage.storageFilters = new List<Tag> { recipe.LiquidIngredient, EspressoMachine.INGREDIENT_TAG };
+                {
+                    var solid = recipe.SolidIngredient.IsValid ? recipe.SolidIngredient : EspressoMachine.INGREDIENT_TAG;
+                    Debug.Log($"[CafePlus][DEBUG] OnSpawn: Setting storage filter to solid ingredient: {solid}");
+                    storage.storageFilters = new List<Tag> { solid };
+                    if (delivery != null)
+                    {
+                        Debug.Log($"[CafePlus][DEBUG] OnSpawn: Setting delivery.RequestedItemTag to: {solid}");
+                        delivery.RequestedItemTag = solid;
+                    }
+                }
                 var consumer = GetComponent<ConduitConsumer>();
                 if (consumer != null && recipe != null)
                     consumer.capacityTag = recipe.LiquidIngredient;
             }
+
+            UpdateManualDeliveryTag();
         }
     }
 
@@ -222,7 +283,10 @@ namespace CafePlus
             PrimaryElement primaryElement = storage.FindPrimaryElement(ElementLoader.GetElement(inputLiquid).id);
 
             bool hasLiquid = primaryElement != null && primaryElement.Mass >= EspressoMachine.WATER_MASS_PER_USE;
-            bool hasIngredient = storage.GetAmountAvailable(EspressoMachine.INGREDIENT_TAG) >= EspressoMachine.INGREDIENT_MASS_PER_USE;
+            Tag solid = recipeComponent.SelectedRecipe?.SolidIngredient.IsValid == true
+                ? recipeComponent.SelectedRecipe.SolidIngredient
+                : EspressoMachine.INGREDIENT_TAG;
+            bool hasIngredient = storage.GetAmountAvailable(solid) >= EspressoMachine.INGREDIENT_MASS_PER_USE;
 
             __result = hasLiquid && hasIngredient;
         }
@@ -244,7 +308,13 @@ namespace CafePlus
 
             Effect.AddModifierDescriptions(__instance.gameObject, descs, "Espresso", true);
 
-            string ingredientName = EspressoMachine.INGREDIENT_TAG.ProperName();
+            // Use the selected recipe's solid ingredient
+            var recipeComponent = __instance.GetComponent<RecipeComponent>();
+            Tag solidTag = EspressoMachine.INGREDIENT_TAG;
+            if (recipeComponent != null && recipeComponent.SelectedRecipe != null && recipeComponent.SelectedRecipe.SolidIngredient.IsValid)
+                solidTag = recipeComponent.SelectedRecipe.SolidIngredient;
+
+            string ingredientName = solidTag.ProperName();
             Descriptor ingredientDesc = new Descriptor();
             ingredientDesc.SetupDescriptor(
                 string.Format(
@@ -262,7 +332,6 @@ namespace CafePlus
             descs.Add(ingredientDesc);
 
             Tag inputLiquid = GameTags.DirtyWater;
-            var recipeComponent = __instance.GetComponent<RecipeComponent>();
             if (recipeComponent != null)
             {
                 inputLiquid = recipeComponent.InputLiquid;
@@ -343,21 +412,24 @@ namespace CafePlus
             Tag inputLiquid = GameTags.DirtyWater;
             string recipeName = "Unknown";
             List<string> effectIds = null;
+            Tag solidIngredient = EspressoMachine.INGREDIENT_TAG;
             if (recipeComponent != null && recipeComponent.SelectedRecipe != null)
             {
                 inputLiquid = recipeComponent.InputLiquid;
                 recipeName = recipeComponent.SelectedRecipe.EffectName;
                 effectIds = recipeComponent.SelectedRecipe.Effects;
+                if (recipeComponent.SelectedRecipe.SolidIngredient.IsValid)
+                    solidIngredient = recipeComponent.SelectedRecipe.SolidIngredient;
             }
 
             storage.ConsumeAndGetDisease(inputLiquid, EspressoMachine.WATER_MASS_PER_USE, out amount_consumed, out disease_info1, out aggregate_temperature);
-            storage.ConsumeAndGetDisease(EspressoMachine.INGREDIENT_TAG, EspressoMachine.INGREDIENT_MASS_PER_USE, out amount_consumed, out disease_info2, out aggregate_temperature);
+            storage.ConsumeAndGetDisease(solidIngredient, EspressoMachine.INGREDIENT_MASS_PER_USE, out amount_consumed, out disease_info2, out aggregate_temperature);
 
             GermExposureMonitor.Instance smi = worker.GetSMI<GermExposureMonitor.Instance>();
             if (smi != null)
             {
                 smi.TryInjectDisease(disease_info1.idx, disease_info1.count, inputLiquid, Sickness.InfectionVector.Digestion);
-                smi.TryInjectDisease(disease_info2.idx, disease_info2.count, EspressoMachine.INGREDIENT_TAG, Sickness.InfectionVector.Digestion);
+                smi.TryInjectDisease(disease_info2.idx, disease_info2.count, solidIngredient, Sickness.InfectionVector.Digestion);
             }
 
             Effects effects = worker.GetComponent<Effects>();
@@ -470,6 +542,7 @@ namespace CafePlus
         public string Recipe { get; set; }
         public EffectData Effect { get; set; }
         public Tag LiquidIngredient { get; set; }
+        public Tag SolidIngredient { get; set; } // <-- Add this line
 
         public string AllowedUsers { get; set; }
 
@@ -496,6 +569,7 @@ namespace CafePlus
     {
         public static readonly List<CafePlusRecipe> All;
         public static readonly Dictionary<string, CafePlusRecipe> ByName;
+        public static readonly HashSet<Tag> AllSolidIngredients; // Add this
 
         static CafePlusRecipes()
         {
@@ -509,6 +583,12 @@ namespace CafePlus
                 }
             }
             ByName = All.ToDictionary(r => r.EffectName, r => r);
+
+            // Collect all unique valid solid ingredients
+            AllSolidIngredients = new HashSet<Tag>(
+                All.Where(r => r.SolidIngredient.IsValid)
+                   .Select(r => r.SolidIngredient)
+            );
         }
     }
 
@@ -590,6 +670,14 @@ namespace CafePlus
         public string AttributeId { get; set; }
         public float Value { get; set; }
         public bool IsMultiplier { get; set; }
+    }
+
+    public static class ManualDeliveryKGExtensions
+    {
+        public static void ForceManualDeliveryUpdate(ManualDeliveryKG delivery)
+        {
+            delivery.UpdateDeliveryState();
+        }
     }
 }
 
