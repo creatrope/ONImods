@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectName>Medals</ProjectName>
+    <ProjectGuid>{312EC64E-4F4F-4BC8-801B-53FB2D64F52E}</ProjectGuid>
+    <RootNamespace>$(ProjectName)</RootNamespace>
+    <AssemblyName>$(ProjectName)</AssemblyName>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <ItemGroup>
+    <Compile Include="Patches.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HLib\HLib.csproj">
+      <Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
+      <Name>HLib</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="mod.yaml" />
+    <None Include="mod_info.yaml" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
