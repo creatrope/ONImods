@@ -24,7 +24,9 @@ namespace Medals
     {
         // Change from private to internal so other classes in the same assembly can access it
         internal static PAction KeyTestAction;
+        internal static PAction DamageMinionAction; // New action for damage hotkey
         private Action snapshotAction;
+        private Action damageSnapshotAction; // New snapshot for damage
 
         public string handlerName => "MinimalKeybindHandler";
         public KInputHandler inputHandler { get; set; }
@@ -35,6 +37,7 @@ namespace Medals
         internal MinimalKeybindHandler()
         {
             snapshotAction = KeyTestAction != null ? KeyTestAction.GetKAction() : PAction.MaxAction;
+            damageSnapshotAction = DamageMinionAction != null ? DamageMinionAction.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
@@ -70,6 +73,28 @@ namespace Medals
                     Debug.Log("[Medals] No minion selected.");
                 }
             }
+            if (e.TryConsume(damageSnapshotAction))
+            {
+                Debug.Log("[Medals] Hotkey CTRL+F11 detected for damage.");
+                if (SelectedMinion != null)
+                {
+                    var health = SelectedMinion.GetComponent<Health>();
+                    if (health != null)
+                    {
+                        float damageAmount = 10f; // Amount of damage to apply
+                        health.Damage(damageAmount);
+                        Debug.Log($"[Medals] Damaged '{SelectedMinion.GetProperName()}' for {damageAmount} HP via hotkey.");
+                    }
+                    else
+                    {
+                        Debug.Log("[Medals] Health component not found on selected minion.");
+                    }
+                }
+                else
+                {
+                    Debug.Log("[Medals] No minion selected.");
+                }
+            }
         }
 
         [PLibMethod(RunAt.AfterLayerableLoad)]
@@ -84,6 +109,8 @@ namespace Medals
             manager.RegisterPatchClass(typeof(MinimalKeybindHandler));
             KeyTestAction = new PActionManager().CreateAction(
                 "Medals.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F12, Modifier.Ctrl));
+            DamageMinionAction = new PActionManager().CreateAction(
+                "Medals.DamageMinionAction", "Damage Minion", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl)); // New hotkey: CTRL+F11
         }
     }
 
@@ -113,6 +140,8 @@ namespace Medals
             // Add medals here
             AddMedal(new MedalInfo("Spawned Medal", "SpawnedMedal", "Awarded for spawning in the colony."));
             AddMedal(new MedalInfo("Rescued Dupe", "RescuedDupe", "Awarded for rescuing an incapacitated dupe."));
+            AddMedal(new MedalInfo("Injured Medal", "InjuredMedal", "Awarded for being injured (taking damage)."));
+            AddMedal(new MedalInfo("Space Launch Medal", "SpaceLaunchMedal", "Awarded for launching to space (migrating to a new world)."));
         }
 
         private static void AddMedal(MedalInfo medal)
@@ -293,4 +322,44 @@ namespace Medals
         }
     }
 
+    [HarmonyPatch(typeof(Health), "Damage")]
+    public static class Health_DamageMedalPatch
+    {
+        private static void Postfix(Health __instance, float amount)
+        {
+            var minion = __instance.GetComponent<MinionIdentity>();
+            if (minion != null && amount > 0)
+            {
+                // Award a medal for being injured
+                MedalsUtility.AddMedalToMinion(minion.GetProperName(), "InjuredMedal");
+                Debug.Log($"[Medals] Awarded InjuredMedal to '{minion.GetProperName()}' for taking damage: {amount}");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(AssignmentManager), "MinionMigration")]
+    public static class AssignmentManager_MinionMigration_Patch
+    {
+        public static void Postfix(object data)
+        {
+            var migrationEventArgs = data as MinionMigrationEventArgs;
+            if (migrationEventArgs != null)
+            {
+                var minionGo = migrationEventArgs.minionId?.gameObject;
+                if (minionGo == null) return;
+
+                int oldWorldId = migrationEventArgs.prevWorldId;
+                int newWorldId = migrationEventArgs.targetWorldId;
+
+                string minionName = minionGo.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+
+                // Award the Space Launch Medal only if the world IDs are equal
+                if (oldWorldId == newWorldId)
+                {
+                    MedalsUtility.AddMedalToMinion(minionName, "SpaceLaunchMedal");
+                    Debug.Log($"[ArtifactsPlus] Minion migrated and awarded SpaceLaunchMedal.");
+                }
+            }
+        }
+    }
 }
