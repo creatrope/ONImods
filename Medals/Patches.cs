@@ -137,11 +137,30 @@ namespace Medals
         /// </summary>
         public static void LoadAndRegisterMedals()
         {
-            // Add medals here
-            AddMedal(new MedalInfo("Spawned Medal", "SpawnedMedal", "Awarded for spawning in the colony."));
+            // Add static medals
             AddMedal(new MedalInfo("Rescued Dupe", "RescuedDupe", "Awarded for rescuing an incapacitated dupe."));
             AddMedal(new MedalInfo("Injured Medal", "InjuredMedal", "Awarded for being injured (taking damage)."));
             AddMedal(new MedalInfo("Space Launch Medal", "SpaceLaunchMedal", "Awarded for launching to space (migrating to a new world)."));
+
+            Debug.Log("[Medals] Creating First World Visitor medals.");
+
+            if (ClusterManager.Instance != null && ClusterManager.Instance.WorldContainers != null)
+            {
+                int worldCount = ClusterManager.Instance.WorldContainers.Count;
+                Debug.Log($"[Medals] Found {worldCount} worlds in ClusterManager.Instance.WorldContainers.");
+
+                foreach (var world in ClusterManager.Instance.WorldContainers)
+                {
+                    string effectId = $"FirstVisitor_{world.id}";
+                    string worldDisplayName = world.GetComponent<ClusterGridEntity>()?.GetProperName();
+                    string name = $"First Visitor to {worldDisplayName}";
+                    string desc = $"Awarded to the first visitor to {worldDisplayName}.";
+                    AddMedal(new MedalInfo(name, effectId, desc));
+                }
+                Debug.Log("[Medals] First Visitor medals registered for all worlds.");
+            }
+            int medalsCount = AllMedals.Count;
+            Debug.Log($"[Medals] created {medalsCount} medals.");
         }
 
         private static void AddMedal(MedalInfo medal)
@@ -262,26 +281,6 @@ namespace Medals
         }
     }
 
-    [HarmonyPatch(typeof(MinionIdentity), "OnSpawn")]
-    public static class MinionIdentity_SpawnMedalPatch
-    {
-        public static void Postfix(MinionIdentity __instance)
-        {
-            MedalsUtility.AddMedalToMinion(__instance.GetProperName(), "SpawnedMedal");
-            Debug.Log($"[Medals] Awarded SpawnedMedal to '{__instance.GetProperName()}' on spawn.");
-        }
-    }
-
-    [HarmonyPatch(typeof(Db), "Initialize")]
-    public static class Db_Initialize_MedalsRegistryPatch
-    {
-        public static void Postfix()
-        {
-            MedalsRegistry.LoadAndRegisterMedals();
-            Debug.Log("[Medals] Medals registered after Db initialization.");
-        }
-    }
-
     [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
     public static class MinionPersonalityPanel_AddMedalsPanelPatch
     {
@@ -337,27 +336,167 @@ namespace Medals
         }
     }
 
+    // Add this tracker class to serialize first visitor awards
+    [Serializable]
+    public class FirstVisitorMedalTracker : KMonoBehaviour, ISaveLoadable
+    {
+        [Serialize]
+        private Dictionary<int, string> worldFirstVisitors = new Dictionary<int, string>();
+
+        public static FirstVisitorMedalTracker Instance;
+
+        protected override void OnPrefabInit()
+        {
+            base.OnPrefabInit();
+            Instance = this;
+        }
+        a
+        public bool TryAwardFirstVisitor(int worldId, string minionName)
+        {
+            if (!worldFirstVisitors.ContainsKey(worldId))
+            {
+                worldFirstVisitors[worldId] = minionName;
+                string effectId = $"FirstVisitor_{worldId}";
+                MedalsUtility.AddMedalToMinion(minionName, effectId);
+                Debug.Log($"[Medals] Awarded {effectId} to '{minionName}'.");
+                return true;
+            }
+            return false;
+        }
+
+        public string GetFirstVisitor(int worldId)
+        {
+            return worldFirstVisitors.TryGetValue(worldId, out var minionName) ? minionName : null;
+        }
+    }
+
     [HarmonyPatch(typeof(AssignmentManager), "MinionMigration")]
     public static class AssignmentManager_MinionMigration_Patch
     {
         public static void Postfix(object data)
         {
-            var migrationEventArgs = data as MinionMigrationEventArgs;
-            if (migrationEventArgs != null)
+            Debug.Log("[Medals] AssignmentManager_MinionMigration_Patch.Postfix called.");
+            if (data == null)
             {
-                var minionGo = migrationEventArgs.minionId?.gameObject;
-                if (minionGo == null) return;
+                Debug.Log("[Medals] MinionMigration data is null.");
+                return;
+            }
 
-                int oldWorldId = migrationEventArgs.prevWorldId;
-                int newWorldId = migrationEventArgs.targetWorldId;
+            Debug.Log($"[Medals] MinionMigration data type: {data.GetType().FullName}");
 
-                string minionName = minionGo.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+            var migrationEventArgs = data as MinionMigrationEventArgs;
+            if (migrationEventArgs == null)
+            {
+                Debug.Log("[Medals] MinionMigrationEventArgs cast failed.");
+                return;
+            }
 
-                // Award the Space Launch Medal only if the world IDs are equal
-                if (oldWorldId == newWorldId)
+            Debug.Log($"[Medals] migrationEventArgs: prevWorldId={migrationEventArgs.prevWorldId}, targetWorldId={migrationEventArgs.targetWorldId}, minionId={migrationEventArgs.minionId}");
+
+            var minionGo = migrationEventArgs.minionId?.gameObject;
+            if (minionGo == null)
+            {
+                Debug.Log("[Medals] minionGo is null.");
+                return;
+            }
+
+            Debug.Log($"[Medals] minionGo name: {minionGo.name}, minionGo type: {minionGo.GetType().FullName}");
+
+            int oldWorldId = migrationEventArgs.prevWorldId;
+            int newWorldId = migrationEventArgs.targetWorldId;
+
+            var selectable = minionGo.GetComponent<KSelectable>();
+            string minionName = selectable != null ? selectable.GetProperName() : "Unknown Minion";
+            Debug.Log($"[Medals] minionName: {minionName}");
+
+            Debug.Log($"[Medals] oldWorldId: {oldWorldId}, newWorldId: {newWorldId}");
+
+            // Award the Space Launch Medal only if the world IDs are equal
+            if (oldWorldId == newWorldId)
+            {
+                Debug.Log("[Medals] oldWorldId == newWorldId, awarding SpaceLaunchMedal.");
+                MedalsUtility.AddMedalToMinion(minionName, "SpaceLaunchMedal");
+                Debug.Log($"[ArtifactsPlus] Minion migrated and awarded SpaceLaunchMedal.");
+                return;
+            }
+
+            // Award First Visitor medal if this is the first visit to the world
+            var world = ClusterManager.Instance.GetWorld(newWorldId);
+            if (world == null)
+            {
+                Debug.Log($"[Medals] ClusterManager.Instance.GetWorld({newWorldId}) returned null.");
+            }
+            else
+            {
+                Debug.Log($"[Medals] world id: {world.id}, world name: {world.name}, world type: {world.GetType().FullName}");
+            }
+
+            string worldName = world != null ? world.name : $"World {newWorldId}";
+            Debug.Log($"[Medals] worldName: {worldName}");
+
+            if (FirstVisitorMedalTracker.Instance != null)
+            {
+                Debug.Log("[Medals] FirstVisitorMedalTracker.Instance is not null, trying to award FirstVisitor medal.");
+                bool awarded = FirstVisitorMedalTracker.Instance.TryAwardFirstVisitor(newWorldId, minionName);
+                Debug.Log($"[Medals] TryAwardFirstVisitor returned: {awarded}");
+            }
+            else
+            {
+                Debug.Log("[Medals] FirstVisitorMedalTracker.Instance is null.");
+            }
+        }
+    }
+
+
+    [HarmonyPatch(typeof(ClusterManager), "OnSpawn")]
+    public static class ClusterManager_OnSpawn_MedalsRegistryPatch
+    {
+        public static void DumpWorldMeta(string header)
+        {
+            var worlds = ClusterManager.Instance?.WorldContainers;
+            if (worlds != null && worlds.Count > 0)
+            {
+                var world = worlds[0];
+                var gridEntity = world.GetComponent<ClusterGridEntity>();
+                Debug.Log($"[Medals] {header}:");
+                Debug.Log($"  id: {world.id}");
+                Debug.Log($"  name: {world.name}");
+                Debug.Log($"  DisplayName: {world.GetProperName()}");
+                Debug.Log($"  type: {world.GetType().FullName}");
+                Debug.Log($"  IsStartWorld: {world.IsStartWorld}");
+                Debug.Log($"  IsDiscovered: {world.IsDiscovered}");
+                Debug.Log($"  IsDupeVisited: {world.IsDupeVisited}");
+                Debug.Log($"  ClusterGridEntity name: {gridEntity?.name}");
+                Debug.Log($"  ClusterGridEntity proper name: {gridEntity?.GetProperName()}");
+                Debug.Log($"  ClusterGridEntity location: {gridEntity?.Location}");
+            }
+            else
+            {
+                Debug.Log("[Medals] No worlds found in ClusterManager.Instance.WorldContainers.");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(MinionIdentity), "OnSpawn")]
+    public static class MinionIdentity_OnSpawn_WorldMetaDumpPatch
+    {
+        private static bool loaded = false;
+
+        public static void Prefix()
+        {
+            if (!loaded)
+            {
+                Debug.Log("[Medals] MinionIdentity_OnSpawn Prefix.");
+                MedalsRegistry.LoadAndRegisterMedals();
+                loaded = true;
+
+                // Create and attach the singleton FirstVisitorMedalTracker if not present
+                if (FirstVisitorMedalTracker.Instance == null)
                 {
-                    MedalsUtility.AddMedalToMinion(minionName, "SpaceLaunchMedal");
-                    Debug.Log($"[ArtifactsPlus] Minion migrated and awarded SpaceLaunchMedal.");
+                    var trackerGo = new GameObject("FirstVisitorMedalTracker");
+                    UnityEngine.Object.DontDestroyOnLoad(trackerGo);
+                    FirstVisitorMedalTracker.Instance = trackerGo.AddComponent<FirstVisitorMedalTracker>();
+                    Debug.Log("[Medals] FirstVisitorMedalTracker singleton created and component added.");
                 }
             }
         }
