@@ -10,13 +10,12 @@ using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
+using STRINGS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using TUNING;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace Medals
 {
@@ -235,22 +234,38 @@ namespace Medals
             pos.z = Grid.GetLayerZ(Grid.SceneLayer.Ore);
             pos.y += 2.0f;
 
-            // If you have a custom keepsake prefab, instantiate it like LargeImpactorDestroyedSequence
-            GameObject prefab = Assets.GetPrefab((Tag)"keepsake_megabrain"); // stereoscope
+            GameObject prefab = Assets.GetPrefab((Tag)"keepsake_megabrain");
             if (prefab != null)
             {
-                Debug.Log($"[Medals] Keepsake prefab info: name={prefab.name}, activeSelf={prefab.activeSelf}, has PedestalDisplayable={prefab.HasTag(GameTags.PedestalDisplayable)}");
-
                 GameObject keepsakeObj = Util.KInstantiate(prefab, pos);
+                keepsakeObj.SetActive(true);
+
+                // Set custom name and description in looseEntity
+                var medal = MedalsRegistry.AllMedals.FirstOrDefault(m => m.EffectId == effectId);
+                if (medal != null)
+                {
+                    keepsakeObj.name = medal.Name; // Unity GameObject name
+                    // Set display name and description for UI
+                    var selectable = keepsakeObj.GetComponent<KSelectable>();
+                    if (selectable != null)
+                        selectable.SetName(medal.Name);
+
+                    // Set description for tooltip/long description
+                    var prefabID = keepsakeObj.GetComponent<KPrefabID>();
+                    if (prefabID != null)
+                    {
+                        // This is how ONI stores description for tooltips
+                        prefabID.PrefabTag = new Tag($"keepsake_{effectId}"); 
+						
+                        var infoDesc = keepsakeObj.GetComponent<InfoDescription>();
+                        if (infoDesc != null)
+                            infoDesc.description = medal.Description;
+                    }
+                }
+
                 if (!keepsakeObj.HasTag(GameTags.PedestalDisplayable))
                     keepsakeObj.AddTag(GameTags.PedestalDisplayable);
-                keepsakeObj.SetActive(true);
                 Debug.Log($"[Medals] Spawned keepsake '{keepsakeId}' for medal '{effectId}' at {pos}.");
-
-                Debug.Log($"[Medals] Keepsake instance info: name={keepsakeObj.name}, activeSelf={keepsakeObj.activeSelf}, has PedestalDisplayable={keepsakeObj.HasTag(GameTags.PedestalDisplayable)}");
-
-                // Optionally, play a visual effect for extra visibility
-                // new UpgradeFX.Instance((IStateMachineTarget) keepsakeObj.GetComponent<KMonoBehaviour>(), new Vector3(0.0f, -0.5f, -0.1f)).StartSM();
             }
             else
             {
