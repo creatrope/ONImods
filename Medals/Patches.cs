@@ -14,6 +14,7 @@ using STRINGS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TemplateClasses;
 using TUNING;
 using UnityEngine;
 
@@ -229,22 +230,24 @@ namespace Medals
         /// </summary>
         private static void SpawnKeepsakeForMedal(MinionIdentity minion, string effectId)
         {
-            string keepsakeId = $"keepsake-{effectId}";
+            string keepsakeId = "keepsake_medal";
             var pos = minion.transform.position;
             pos.z = Grid.GetLayerZ(Grid.SceneLayer.Ore);
             pos.y += 2.0f;
 
-            GameObject prefab = Assets.GetPrefab((Tag)"keepsake_megabrain");
+            GameObject prefab = Assets.GetPrefab((Tag) keepsakeId);
             if (prefab != null)
             {
                 GameObject keepsakeObj = Util.KInstantiate(prefab, pos);
                 keepsakeObj.SetActive(true);
 
-                // Set custom name and description in looseEntity
+                bool isDisplayable = keepsakeObj.HasTag(GameTags.PedestalDisplayable);
+                Debug.Log($"[Medals] Keepsake '{keepsakeObj.name}' isDisplayable: {isDisplayable}");
+
                 var medal = MedalsRegistry.AllMedals.FirstOrDefault(m => m.EffectId == effectId);
                 if (medal != null)
                 {
-                    keepsakeObj.name = medal.Name; // Unity GameObject name
+                    keepsakeObj.name = keepsakeId; // Unity GameObject name
                     // Set display name and description for UI
                     var selectable = keepsakeObj.GetComponent<KSelectable>();
                     if (selectable != null)
@@ -254,9 +257,8 @@ namespace Medals
                     var prefabID = keepsakeObj.GetComponent<KPrefabID>();
                     if (prefabID != null)
                     {
-                        // This is how ONI stores description for tooltips
-                        prefabID.PrefabTag = new Tag($"keepsake_{effectId}"); 
-						
+                        prefabID.PrefabTag = new Tag(keepsakeId);
+
                         var infoDesc = keepsakeObj.GetComponent<InfoDescription>();
                         if (infoDesc != null)
                             infoDesc.description = medal.Description;
@@ -265,6 +267,7 @@ namespace Medals
 
                 if (!keepsakeObj.HasTag(GameTags.PedestalDisplayable))
                     keepsakeObj.AddTag(GameTags.PedestalDisplayable);
+
                 Debug.Log($"[Medals] Spawned keepsake '{keepsakeId}' for medal '{effectId}' at {pos}.");
             }
             else
@@ -527,6 +530,8 @@ namespace Medals
             if (!loaded)
             {
                 Debug.Log("[Medals] MinionIdentity_OnSpawn Prefix.");
+                ClusterManager_OnSpawn_MedalsRegistryPatch.DumpWorldMeta("Prefix");
+
                 MedalsRegistry.LoadAndRegisterMedals();
                 loaded = true;
 
@@ -542,23 +547,52 @@ namespace Medals
     }
 
     [HarmonyPatch]
-    public static class DisplayablePatch
+    public static class MedalKeepsakeConfigPatch
     {
+        // Add this field to the class, not inside the method
+        private static bool keepsakeMedalAdded = false;
+
         [HarmonyPatch(typeof(KeepsakeConfig), "CreatePrefabs")]
         [HarmonyPostfix]
         public static void Postfix(List<GameObject> __result)
         {
+            if (keepsakeMedalAdded)
+                return;
+            keepsakeMedalAdded = true;
+
+            Debug.Log("[Medals] Adding my own Prefab keepsake_medal.");
+
             if (__result != null)
             {
-                foreach (var prefab in __result)
+                var keepsakeExists = Assets.TryGetPrefab((Tag)"keepsake_medal") != null;
+                if (!keepsakeExists)
                 {
-                    if (prefab != null)
-                    {
-                        prefab.AddTag(GameTags.PedestalDisplayable);
-                        Debug.Log("[Medals] Added PedestalDisplayable tag to {prefab.name}.");
-                    }
+                    var newkeepsake = KeepsakeConfig.CreateKeepsake(
+                      "Medal",
+                       (string) "Medal Keepsake",     // UI.KEEPSAKES.GEOTHERMAL_PLANT.NAME,
+                        (string)"Medal Keepsake Description", // UI.KEEPSAKES.GEOTHERMAL_PLANT.DESCRIPTION,
+                       "keepsake_geothermal_vent_kanim", "idle", "ui", DlcManager.DLC2,
+                        (string[])null, (KeepsakeConfig.PostInitFn)null, SimHashes.Creature);
+                    newkeepsake.GetComponent<KPrefabID>().AddTag(GameTags.PedestalDisplayable);
+                    __result.Add(newkeepsake);
                 }
             }
+
+            // Print out all prefab names in the result list
+            Debug.Log("[Medals] Prefab names in __result:");
+            foreach (var prefab in __result)
+            {
+                if (prefab != null)
+                {
+                    Debug.Log($"[Medals] Prefab: {prefab.name}, making displayable");
+                    if (!prefab.HasTag(GameTags.PedestalDisplayable))
+                        prefab.AddTag(GameTags.PedestalDisplayable);
+                }
+                else
+                    Debug.Log("[Medals] Prefab: <null>");
+            }
+
+            __result.RemoveAll((Predicate<GameObject>)(x => (UnityEngine.Object)x == (UnityEngine.Object)null));
         }
     }
 }
