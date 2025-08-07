@@ -244,11 +244,11 @@ namespace CafePlus
                 if (storage != null && recipe != null)
                 {
                     var solid = recipe.SolidIngredient.IsValid ? recipe.SolidIngredient : EspressoMachine.INGREDIENT_TAG;
-                    Debug.Log($"[CafePlus][DEBUG] OnSpawn: Setting storage filter to solid ingredient: {solid}");
+                    //Debug.Log($"[CafePlus][DEBUG] OnSpawn: Setting storage filter to solid ingredient: {solid}");
                     storage.storageFilters = new List<Tag> { solid };
                     if (delivery != null)
                     {
-                        Debug.Log($"[CafePlus][DEBUG] OnSpawn: Setting delivery.RequestedItemTag to: {solid}");
+                        //Debug.Log($"[CafePlus][DEBUG] OnSpawn: Setting delivery.RequestedItemTag to: {solid}");
                         delivery.RequestedItemTag = solid;
                     }
                 }
@@ -512,18 +512,18 @@ namespace CafePlus
                             return true;
                         }
 
-                        Debug.Log($"[CafePlus][DEBUG] Precondition: checking CafePlus effects for worker '{worker.name}'.");
+                        //Debug.Log($"[CafePlus][DEBUG] Precondition: checking CafePlus effects for worker '{worker.name}'.");
 
                         // Use EffectName, not Recipe name
                         foreach (var effectName in CafePlusRecipes.All.Select(r => r.EffectName).Where(n => !string.IsNullOrEmpty(n)))
                         {
                             if (effects.HasEffect(effectName))
                             {
-                                Debug.Log($"[CafePlus][DEBUG] Chore blocked for worker '{worker.name}' because CafePlus effect '{effectName}' is active.");
+                                //Debug.Log($"[CafePlus][DEBUG] Chore blocked for worker '{worker.name}' because CafePlus effect '{effectName}' is active.");
                                 return false;
                             }
                         }
-                        Debug.Log($"[CafePlus][DEBUG] Precondition: worker '{worker.name}' has no active CafePlus effects, returning true.");
+                        //Debug.Log($"[CafePlus][DEBUG] Precondition: worker '{worker.name}' has no active CafePlus effects, returning true.");
                         return true;
                     }
                 }
@@ -547,16 +547,16 @@ namespace CafePlus
                         RecipeUserType allowed = RecipeUserType.None;
                         bool parsed = Enum.TryParse(allowedUsersRaw, out allowed);
 
-                        Debug.Log($"[CafePlus][DEBUG] AllowedUserType precondition for worker '{worker?.name ?? "null"}':");
-                        Debug.Log($"[CafePlus][DEBUG]  - hasBionicTag: {hasBionicTag}");
-                        Debug.Log($"[CafePlus][DEBUG]  - minionModel: {minionModel}");
-                        Debug.Log($"[CafePlus][DEBUG]  - recipe.AllowedUsers: {allowedUsersRaw} (parsed: {parsed}, value: {allowed})");
+                        //Debug.Log($"[CafePlus][DEBUG] AllowedUserType precondition for worker '{worker?.name ?? "null"}':");
+                        //Debug.Log($"[CafePlus][DEBUG]  - hasBionicTag: {hasBionicTag}");
+                        //Debug.Log($"[CafePlus][DEBUG]  - minionModel: {minionModel}");
+                        //Debug.Log($"[CafePlus][DEBUG]  - recipe.AllowedUsers: {allowedUsersRaw} (parsed: {parsed}, value: {allowed})");
 
                         bool allowedResult = RecipeUserTypeUtil.IsWorkerAllowed(worker, allowed);
-                        Debug.Log($"[CafePlus][DEBUG]  - IsWorkerAllowed result: {allowedResult}");
+                        //Debug.Log($"[CafePlus][DEBUG]  - IsWorkerAllowed result: {allowedResult}");
 
-                        if (!allowedResult)
-                            Debug.Log($"[CafePlus][DEBUG] Chore blocked for worker '{worker?.name ?? "null"}' due to AllowedUserType mismatch.");
+                        //if (!allowedResult)
+                        //    Debug.Log($"[CafePlus][DEBUG] Chore blocked for worker '{worker?.name ?? "null"}' due to AllowedUserType mismatch.");
 
                         return allowedResult;
                     },
