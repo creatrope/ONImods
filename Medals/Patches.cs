@@ -22,16 +22,16 @@ namespace Medals
 {
     internal sealed class MinimalKeybindHandler : IInputHandler
     {
-        // Change from private to internal so other classes in the same assembly can access it
         internal static PAction KeyTestAction;
-        internal static PAction DamageMinionAction; // New action for damage hotkey
+        internal static PAction DamageMinionAction;
         private Action snapshotAction;
-        private Action damageSnapshotAction; // New snapshot for damage
+        private Action damageSnapshotAction;
+        private float lastSnapshotTime = 0f;
+        private float lastDamageTime = 0f;
+        private readonly float debounceInterval = 1.0f; // seconds
 
         public string handlerName => "MinimalKeybindHandler";
         public KInputHandler inputHandler { get; set; }
-
-        // Track the selected minion globally so the handler can access it
         internal static MinionIdentity SelectedMinion;
 
         internal MinimalKeybindHandler()
@@ -42,48 +42,45 @@ namespace Medals
 
         public void OnKeyDown(KButtonEvent e)
         {
-            if (e.TryConsume(snapshotAction))
+            float now = Time.time;
+
+            // Only consume one action per key press, and check which action was triggered
+            bool incapacitatePressed = e.TryConsume(snapshotAction);
+            bool damagePressed = e.TryConsume(damageSnapshotAction);
+
+            if (damagePressed || incapacitatePressed)
             {
-                Debug.Log("[Medals] Hotkey CTRL+F12 detected.");
+                if (now - lastSnapshotTime < debounceInterval)
+                    return;
+                lastSnapshotTime = now;
+
+                Debug.Log("[Medals] Hotkey detected.");
                 if (SelectedMinion != null)
                 {
                     Debug.Log($"[Medals] Selected minion: {SelectedMinion.GetProperName()}");
                     var health = SelectedMinion.GetComponent<Health>();
                     if (health != null)
                     {
-                        Debug.Log($"[Medals] Health component found. Can be incapacitated: {health.canBeIncapacitated}, IsIncapacitated: {health.IsIncapacitated()}");
-                        if (health.canBeIncapacitated && !health.IsIncapacitated())
+                        if (incapacitatePressed)
                         {
-                            health.Incapacitate(new Tag("ManualIncapacitate"));
-                            Debug.Log($"[Medals] Incapacitated '{SelectedMinion.GetProperName()}' via hotkey.");
-                            SelectedMinion = null; // Clear the selected minion after incapacitation
+                            Debug.Log($"[Medals] Health component found. Can be incapacitated: {health.canBeIncapacitated}, IsIncapacitated: {health.IsIncapacitated()}");
+                            if (health.canBeIncapacitated && !health.IsIncapacitated())
+                            {
+                                health.Incapacitate(new Tag("ManualIncapacitate"));
+                                Debug.Log($"[Medals] Incapacitated '{SelectedMinion.GetProperName()}' via hotkey.");
+                                SelectedMinion = null;
+                            }
+                            else
+                            {
+                                Debug.Log("[Medals] Minion cannot be incapacitated or is already incapacitated.");
+                            }
                         }
-                        else
+                        else if (damagePressed)
                         {
-                            Debug.Log("[Medals] Minion cannot be incapacitated or is already incapacitated.");
+                            float damageAmount = 10f;
+                            health.Damage(damageAmount);
+                            Debug.Log($"[Medals] Damaged '{SelectedMinion.GetProperName()}' for {damageAmount} HP via hotkey.");
                         }
-                    }
-                    else
-                    {
-                        Debug.Log("[Medals] Health component not found on selected minion.");
-                    }
-                }
-                else
-                {
-                    Debug.Log("[Medals] No minion selected.");
-                }
-            }
-            if (e.TryConsume(damageSnapshotAction))
-            {
-                Debug.Log("[Medals] Hotkey CTRL+F11 detected for damage.");
-                if (SelectedMinion != null)
-                {
-                    var health = SelectedMinion.GetComponent<Health>();
-                    if (health != null)
-                    {
-                        float damageAmount = 10f; // Amount of damage to apply
-                        health.Damage(damageAmount);
-                        Debug.Log($"[Medals] Damaged '{SelectedMinion.GetProperName()}' for {damageAmount} HP via hotkey.");
                     }
                     else
                     {
@@ -110,7 +107,7 @@ namespace Medals
             KeyTestAction = new PActionManager().CreateAction(
                 "Medals.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F12, Modifier.Ctrl));
             DamageMinionAction = new PActionManager().CreateAction(
-                "Medals.DamageMinionAction", "Damage Minion", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl)); // New hotkey: CTRL+F11
+                "Medals.DamageMinionAction", "Damage Minion", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl));
         }
     }
 
@@ -119,12 +116,14 @@ namespace Medals
         public string Name { get; }
         public string EffectId { get; }
         public string Description { get; }
+        public bool IsRepeatable { get; }
 
-        public MedalInfo(string name, string effectId, string description)
+        public MedalInfo(string name, string effectId, string description, bool isRepeatable)
         {
             Name = name;
             EffectId = effectId;
             Description = description;
+            IsRepeatable = isRepeatable;
         }
     }
 
@@ -132,15 +131,11 @@ namespace Medals
     {
         public static readonly List<MedalInfo> AllMedals = new List<MedalInfo>();
 
-        /// <summary>
-        /// Loads all medals into the registry and registers their effects.
-        /// </summary>
         public static void LoadAndRegisterMedals()
         {
-            // Add static medals
-            AddMedal(new MedalInfo("Rescued Dupe", "RescuedDupe", "Awarded for rescuing an incapacitated dupe."));
-            AddMedal(new MedalInfo("Injured Medal", "InjuredMedal", "Awarded for being injured (taking damage)."));
-            AddMedal(new MedalInfo("Space Launch Medal", "SpaceLaunchMedal", "Awarded for launching to space (migrating to a new world)."));
+            AddMedal(new MedalInfo("Rescued Dupe", "RescuedDupe", "Awarded for rescuing an incapacitated dupe.", true));
+            AddMedal(new MedalInfo("Injured Medal", "InjuredMedal", "Awarded for being injured (taking damage).", false));
+            AddMedal(new MedalInfo("Space Launch Medal", "SpaceLaunchMedal", "Awarded for launching to space (migrating to a new world).", false));
 
             Debug.Log("[Medals] Creating First World Visitor medals.");
 
@@ -155,7 +150,7 @@ namespace Medals
                     string worldDisplayName = world.GetComponent<ClusterGridEntity>()?.GetProperName();
                     string name = $"First Visitor to {worldDisplayName}";
                     string desc = $"Awarded to the first visitor to {worldDisplayName}.";
-                    AddMedal(new MedalInfo(name, effectId, desc));
+                    AddMedal(new MedalInfo(name, effectId, desc, false));
                 }
                 Debug.Log("[Medals] First Visitor medals registered for all worlds.");
             }
@@ -181,7 +176,7 @@ namespace Medals
                 id: medal.EffectId,
                 name: medal.Name,
                 description: medal.Description,
-                duration: -1, // Permanent
+                duration: -1,
                 show_in_ui: true,
                 trigger_floating_text: false,
                 is_bad: false
@@ -193,9 +188,6 @@ namespace Medals
 
     public static class MedalsUtility
     {
-        /// <summary>
-        /// Awards a medal (effect) to the specified minion.
-        /// </summary>
         public static void AddMedalToMinion(string minionName, string effectId)
         {
             var minion = Components.MinionIdentities?.Items?.FirstOrDefault(m => m.GetProperName() == minionName);
@@ -212,27 +204,66 @@ namespace Medals
                 return;
             }
 
-            // Check if the medal is already awarded
-            if (effects.HasEffect(effectId))
+            var medal = MedalsRegistry.AllMedals.FirstOrDefault(m => m.EffectId == effectId);
+            if (medal == null)
             {
-                Debug.Log($"[Medals] Minion '{minionName}' already has medal effect '{effectId}'.");
+                Debug.Log($"[Medals] Medal '{effectId}' not found in registry.");
+                return;
+            }
+
+            // Only award once if not repeatable
+            if (!medal.IsRepeatable && effects.HasEffect(effectId))
+            {
+                Debug.Log($"[Medals] Minion '{minionName}' already has non-repeatable medal effect '{effectId}'.");
                 return;
             }
 
             effects.Add(effectId, true);
             Debug.Log($"[Medals] Added medal effect '{effectId}' to minion '{minionName}'.");
+
+            // Spawn a keepsake at the minion's position
+            SpawnKeepsakeForMedal(minion, effectId);
         }
 
         /// <summary>
-        /// Returns a list of medal effect names currently applied to the minion.
+        /// Spawns a keepsake prefab at the minion's position.
         /// </summary>
+        private static void SpawnKeepsakeForMedal(MinionIdentity minion, string effectId)
+        {
+            string keepsakeId = $"keepsake-{effectId}";
+            var pos = minion.transform.position;
+            pos.z = Grid.GetLayerZ(Grid.SceneLayer.Ore);
+            pos.y += 2.0f;
+
+            // If you have a custom keepsake prefab, instantiate it like LargeImpactorDestroyedSequence
+            GameObject prefab = Assets.GetPrefab((Tag)"keepsake_megabrain"); // stereoscope
+            if (prefab != null)
+            {
+                Debug.Log($"[Medals] Keepsake prefab info: name={prefab.name}, activeSelf={prefab.activeSelf}, has PedestalDisplayable={prefab.HasTag(GameTags.PedestalDisplayable)}");
+
+                GameObject keepsakeObj = Util.KInstantiate(prefab, pos);
+                if (!keepsakeObj.HasTag(GameTags.PedestalDisplayable))
+                    keepsakeObj.AddTag(GameTags.PedestalDisplayable);
+                keepsakeObj.SetActive(true);
+                Debug.Log($"[Medals] Spawned keepsake '{keepsakeId}' for medal '{effectId}' at {pos}.");
+
+                Debug.Log($"[Medals] Keepsake instance info: name={keepsakeObj.name}, activeSelf={keepsakeObj.activeSelf}, has PedestalDisplayable={keepsakeObj.HasTag(GameTags.PedestalDisplayable)}");
+
+                // Optionally, play a visual effect for extra visibility
+                // new UpgradeFX.Instance((IStateMachineTarget) keepsakeObj.GetComponent<KMonoBehaviour>(), new Vector3(0.0f, -0.5f, -0.1f)).StartSM();
+            }
+            else
+            {
+                Debug.Log($"[Medals] No keepsake prefab found for '{keepsakeId}'.");
+            }
+        }
+
         public static List<string> GetMinionMedals(MinionIdentity minion)
         {
             var medals = new List<string>();
             var effects = minion.GetComponent<Effects>();
             if (effects != null)
             {
-                // Use the same method as CafePlus: check HasEffect for each registered effect
                 foreach (var medal in MedalsRegistry.AllMedals)
                 {
                     if (effects.HasEffect(medal.EffectId))
@@ -243,7 +274,6 @@ namespace Medals
         }
     }
 
-    // Patch RescueIncapacitatedChore.HoldingIncapacitated.deposit state's completion
     [HarmonyPatch(typeof(RescueIncapacitatedChore), "DropIncapacitatedDuplicant")]
     public static class RescueIncapacitatedChore_RescuedDupeMedalPatch
     {
@@ -329,14 +359,12 @@ namespace Medals
             var minion = __instance.GetComponent<MinionIdentity>();
             if (minion != null && amount > 0)
             {
-                // Award a medal for being injured
                 MedalsUtility.AddMedalToMinion(minion.GetProperName(), "InjuredMedal");
                 Debug.Log($"[Medals] Awarded InjuredMedal to '{minion.GetProperName()}' for taking damage: {amount}");
             }
         }
     }
 
-    // Add this tracker class to serialize first visitor awards
     [Serializable]
     public class FirstVisitorMedalTracker : KMonoBehaviour, ISaveLoadable
     {
@@ -350,7 +378,7 @@ namespace Medals
             base.OnPrefabInit();
             Instance = this;
         }
-        a
+
         public bool TryAwardFirstVisitor(int worldId, string minionName)
         {
             if (!worldFirstVisitors.ContainsKey(worldId))
@@ -411,7 +439,6 @@ namespace Medals
 
             Debug.Log($"[Medals] oldWorldId: {oldWorldId}, newWorldId: {newWorldId}");
 
-            // Award the Space Launch Medal only if the world IDs are equal
             if (oldWorldId == newWorldId)
             {
                 Debug.Log("[Medals] oldWorldId == newWorldId, awarding SpaceLaunchMedal.");
@@ -420,7 +447,6 @@ namespace Medals
                 return;
             }
 
-            // Award First Visitor medal if this is the first visit to the world
             var world = ClusterManager.Instance.GetWorld(newWorldId);
             if (world == null)
             {
@@ -446,7 +472,6 @@ namespace Medals
             }
         }
     }
-
 
     [HarmonyPatch(typeof(ClusterManager), "OnSpawn")]
     public static class ClusterManager_OnSpawn_MedalsRegistryPatch
@@ -490,13 +515,33 @@ namespace Medals
                 MedalsRegistry.LoadAndRegisterMedals();
                 loaded = true;
 
-                // Create and attach the singleton FirstVisitorMedalTracker if not present
                 if (FirstVisitorMedalTracker.Instance == null)
                 {
                     var trackerGo = new GameObject("FirstVisitorMedalTracker");
                     UnityEngine.Object.DontDestroyOnLoad(trackerGo);
                     FirstVisitorMedalTracker.Instance = trackerGo.AddComponent<FirstVisitorMedalTracker>();
                     Debug.Log("[Medals] FirstVisitorMedalTracker singleton created and component added.");
+                }
+            }
+        }
+    }
+
+    [HarmonyPatch]
+    public static class DisplayablePatch
+    {
+        [HarmonyPatch(typeof(KeepsakeConfig), "CreatePrefabs")]
+        [HarmonyPostfix]
+        public static void Postfix(List<GameObject> __result)
+        {
+            if (__result != null)
+            {
+                foreach (var prefab in __result)
+                {
+                    if (prefab != null)
+                    {
+                        prefab.AddTag(GameTags.PedestalDisplayable);
+                        Debug.Log("[Medals] Added PedestalDisplayable tag to {prefab.name}.");
+                    }
                 }
             }
         }
