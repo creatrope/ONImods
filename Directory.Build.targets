@@ -24,7 +24,7 @@
     <ItemGroup>
     <Reference Include="0Harmony" HintPath="$(ONIManaged)\0Harmony.dll" />
     <Reference Include="Assembly-CSharp" HintPath="$(PublicizedPath)\Assembly-CSharp.dll" />
-    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ONIManaged)\Assembly-CSharp-firstpass.dll" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(PublicizedPath)\Assembly-CSharp-firstpass.dll" />
     <Reference Include="Newtonsoft.Json" HintPath="$(ONIManaged)\Newtonsoft.Json.dll" />
     <Reference Include="PLib" HintPath="..\packages\PLib.4.17.1\lib\net471\PLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
     <Reference Include="HLib" HintPath="..\HLib\bin\Release\HLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
@@ -43,9 +43,12 @@
   <PropertyGroup>
 	<PublicizedPath>C:\Users\sendh\Downloads</PublicizedPath>
     <OriginalAssembly>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll</OriginalAssembly>
+    <OriginalFirstpassAssembly>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp-firstpass.dll</OriginalFirstpassAssembly>
     <PublicizerExe>C:\Users\sendh\.dotnet\tools\assembly-publicizer.exe</PublicizerExe>
     <PublicizedAssembly>$(PublicizedPath)\Assembly-CSharp.dll</PublicizedAssembly>
+    <PublicizedFirstpassAssembly>$(PublicizedPath)\Assembly-CSharp-firstpass.dll</PublicizedFirstpassAssembly>
     <PublicizerCmd>"$(PublicizerExe)" "$(OriginalAssembly)" -o "$(PublicizedAssembly)"</PublicizerCmd>
+    <PublicizerFirstpassCmd>"$(PublicizerExe)" "$(OriginalFirstpassAssembly)" -o "$(PublicizedFirstpassAssembly)"</PublicizerFirstpassCmd>
   </PropertyGroup>
 
   <Target Name="EnsurePublicizedAssembly" BeforeTargets="ResolveAssemblyReferences"
@@ -54,5 +57,13 @@
   <Message Importance="high" Text="Publicizer command line: $(PublicizerCmd)" />
   <Exec Command="$(PublicizerCmd)" ContinueOnError="false" />
   <Message Importance="high" Text="AssemblyPublicizer execution finished." />
+</Target>
+
+<Target Name="EnsurePublicizedFirstpassAssembly" BeforeTargets="ResolveAssemblyReferences"
+        Inputs="$(OriginalFirstpassAssembly)" Outputs="$(PublicizedFirstpassAssembly)">
+  <Message Importance="high" Text="Publicized firstpass assembly missing or out of date. Building: $(PublicizedFirstpassAssembly)" />
+  <Message Importance="high" Text="Publicizer command line: $(PublicizerFirstpassCmd)" />
+  <Exec Command="$(PublicizerFirstpassCmd)" ContinueOnError="false" />
+  <Message Importance="high" Text="AssemblyPublicizer execution finished for firstpass." />
 </Target>
 </Project>
