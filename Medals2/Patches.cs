@@ -1,3 +1,4 @@
+using System.Reflection;
 using Database;
 using HarmonyLib;
 using HLib;
@@ -133,8 +134,7 @@ namespace Medals
 
         public static void LoadAndRegisterMedals()
         {
-            AddMedal(new MedalInfo("Rescued Dupe", "RescuedDupe", "Awarded for rescuing an incapacitated dupe.", true));
-            AddMedal(new MedalInfo("Injured Medal", "InjuredMedal", "Awarded for being injured (taking damage).", false));
+            //AddMedal(new MedalInfo("Rescued Dupe", "RescuedDupe", "Awarded for rescuing an incapacitated dupe.", true));
             AddMedal(new MedalInfo("Space Launch Medal", "SpaceLaunchMedal", "Awarded for launching to space (migrating to a new world).", false));
 
             Debug.Log("[Medals] Creating First World Visitor medals.");
@@ -161,7 +161,7 @@ namespace Medals
             Debug.Log($"[Medals] created {medalsCount} medals.");
         }
 
-        private static void AddMedal(MedalInfo medal)
+        public static void AddMedal(MedalInfo medal)
         {
             if (!AllMedals.Any(m => m.EffectId == medal.EffectId))
             {
@@ -233,49 +233,37 @@ namespace Medals
         /// </summary>
         private static void SpawnKeepsakeForMedal(MinionIdentity minion, string effectId)
         {
-            string keepsakeId = "keepsake_medal";
-            var pos = minion.transform.position;
-            pos.z = Grid.GetLayerZ(Grid.SceneLayer.Ore);
-            pos.y += 2.0f;
+            var medal = MedalsRegistry.AllMedals.FirstOrDefault(m => m.EffectId == effectId);
+            if (medal == null)
+            {
+                Debug.Log($"[Medals] Medal '{effectId}' not found for keepsake spawn.");
+                return;
+            }
 
-            GameObject prefab = Assets.GetPrefab((Tag)keepsakeId);
+            GameObject prefab = CreateUniqueKeepsakePrefab(medal);
             if (prefab != null)
             {
+                var pos = minion.transform.position;
+                pos.z = Grid.GetLayerZ(Grid.SceneLayer.Ore);
+                pos.y += 2.0f;
+
                 GameObject keepsakeObj = Util.KInstantiate(prefab, pos);
                 keepsakeObj.SetActive(true);
 
-                bool isDisplayable = keepsakeObj.HasTag(GameTags.PedestalDisplayable);
-                Debug.Log($"[Medals] Keepsake '{keepsakeObj.name}' isDisplayable: {isDisplayable}");
+                Debug.Log($"[Medals] Keepsake for filter: Name='{medal.Name}', Description='{medal.Description}'");
 
-                var medal = MedalsRegistry.AllMedals.FirstOrDefault(m => m.EffectId == effectId);
-                if (medal != null)
+                foreach (var pedestal in UnityEngine.Object.FindObjectsOfType<ItemPedestal>())
                 {
-                    keepsakeObj.name = keepsakeId; // Unity GameObject name
-                    // Set display name and description for UI
-                    var selectable = keepsakeObj.GetComponent<KSelectable>();
-                    if (selectable != null)
-                        selectable.SetName(medal.Name);
-
-                    // Set description for tooltip/long description
-                    var prefabID = keepsakeObj.GetComponent<KPrefabID>();
-                    if (prefabID != null)
-                    {
-                        prefabID.PrefabTag = new Tag(keepsakeId);
-
-                        var infoDesc = keepsakeObj.GetComponent<InfoDescription>();
-                        if (infoDesc != null)
-                            infoDesc.description = medal.Description;
-                    }
+                    var receptacle = pedestal.GetComponent<SingleEntityReceptacle>();
+                    if (receptacle != null)
+                        receptacle.UpdateStatusItem();
                 }
 
-                if (!keepsakeObj.HasTag(GameTags.PedestalDisplayable))
-                    keepsakeObj.AddTag(GameTags.PedestalDisplayable);
-
-                Debug.Log($"[Medals] Spawned keepsake '{keepsakeId}' for medal '{effectId}' at {pos}.");
+                Debug.Log($"[Medals] Spawned keepsake '{prefab.name}' for medal '{effectId}' at {pos}.");
             }
             else
             {
-                Debug.Log($"[Medals] No keepsake prefab found for '{keepsakeId}'.");
+                Debug.Log($"[Medals] Could not create keepsake prefab for '{effectId}'.");
             }
         }
 
@@ -292,6 +280,37 @@ namespace Medals
                 }
             }
             return medals;
+        }
+
+        public static GameObject CreateUniqueKeepsakePrefab(MedalInfo medal)
+        {
+            var basePrefab = Assets.GetPrefab((Tag)"keepsake_medal");
+            if (basePrefab == null)
+                return null;
+
+            // Clone the base prefab
+            var newPrefab = Util.KInstantiate(basePrefab, Vector3.zero);
+            string uniqueId = $"keepsake_medal_{medal.EffectId}";
+            newPrefab.name = uniqueId;
+
+            var prefabId = newPrefab.GetComponent<KPrefabID>();
+            if (prefabId != null)
+                prefabId.PrefabTag = new Tag(uniqueId);
+
+            var selectable = newPrefab.GetComponent<KSelectable>();
+            if (selectable != null)
+                selectable.SetName(medal.Name);
+
+            var infoDesc = newPrefab.GetComponent<InfoDescription>();
+            if (infoDesc != null)
+                infoDesc.description = medal.Description;
+
+            if (!newPrefab.HasTag(GameTags.PedestalDisplayable))
+                newPrefab.GetComponent<KPrefabID>().AddTag(GameTags.PedestalDisplayable);
+
+            Assets.AddPrefab(prefabId);
+
+            return newPrefab;
         }
     }
 
@@ -329,6 +348,9 @@ namespace Medals
             harmony.PatchAll();
             PUtil.InitLibrary();
             MinimalKeybindHandler.Register(new PPatchManager(harmony));
+
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            Debug.Log($"[Medals] Build version: {version}");
         }
     }
 
@@ -380,7 +402,13 @@ namespace Medals
             var minion = __instance.GetComponent<MinionIdentity>();
             if (minion != null && amount > 0)
             {
-                MedalsUtility.AddMedalToMinion(minion.GetProperName(), "InjuredMedal");
+                // When awarding a medal, create a unique name and effectId per minion
+                string effectId = $"InjuredMedal_{minion.GetProperName()}";
+                string name = $"Injured Medal ({minion.GetProperName()})";
+                string desc = $"Awarded to {minion.GetProperName()} for being injured.";
+                MedalsRegistry.AddMedal(new MedalInfo(name, effectId, desc, false));
+
+                MedalsUtility.AddMedalToMinion(minion.GetProperName(), effectId);
                 Debug.Log($"[Medals] Awarded InjuredMedal to '{minion.GetProperName()}' for taking damage: {amount}");
             }
         }

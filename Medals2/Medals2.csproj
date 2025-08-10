@@ -18,17 +18,13 @@
       <Name>CustomLogger</Name>
     </ProjectReference>
   </ItemGroup>
+  <PropertyGroup>
+    <AnimPath>anim\assets\keepsake_medal</AnimPath>
+  </PropertyGroup>
   <ItemGroup>
-    <AnimAssets Include="anim\assets\keepsake_medal\keepsake_medal_0.png" />
-    <AnimAssets Include="anim\assets\keepsake_medal\keepsake_medal_anim.bytes" />
-    <AnimAssets Include="anim\assets\keepsake_medal\keepsake_medal_build.bytes" />
+    <AnimAssets Include="$(AnimPath)\keepsake_medal_0.png" />
+    <AnimAssets Include="$(AnimPath)\keepsake_medal_anim.bytes" />
+    <AnimAssets Include="$(AnimPath)\keepsake_medal_build.bytes" />
   </ItemGroup>
-  <Target Name="PostBuildMedals" AfterTargets="Build">
-    <Message Text="Starting PostBuild..." Importance="high" />
-    <Message Text="Source: anim\assets\medal\**\*.*" Importance="high" />
-    <Message Text="Destination: $(DeploymentBasePath)$(ProjectName)\anim\assets\medal\" Importance="high" />
-    <Copy SourceFiles="@(AnimAssets)" DestinationFiles="@(AnimAssets->'$(DeploymentBasePath)$(ProjectName)\anim\assets\medal\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" OverwriteReadOnlyFiles="true" />
-    <Message Text="PostBuild copy completed." Importance="high" />
-  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
