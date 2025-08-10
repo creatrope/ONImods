@@ -1,17 +1,17 @@
 <Project>
-  <Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(ProjectName)' != 'HLib'">
-    <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
-    <Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).pdb" />
-  </Target>
+	<Target Name="Cleanup" AfterTargets="RunILRepack" Condition="'$(ProjectName)' != 'HLib'">
+		<Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).dll.config" />
+		<Delete Files="$(DeploymentBasePath)$(ProjectName)\$(ProjectName).pdb" />
+	</Target>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(ProjectName)' != 'HLib'">
-    <Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
-    <Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="README.md" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" Condition="Exists('README.md')" />
-  </Target>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(ProjectName)' != 'HLib'">
+		<Message Text="$(ProjectName) PostBuild target running!" Importance="high" />
+		<Copy SourceFiles="mod.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="mod_info.yaml" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="README.md" DestinationFolder="$(DeploymentBasePath)$(ProjectName)\" OverwriteReadOnlyFiles="true" SkipUnchangedFiles="true" Condition="Exists('README.md')" />
+	</Target>
 
-  	<Target Name="RunILRepack" AfterTargets="Build" Condition="'$(ProjectName)' != 'HLib'">
+	<Target Name="RunILRepack" AfterTargets="Build" Condition="'$(ProjectName)' != 'HLib'">
 		<PropertyGroup>
 			<MainDll>$(MSBuildProjectDirectory)\bin\Release\$(ProjectName).dll</MainDll>
 			<PLibDll>..\packages\PLib.4.17.1\lib\net471\PLib.dll</PLibDll>
@@ -21,49 +21,62 @@
 		</PropertyGroup>
 		<Exec Command="&quot;$(ILRepackExePath)&quot; /out:&quot;$(OutputDll)&quot; /internalize /target:library /lib:&quot;$(MSBuildProjectDirectory)\bin\Release&quot; /lib:&quot;$(SolutionDir)lib&quot; &quot;$(MainDll)&quot; &quot;$(PLibDll)&quot; &quot;$(HLibDll)&quot;" />
 	</Target>
-    <ItemGroup>
-    <Reference Include="0Harmony" HintPath="$(ONIManaged)\0Harmony.dll" />
-    <Reference Include="Assembly-CSharp" HintPath="$(PublicizedPath)\Assembly-CSharp.dll" />
-    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(PublicizedPath)\Assembly-CSharp-firstpass.dll" />
-    <Reference Include="Newtonsoft.Json" HintPath="$(ONIManaged)\Newtonsoft.Json.dll" />
-    <Reference Include="PLib" HintPath="..\packages\PLib.4.17.1\lib\net471\PLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
-    <Reference Include="HLib" HintPath="..\HLib\bin\Release\HLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-    <Reference Include="Unity.TextMeshPro" HintPath="$(ONIManaged)\Unity.TextMeshPro.dll" />
-    <Reference Include="UnityEngine" HintPath="$(ONIManaged)\UnityEngine.dll" />
-    <Reference Include="UnityEngine.CoreModule" HintPath="$(ONIManaged)\UnityEngine.CoreModule.dll" />
-    <Reference Include="UnityEngine.UI" HintPath="$(ONIManaged)\UnityEngine.UI.dll" />
-  </ItemGroup>
+	<ItemGroup>
+		<Reference Include="0Harmony" HintPath="$(ONIManaged)\0Harmony.dll" />
+		<Reference Include="Assembly-CSharp" HintPath="$(PublicizedPath)\Assembly-CSharp.dll" />
+		<Reference Include="Assembly-CSharp-firstpass" HintPath="$(PublicizedPath)\Assembly-CSharp-firstpass.dll" />
+		<Reference Include="Newtonsoft.Json" HintPath="$(ONIManaged)\Newtonsoft.Json.dll" />
+		<Reference Include="PLib" HintPath="..\packages\PLib.4.17.1\lib\net471\PLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
+		<Reference Include="HLib" HintPath="..\HLib\bin\Release\HLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
+		<Reference Include="System" />
+		<Reference Include="System.Core" />
+		<Reference Include="System.Xml.Linq" />
+		<Reference Include="System.Data.DataSetExtensions" />
+		<Reference Include="System.Data" />
+		<Reference Include="System.Xml" />
+		<Reference Include="Unity.TextMeshPro" HintPath="$(ONIManaged)\Unity.TextMeshPro.dll" />
+		<Reference Include="UnityEngine" HintPath="$(ONIManaged)\UnityEngine.dll" />
+		<Reference Include="UnityEngine.CoreModule" HintPath="$(ONIManaged)\UnityEngine.CoreModule.dll" />
+		<Reference Include="UnityEngine.UI" HintPath="$(ONIManaged)\UnityEngine.UI.dll" />
+	</ItemGroup>
 
-  <PropertyGroup>
-	<PublicizedPath>C:\Users\sendh\Downloads</PublicizedPath>
-    <OriginalAssembly>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll</OriginalAssembly>
-    <OriginalFirstpassAssembly>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp-firstpass.dll</OriginalFirstpassAssembly>
-    <PublicizerExe>C:\Users\sendh\.dotnet\tools\assembly-publicizer.exe</PublicizerExe>
-    <PublicizedAssembly>$(PublicizedPath)\Assembly-CSharp.dll</PublicizedAssembly>
-    <PublicizedFirstpassAssembly>$(PublicizedPath)\Assembly-CSharp-firstpass.dll</PublicizedFirstpassAssembly>
-    <PublicizerCmd>"$(PublicizerExe)" "$(OriginalAssembly)" -o "$(PublicizedAssembly)"</PublicizerCmd>
-    <PublicizerFirstpassCmd>"$(PublicizerExe)" "$(OriginalFirstpassAssembly)" -o "$(PublicizedFirstpassAssembly)"</PublicizerFirstpassCmd>
-  </PropertyGroup>
+	<PropertyGroup>
+		<PublicizedPath>C:\Users\sendh\Downloads</PublicizedPath>
+		<OriginalAssembly>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp.dll</OriginalAssembly>
+		<OriginalFirstpassAssembly>C:\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\Assembly-CSharp-firstpass.dll</OriginalFirstpassAssembly>
+		<PublicizerExe>C:\Users\sendh\.dotnet\tools\assembly-publicizer.exe</PublicizerExe>
+		<PublicizedAssembly>$(PublicizedPath)\Assembly-CSharp.dll</PublicizedAssembly>
+		<PublicizedFirstpassAssembly>$(PublicizedPath)\Assembly-CSharp-firstpass.dll</PublicizedFirstpassAssembly>
+		<PublicizerCmd>"$(PublicizerExe)" "$(OriginalAssembly)" -o "$(PublicizedAssembly)"</PublicizerCmd>
+		<PublicizerFirstpassCmd>"$(PublicizerExe)" "$(OriginalFirstpassAssembly)" -o "$(PublicizedFirstpassAssembly)"</PublicizerFirstpassCmd>
+	</PropertyGroup>
 
-  <Target Name="EnsurePublicizedAssembly" BeforeTargets="ResolveAssemblyReferences"
-        Inputs="$(OriginalAssembly)" Outputs="$(PublicizedAssembly)">
-  <Message Importance="high" Text="Publicized assembly missing or out of date. Building: $(PublicizedAssembly)" />
-  <Message Importance="high" Text="Publicizer command line: $(PublicizerCmd)" />
-  <Exec Command="$(PublicizerCmd)" ContinueOnError="false" />
-  <Message Importance="high" Text="AssemblyPublicizer execution finished." />
-</Target>
+	<Target Name="EnsurePublicizedAssembly" BeforeTargets="ResolveAssemblyReferences"
+		  Inputs="$(OriginalAssembly)" Outputs="$(PublicizedAssembly)">
+		<Message Importance="high" Text="Publicized assembly missing or out of date. Building: $(PublicizedAssembly)" />
+		<Message Importance="high" Text="Publicizer command line: $(PublicizerCmd)" />
+		<Exec Command="$(PublicizerCmd)" ContinueOnError="false" />
+		<Message Importance="high" Text="AssemblyPublicizer execution finished." />
+	</Target>
 
-<Target Name="EnsurePublicizedFirstpassAssembly" BeforeTargets="ResolveAssemblyReferences"
-        Inputs="$(OriginalFirstpassAssembly)" Outputs="$(PublicizedFirstpassAssembly)">
-  <Message Importance="high" Text="Publicized firstpass assembly missing or out of date. Building: $(PublicizedFirstpassAssembly)" />
-  <Message Importance="high" Text="Publicizer command line: $(PublicizerFirstpassCmd)" />
-  <Exec Command="$(PublicizerFirstpassCmd)" ContinueOnError="false" />
-  <Message Importance="high" Text="AssemblyPublicizer execution finished for firstpass." />
-</Target>
+	<Target Name="EnsurePublicizedFirstpassAssembly" BeforeTargets="ResolveAssemblyReferences"
+			Inputs="$(OriginalFirstpassAssembly)" Outputs="$(PublicizedFirstpassAssembly)">
+		<Message Importance="high" Text="Publicized firstpass assembly missing or out of date. Building: $(PublicizedFirstpassAssembly)" />
+		<Message Importance="high" Text="Publicizer command line: $(PublicizerFirstpassCmd)" />
+		<Exec Command="$(PublicizerFirstpassCmd)" ContinueOnError="false" />
+		<Message Importance="high" Text="AssemblyPublicizer execution finished for firstpass." />
+	</Target>
+
+	<Target Name="CopyAnimDirectory" AfterTargets="PostBuildEvent" Condition="'$(ProjectName)' != 'HLib' and Exists('anim')">
+		<Message Text="Copying anim directory to $(DeploymentBasePath)$(ProjectName)\anim" Importance="high" />
+		<Copy
+		  SourceFiles="@(AnimFiles)"
+		  DestinationFiles="@(AnimFiles->'$(DeploymentBasePath)$(ProjectName)\anim\%(RecursiveDir)%(Filename)%(Extension)')"
+		  SkipUnchangedFiles="true"
+		  OverwriteReadOnlyFiles="true" />
+	</Target>
+
+	<ItemGroup>
+		<AnimFiles Include="anim\**\*" />
+	</ItemGroup>
 </Project>
