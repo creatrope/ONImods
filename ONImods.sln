@@ -81,6 +81,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UtilLibs", "UtilLibs\UtilLibs.csproj", "{C32E238A-B416-2814-B620-7368131A6F7F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medals2", "Medals2\Medals2.csproj", "{E4219BB3-1A1E-4072-B877-57C5C893ADE0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F446A1C4-7859-4B1A-A508-32997511C3BF} = {F446A1C4-7859-4B1A-A508-32997511C3BF}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

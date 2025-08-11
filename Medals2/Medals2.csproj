@@ -12,19 +12,23 @@
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\HLib\HLib.csproj">
-      <Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
-      <Name>CustomLogger</Name>
-    </ProjectReference>
-  </ItemGroup>
   <PropertyGroup>
     <AnimPath>anim\assets\keepsake_medal</AnimPath>
   </PropertyGroup>
   <ItemGroup>
-    <AnimAssets Include="$(AnimPath)\keepsake_medal_0.png" />
+    <AnimAssets Include="$(AnimPath)\keepsake_medal.png" />
     <AnimAssets Include="$(AnimPath)\keepsake_medal_anim.bytes" />
     <AnimAssets Include="$(AnimPath)\keepsake_medal_build.bytes" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="assets\keepsake_medal.scml" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="assets\keepsake_medal_0.png" />
+    <Content Include="assets\place_0.png" />
+    <Content Include="assets\ui_0.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -23,9 +23,9 @@ namespace Medals
 {
     internal sealed class MinimalKeybindHandler : IInputHandler
     {
-        internal static PAction KeyTestAction;
-        internal static PAction DamageMinionAction;
-        private Action snapshotAction;
+        internal static PAction incapacitateAction;
+        internal static PAction damageAction;
+        private Action incapacitateSnapshotAction;
         private Action damageSnapshotAction;
         private float lastSnapshotTime = 0f;
         private float lastDamageTime = 0f;
@@ -37,8 +37,8 @@ namespace Medals
 
         internal MinimalKeybindHandler()
         {
-            snapshotAction = KeyTestAction != null ? KeyTestAction.GetKAction() : PAction.MaxAction;
-            damageSnapshotAction = DamageMinionAction != null ? DamageMinionAction.GetKAction() : PAction.MaxAction;
+            incapacitateSnapshotAction = incapacitateAction != null ? incapacitateAction.GetKAction() : PAction.MaxAction;
+            damageSnapshotAction = damageAction != null ? damageAction.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
@@ -46,7 +46,7 @@ namespace Medals
             float now = Time.time;
 
             // Only consume one action per key press, and check which action was triggered
-            bool incapacitatePressed = e.TryConsume(snapshotAction);
+            bool incapacitatePressed = e.TryConsume(incapacitateSnapshotAction);
             bool damagePressed = e.TryConsume(damageSnapshotAction);
 
             if (damagePressed || incapacitatePressed)
@@ -105,10 +105,10 @@ namespace Medals
         internal static void Register(PPatchManager manager)
         {
             manager.RegisterPatchClass(typeof(MinimalKeybindHandler));
-            KeyTestAction = new PActionManager().CreateAction(
-                "Medals.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F12, Modifier.Ctrl));
-            DamageMinionAction = new PActionManager().CreateAction(
-                "Medals.DamageMinionAction", "Damage Minion", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl));
+            incapacitateAction = new PActionManager().CreateAction(
+                "Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F12, Modifier.Ctrl));
+            damageAction = new PActionManager().CreateAction(
+                "Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl));
         }
     }
 

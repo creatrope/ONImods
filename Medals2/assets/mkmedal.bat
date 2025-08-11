@@ -1,0 +1,1 @@
+kanimal-cli.exe kanim keepsake_medal.scml keepsake_medal_0.png place_0.png ui_0.png -o ..\anim\assets\keepsake_medal
