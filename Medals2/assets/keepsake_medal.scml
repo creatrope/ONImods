@@ -5,39 +5,27 @@
 		<file id="2" name="ui_0.png" width="151" height="121" pivot_x="0.5" pivot_y="0.5" />
 	</folder>
 	<entity id="0" name="keepsake_medal">
-		<animation id="0" name="idle" length="33" interval="33">
+		<animation id="0" name="static" length="1" interval="1">
 			<mainline>
 				<key id="0" time="0">
 					<object_ref id="0" timeline="0" key="0" z_index="1" />
+					<object_ref id="1" timeline="1" key="0" z_index="2" />
+					<object_ref id="2" timeline="2" key="0" z_index="3" />
 				</key>
 			</mainline>
-			<timeline id="0" name="idle_0">
+			<timeline id="0" name="keepsake_medal_0">
 				<key id="0" time="0">
-					<object folder="0" file="0" x="0.125" y="26.774999618530273" angle="0" scale_x="1.1210939626660295" scale_y="1.1210939626660295" a="1" />
+					<object folder="0" file="0" x="20" y="-20" angle="0" scale_x="1" scale_y="1" a="1" />
 				</key>
 			</timeline>
-		</animation>
-		<animation id="1" name="place" length="33" interval="33">
-			<mainline>
-				<key id="0" time="0">
-					<object_ref id="0" timeline="1" key="0" z_index="1" />
-				</key>
-			</mainline>
 			<timeline id="1" name="place_0">
 				<key id="0" time="0">
-					<object folder="0" file="1" x="0.125" y="26.774999618530273" angle="0" scale_x="1.1210939626660295" scale_y="1.1210939626660295" a="1" />
+					<object folder="0" file="1" x="20" y="-20" angle="0" scale_x="1" scale_y="1" a="1" />
 				</key>
 			</timeline>
-		</animation>
-		<animation id="2" name="ui" length="33" interval="33">
-			<mainline>
-				<key id="0" time="0">
-					<object_ref id="0" timeline="2" key="0" z_index="1" />
-				</key>
-			</mainline>
 			<timeline id="2" name="ui_0">
 				<key id="0" time="0">
-					<object folder="0" file="2" x="-0.10000000149011612" y="5" angle="0" scale_x="1" scale_y="1" a="1" />
+					<object folder="0" file="2" x="20" y="-20" angle="0" scale_x="1" scale_y="1" a="1" />
 				</key>
 			</timeline>
 		</animation>
