@@ -13,6 +13,8 @@
     <Compile Include="MedalInfo.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Trophy.cs" />
+    <Compile Include="TrophyInfo.cs" />
   </ItemGroup>
   <PropertyGroup>
     <AnimPath>anim\assets\keepsake_medal</AnimPath>

@@ -17,6 +17,7 @@ using System.Reflection;
 using TemplateClasses;
 using TUNING;
 using UnityEngine;
+using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
 
 // --- MOD ENTRY POINT ---
 public class Mod : UserMod2
@@ -27,28 +28,10 @@ public class Mod : UserMod2
         harmony.PatchAll();
         PUtil.InitLibrary();
         Medals.KeybindHandler.Register(new PPatchManager(harmony));
-
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         Debug.Log($"[OnLoad] Build version: {version}");
     }
 }
-
-//private static GameObject CreateBaseKeepsakeMedalPrefab()
-//{
-//    var newkeepsake = KeepsakeConfig.CreateKeepsake(
-//        "Medal",
-//        "Medal Keepsake",
-//        "Medal Keepsake Description",
-//        "keepsake_medal_kanim", "idle", "ui", DlcManager.DLC2,
-//        null, null, SimHashes.Creature);
-//    if (newkeepsake == null)
-//        return null;
-//    newkeepsake.GetComponent<KPrefabID>().AddTag(GameTags.PedestalDisplayable);
-//    if (newkeepsake.GetComponent<MedalInfo>() == null)
-//        newkeepsake.AddComponent<MedalInfo>();
-//    Assets.Prefabs.Add(newkeepsake.GetComponent<KPrefabID>());
-//    return newkeepsake;
-//}
 
 [HarmonyPatch(typeof(Health), "Damage")]
 public static class Health_DamageMedalPatch
@@ -66,8 +49,8 @@ public static class Health_DamageMedalPatch
             {
                 var medal = new Medal(name, desc, MedalType.Citation, true);
                 medalInfo.Medals.Add(medal);
-                medalInfo.TestString = $"Damaged!"; // Reset TestString here
-                Debug.Log($"[Health_DamageMedalPatch] TestString reset to: {medalInfo.TestString}");
+
+                TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
             }
             Debug.Log($"[Health_DamageMedalPatch] (after)");
         }
@@ -124,4 +107,3 @@ public static class BaseMinionConfig_BaseMinion_MedalInfoPatch
         __result.AddOrGet<MedalInfo>();
     }
 }
-
