@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using static STRINGS.UI;
 
+[SerializationConfig(MemberSerialization.OptIn)]
 public class TrophyConfig : IMultiEntityConfig
 {
     public List<GameObject> CreatePrefabs()
@@ -21,7 +22,7 @@ public class TrophyConfig : IMultiEntityConfig
                  null, (KeepsakeConfig.PostInitFn)null, SimHashes.Creature);
         trophypf.GetComponent<KPrefabID>().AddTag(GameTags.PedestalDisplayable);
         trophypf.GetComponent<KPrefabID>().AddTag("Trophy");
-
+        trophypf.AddComponent<TrophyInfo>();
         prefabs.Add(trophypf);
         return prefabs;
     }
@@ -36,19 +37,6 @@ public class TrophyConfig : IMultiEntityConfig
             Debug.LogError("[Trophy] CreateAndAwardTrophy called with null minion!");
             return;
         }
-
-        // Dump all available prefabs
-        Debug.Log("[Trophy] Dumping all registered prefabs in Assets:");
-        bool foundKeepsakeMedal = false;
-        foreach (var p in Assets.Prefabs)
-        {
-            string prefabId = p.PrefabTag.Name;
-            Debug.Log($"[Trophy] Prefab ID: {prefabId}");
-            if (prefabId == "keepsake_medal")
-                foundKeepsakeMedal = true;
-        }
-        if (foundKeepsakeMedal)
-            Debug.Log("[Trophy] Found keepsake_medal in Assets!");
 
         var prefab = Assets.GetPrefab("keepsake_medal");
         if (prefab == null)
@@ -65,6 +53,18 @@ public class TrophyConfig : IMultiEntityConfig
         }
 
         trophy.name = name;
+
+        var trophyInfo = trophy.GetComponent<TrophyInfo>();
+        trophyInfo.SetInfo(name, desc);
+
+        var selectable = trophy.GetComponent<KSelectable>();
+        if (selectable != null)
+            selectable.SetName(name);
+
+        var infoDesc = trophy.GetComponent<InfoDescription>();
+        if (infoDesc != null)
+            infoDesc.description = desc;
+
         trophy.transform.position = minion.transform.position + new Vector3(0, 2f, 0); // above head
         trophy.SetActive(true);
         Debug.Log($"[Trophy] Awarded trophy '{name}' to minion '{minion.GetProperName()}'.");
