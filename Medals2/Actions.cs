@@ -39,35 +39,31 @@ namespace Medals2
         public static void Postfix(AssignmentManager __instance, object data)
         {
             Debug.Log("[Medals] AssignmentManager_MinionMigration_Patch.Postfix called.");
-            var minion = __instance.GetComponent<MinionIdentity>();
-
+            var migrationEventArgs = data as MinionMigrationEventArgs;
             if (data == null)
             {
                 Debug.Log("[Medals] MinionMigration data is null.");
                 return;
             }
-
-            Debug.Log($"[Medals] MinionMigration data type: {data.GetType().FullName}");
-
-            var migrationEventArgs = data as MinionMigrationEventArgs;
             if (migrationEventArgs == null)
             {
                 Debug.Log("[Medals] MinionMigrationEventArgs cast failed.");
                 return;
             }
 
+            Debug.Log($"[Medals] MinionMigration data type: {data.GetType().FullName}");
             Debug.Log($"[Medals] migrationEventArgs: prevWorldId={migrationEventArgs.prevWorldId}, targetWorldId={migrationEventArgs.targetWorldId}, minionId={migrationEventArgs.minionId}");
 
-            var medalInfo = __instance.FindOrAddComponent<MedalInfo>();
+            var minion = migrationEventArgs.minionId; // Use the minion from the event args
+            var medalInfo = minion != null ? minion.FindOrAddComponent<MedalInfo>() : null;
 
             int oldWorldId = migrationEventArgs.prevWorldId;
             int newWorldId = migrationEventArgs.targetWorldId;
 
-            var selectable = __instance.GetComponent<KSelectable>();
+            var selectable = minion.GetComponent<KSelectable>();
             string minionName = selectable != null ? selectable.GetProperName() : "Unknown Minion";
-            Debug.Log($"[Medals] minionName: {minionName}");
 
-            Debug.Log($"[Medals] oldWorldId: {oldWorldId}, newWorldId: {newWorldId}");
+            Debug.Log($"[Medals] minionName: {minionName}, oldWorldId: {oldWorldId}, newWorldId: {newWorldId}");
 
             if (oldWorldId == newWorldId) // first in space
             {
@@ -91,7 +87,9 @@ namespace Medals2
                     Debug.Log($"[Medals] world id: {world.id}, world name: {world.name}, world type: {world.GetType().FullName}");
                 }
 
-                string worldName = world != null ? world.name : $"World {newWorldId}";
+                string worldName = world != null
+                    ? (world.GetComponent<ClusterGridEntity>()?.GetProperName() ?? world.name)
+                    : $"World {newWorldId}";
                 Debug.Log($"[Medals] worldName: {worldName}");
 
                 // put the logic in that checks if they are the first to migrate to this world
@@ -121,7 +119,7 @@ namespace Medals2
             string targetName = deliverTarget != null ? deliverTarget.name : "null";
             bool isMedicalCot = deliverTarget != null && deliverTarget.HasTag(new Tag("MedicalCot"));
 
-            Debug.Log($"[Medals] DropIncapacitatedDuplicant called. deliverTarget: {targetName}, isMedicalCot: {isMedicalCot}");
+           // Debug.Log($"[Medals] DropIncapacitatedDuplicant called. deliverTarget: {targetName}, isMedicalCot: {isMedicalCot}");
 
             if (isMedicalCot)
             {
@@ -147,7 +145,6 @@ namespace Medals2
 
                     TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
                 }
-                Debug.Log($"[RescueIncapacitatedChore] (after)");
             }
         }
     }
