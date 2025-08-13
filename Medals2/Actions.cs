@@ -88,14 +88,14 @@ namespace Medals2
                 string worldName = world != null
                     ? (world.GetComponent<ClusterGridEntity>()?.GetProperName() ?? world.name)
                     : $"World {newWorldId}";
-                if (MedalsSaveData.Instance.awardedFirstVisitWorlds.Contains(worldName))
+                if (newWorldId == 0 || MedalsSaveData.Instance.awardedFirstVisitWorlds.Contains(newWorldId))
                 {
-                    Debug.Log($"[Medals] FirstVisit already awarded for world '{worldName}', skipping.");
+                    Debug.Log($"[Medals] Homeworld || FirstVisit already awarded for world '{newWorldId}', skipping.");
                     return;
                 }
                 MedalInfo.CreateMedal(trophyInfo, minion, worldName);
                 TrophyConfig.CreateTrophy(trophyInfo, minion, worldName);
-                MedalsSaveData.Instance.awardedFirstVisitWorlds.Add(worldName);
+                MedalsSaveData.Instance.awardedFirstVisitWorlds.Add(newWorldId);
             }
         }
     }
@@ -153,7 +153,7 @@ namespace Medals2
     public class MedalsSaveData : KMonoBehaviour, ISaveLoadable
     {
         [Serialize]
-        public HashSet<string> awardedFirstVisitWorlds = new HashSet<string>();
+        public HashSet<int> awardedFirstVisitWorlds = new HashSet<int>();
 
         public static MedalsSaveData Instance
         {
