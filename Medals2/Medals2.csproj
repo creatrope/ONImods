@@ -9,6 +9,7 @@
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <ItemGroup>
+    <Compile Include="Actions.cs" />
     <Compile Include="KeybindHandler.cs" />
     <Compile Include="MedalInfo.cs" />
     <Compile Include="Patches.cs" />

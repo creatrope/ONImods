@@ -1,4 +1,5 @@
 using Database;
+using Epic.OnlineServices;
 using HarmonyLib;
 using Klei.AI;
 using KMod;
@@ -24,38 +25,13 @@ public class Mod : UserMod2
 {
     public override void OnLoad(Harmony harmony)
     {
+        PUtil.InitLibrary(false);
+        new POptions().RegisterOptions(this, typeof(Config));
         base.OnLoad(harmony);
-        harmony.PatchAll();
-        PUtil.InitLibrary();
         Medals.KeybindHandler.Register(new PPatchManager(harmony));
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        Debug.Log($"[OnLoad] Build version: {version}");
     }
 }
 
-[HarmonyPatch(typeof(Health), "Damage")]
-public static class Health_DamageMedalPatch
-{
-    private static void Postfix(Health __instance, float amount)
-    {
-        var minion = __instance.GetComponent<MinionIdentity>();
-        if (minion != null && amount > 0)
-        {
-            string name = $"Injured Medal ({minion.GetProperName()})";
-            string desc = $"Awarded to {minion.GetProperName()} for being injured.";
-
-            var medalInfo = minion.FindOrAddComponent<MedalInfo>();
-            if (medalInfo != null)
-            {
-                var medal = new Medal(name, desc, MedalType.Citation, true);
-                medalInfo.Medals.Add(medal);
-
-                TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
-            }
-            Debug.Log($"[Health_DamageMedalPatch] (after)");
-        }
-    }
-}
 
 [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
 public static class MinionPersonalityPanel_AddMedalsPanelPatch
@@ -107,3 +83,4 @@ public static class BaseMinionConfig_BaseMinion_MedalInfoPatch
         __result.AddOrGet<MedalInfo>();
     }
 }
+

@@ -18,7 +18,7 @@ public class TrophyConfig : IMultiEntityConfig
                 "medal",
                  "Medal Keepsake",
                  "Medal Keepsake Description",
-                 "keepsake_medal_kanim", "idle", "ui", DlcManager.DLC2,
+                 "keepsake_medal_kanim", "idle", "ui", null,
                  null, (KeepsakeConfig.PostInitFn)null, SimHashes.Creature);
         trophypf.GetComponent<KPrefabID>().AddTag(GameTags.PedestalDisplayable);
         trophypf.GetComponent<KPrefabID>().AddTag("Trophy");
