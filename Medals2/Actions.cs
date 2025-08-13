@@ -17,13 +17,13 @@ namespace Medals2
             var minion = __instance.GetComponent<MinionIdentity>();
             if (minion != null && amount > 0)
             {
-                string name = $"Injured Medal ({minion.GetProperName()})";
-                string desc = $"Awarded to {minion.GetProperName()} for being injured.";
+                string name = $"Injured Medal";
+                string desc = $"Awarded for being injured.";
 
                 var medalInfo = minion.FindOrAddComponent<MedalInfo>();
                 if (medalInfo != null)
                 {
-                    var medal = new Medal(name, desc, MedalType.Citation, true);
+                    var medal = new Medal("Injured", "Injuries in the Line of Duty", MedalType.Citation, true);
                     medalInfo.Medals.Add(medal);
 
                     TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
@@ -68,8 +68,8 @@ namespace Medals2
             if (oldWorldId == newWorldId) // first in space
             {
                 Debug.Log("[Medals] oldWorldId == newWorldId, awarding SpaceLaunchMedal.");
-                string name = $"Space Launch Medal ({minionName})";
-                string desc = $"Awarded to {minionName} for first in space.";
+                string name = $"Space Launch";
+                string desc = $"First in space.";
                 var medal = new Medal(name, desc, MedalType.Citation, true);
                 medalInfo.Medals.Add(medal);
                 TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
@@ -90,11 +90,9 @@ namespace Medals2
                 string worldName = world != null
                     ? (world.GetComponent<ClusterGridEntity>()?.GetProperName() ?? world.name)
                     : $"World {newWorldId}";
-                Debug.Log($"[Medals] worldName: {worldName}");
 
-                // put the logic in that checks if they are the first to migrate to this world
-                string name = $"First Visit To {worldName} ({minionName})";
-                string desc = $"Awarded to {minionName} for first visit to {worldName}.";
+                string name = $"First Visit To {worldName}";
+                string desc = $"First Visit to {worldName}.";
                 var medal = new Medal(name, desc, MedalType.Citation, true);
                 medalInfo.Medals.Add(medal);
                 TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
@@ -119,11 +117,10 @@ namespace Medals2
             string targetName = deliverTarget != null ? deliverTarget.name : "null";
             bool isMedicalCot = deliverTarget != null && deliverTarget.HasTag(new Tag("MedicalCot"));
 
-           // Debug.Log($"[Medals] DropIncapacitatedDuplicant called. deliverTarget: {targetName}, isMedicalCot: {isMedicalCot}");
+            // Debug.Log($"[Medals] DropIncapacitatedDuplicant called. deliverTarget: {targetName}, isMedicalCot: {isMedicalCot}");
 
             if (isMedicalCot)
             {
-                string name = $"Rescuer Medal ({minion.GetProperName()})";
                 // Try to get the rescued duplicant's name
                 // Get the rescued duplicant's name from rescueTarget
                 string rescuedName = "Unknown";
@@ -135,16 +132,12 @@ namespace Medals2
                         rescuedName = rescuedMinion.GetProperName();
                 }
 
-                string desc = $"Awarded to {minion.GetProperName()} for rescuing {rescuedName}.";
-
+                string name = $"Rescuer Medal for rescuing {rescuedName}";
                 var medalInfo = minion.FindOrAddComponent<MedalInfo>();
-                if (medalInfo != null)
-                {
-                    var medal = new Medal(name, desc, MedalType.Citation, true);
-                    medalInfo.Medals.Add(medal);
-
-                    TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
-                }
+                string desc = $"For rescuing {rescuedName}.";
+                var medal = new Medal(name, desc, MedalType.Citation, true);
+                medalInfo.Medals.Add(medal);
+                TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
             }
         }
     }
