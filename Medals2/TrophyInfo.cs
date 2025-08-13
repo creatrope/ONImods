@@ -34,6 +34,9 @@ public class TrophyData : ScriptableObject, ISaveLoadable
     [Serialize]
     public Reward rewardType = Reward.Trophy;
 
+    [Serialize]
+    public bool repeatable; // <-- Add this field
+
     public GameObject prefab;
 
     public static readonly Dictionary<Reward, RewardTypeInfo> RewardTypeInfos =
@@ -44,13 +47,13 @@ public class TrophyData : ScriptableObject, ISaveLoadable
             { Reward.Oops,     new RewardTypeInfo(Reward.Oops,     "keepsake_medal_kanim") }
         };
 
-    public static readonly Dictionary<string, (string Name, string Description, Reward RewardType)> TrophyTypes =
-        new Dictionary<string, (string Name, string Description, Reward RewardType)>
+    public static readonly Dictionary<string, (string Name, string Description, Reward RewardType, bool Repeatable)> TrophyTypes =
+        new Dictionary<string, (string Name, string Description, Reward RewardType, bool Repeatable)>
         {
-            { "Injury", ("Injured", "Injured in the Line of Duty", Reward.Trophy) },
-            { "Rescue", ("Rescued", "Rescued Incapacited Duplicant", Reward.Trophy) },
-            { "Space", ("First To Space", "First To Space", Reward.Trophy) },
-            { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet", Reward.Trophy) }
+            { "Injury", ("Injured", "Injured in the Line of Duty", Reward.Trophy, false) },
+            { "Rescue", ("Rescued", "Rescued Incapacited Duplicant", Reward.Trophy, true) },
+            { "Space", ("First To Space", "First To Space", Reward.Trophy, false) },
+            { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet", Reward.Trophy, true) }
         };
 
     public void SetInfo(string name, string desc)
@@ -82,6 +85,7 @@ public static class TrophyDb
             var info = ScriptableObject.CreateInstance<TrophyData>();
             info.SetInfo(kvp.Value.Name, kvp.Value.Description);
             info.rewardType = kvp.Value.RewardType;
+            info.repeatable = kvp.Value.Repeatable;
             Trophies.Add(kvp.Key, info);
         }
     }

@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using static GarbageCollectionProfiler;
 using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
+using KSerialization;
+using UnityEngine;
 
 namespace Medals2
 {
@@ -19,6 +21,8 @@ namespace Medals2
             if (minion != null && amount > 0)
             {
                 var trophyInfo = TrophyDb.Trophies["Injury"];
+                if (!trophyInfo.repeatable)
+                    return;
                 MedalInfo.CreateMedal(trophyInfo, minion);
                 TrophyConfig.CreateTrophy(trophyInfo, minion);
                 Debug.Log($"[Health_DamageMedalPatch] (after)");
@@ -56,6 +60,8 @@ namespace Medals2
             if (oldWorldId == newWorldId) // first in space
             {
                 var trophyInfo = TrophyDb.Trophies["Space"];
+                if (!trophyInfo.repeatable)
+                    return;
                 MedalInfo.CreateMedal(trophyInfo, minion);
                 TrophyConfig.CreateTrophy(trophyInfo, minion);
             }
@@ -74,14 +80,22 @@ namespace Medals2
                 }
 
                 var trophyInfo = TrophyDb.Trophies["FirstVisit"];
+                if (!trophyInfo.repeatable)
+                    return;
                 string name = trophyInfo.GetName();
                 string desc = trophyInfo.GetDesc();
 
                 string worldName = world != null
                     ? (world.GetComponent<ClusterGridEntity>()?.GetProperName() ?? world.name)
                     : $"World {newWorldId}";
+                if (MedalsSaveData.Instance.awardedFirstVisitWorlds.Contains(worldName))
+                {
+                    Debug.Log($"[Medals] FirstVisit already awarded for world '{worldName}', skipping.");
+                    return;
+                }
                 MedalInfo.CreateMedal(trophyInfo, minion, worldName);
                 TrophyConfig.CreateTrophy(trophyInfo, minion, worldName);
+                MedalsSaveData.Instance.awardedFirstVisitWorlds.Add(worldName);
             }
         }
     }
@@ -117,6 +131,8 @@ namespace Medals2
                         rescuedName = rescuedMinion.GetProperName();
 
                     var trophyInfo = TrophyDb.Trophies["Rescue"];
+                    if (!trophyInfo.repeatable)
+                        return;
                     var medalInfo = minion.FindOrAddComponent<MedalInfo>();
                     string medalName = trophyInfo.GetName() + $" {rescuedName}";
                     string medalDesc = trophyInfo.GetDesc() + $" {rescuedName}";
@@ -131,6 +147,28 @@ namespace Medals2
                 }
             }
         }
+    }
+
+    [SerializationConfig(MemberSerialization.OptIn)]
+    public class MedalsSaveData : KMonoBehaviour, ISaveLoadable
+    {
+        [Serialize]
+        public HashSet<string> awardedFirstVisitWorlds = new HashSet<string>();
+
+        public static MedalsSaveData Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    var go = GameObject.Find("MedalsSaveData") ?? new GameObject("MedalsSaveData");
+                    _instance = go.GetComponent<MedalsSaveData>() ?? go.AddComponent<MedalsSaveData>();
+                    UnityEngine.Object.DontDestroyOnLoad(go);
+                }
+                return _instance;
+            }
+        }
+        private static MedalsSaveData _instance;
     }
 
 }
