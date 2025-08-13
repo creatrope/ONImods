@@ -18,15 +18,11 @@ public class Medal
 {
     [Serialize] public string Name;
     [Serialize] public string Description;
-    [Serialize] public MedalType Type;
-    [Serialize] public bool Repeatable;
 
-    public Medal(string name, string description, MedalType type, bool repeatable)
+    public Medal(string name, string description)
     {
         Name = name;
         Description = description;
-        Type = type;
-        Repeatable = repeatable;
     }
 }
 
@@ -34,9 +30,13 @@ public class MedalInfo : KMonoBehaviour, ISaveLoadable
 {
     [Serialize]
     public List<Medal> Medals = new List<Medal>();
-
-    public static Medal CreateMedal(string name, string description, MedalType type, bool repeatable)
+    public static Medal CreateMedal(TrophyData trophyInfo, MinionIdentity minion, string target = null)
     {
-        return new Medal(name, description, type, repeatable);
+        string name = trophyInfo.GetName() + $" {target}";
+        string desc = trophyInfo.GetDesc() + $" {target}";
+        var medalInfo = minion.FindOrAddComponent<MedalInfo>();
+        var medal = new Medal(name, desc);
+        medalInfo.Medals.Add(medal);
+        return medal;
     }
 }

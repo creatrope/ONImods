@@ -10,10 +10,8 @@ namespace Medals
     {
         internal static PAction incapacitateAction;
         internal static PAction damageAction;
-        internal static PAction createRandomMedalAction;
         private Action incapacitateSnapshotAction;
         private Action damageSnapshotAction;
-        private Action createRandomMedalSnapshotAction;
         private float lastSnapshotTime = 0f;
         private readonly float debounceInterval = 1.0f; // seconds
 
@@ -30,7 +28,6 @@ namespace Medals
             incapacitateSnapshotAction = incapacitateAction != null ? incapacitateAction.GetKAction() : PAction.MaxAction;
             damageSnapshotAction = damageAction != null ? damageAction.GetKAction() : PAction.MaxAction;
             eraseMedalsSnapshotAction = eraseMedalsAction != null ? eraseMedalsAction.GetKAction() : PAction.MaxAction;
-            createRandomMedalSnapshotAction = createRandomMedalAction != null ? createRandomMedalAction.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
@@ -45,10 +42,9 @@ namespace Medals
             bool incapacitatePressed = e.TryConsume(incapacitateSnapshotAction);
             bool damagePressed = e.TryConsume(damageSnapshotAction);
             bool eraseMedalsPressed = e.TryConsume(eraseMedalsSnapshotAction);
-            bool createRandomMedalPressed = e.TryConsume(createRandomMedalSnapshotAction);
 
             // Debounce: Only allow one hotkey action per debounceInterval
-            if ((damagePressed || incapacitatePressed || eraseMedalsPressed || createRandomMedalPressed) && now - lastSnapshotTime < debounceInterval)
+            if ((damagePressed || incapacitatePressed || eraseMedalsPressed) && now - lastSnapshotTime < debounceInterval)
                 return;
 
             if (damagePressed)
@@ -65,11 +61,6 @@ namespace Medals
             {
                 lastSnapshotTime = now;
                 HandleEraseMedalsHotkey();
-            }
-            else if (createRandomMedalPressed)
-            {
-                lastSnapshotTime = now;
-                OnCreateRandomMedal();
             }
         }
 
@@ -101,9 +92,7 @@ namespace Medals
                 "Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl));
             eraseMedalsAction = new PActionManager().CreateAction(
                 "Medals.eraseMedalsAction", "Erase All Medals", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl));
-            createRandomMedalAction = new PActionManager().CreateAction(
-                "Medals.createRandomMedalAction", "Create Random Medal", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl));
-        }
+       }
 
         // --- SUPPORT FUNCTIONS BELOW ---
 
@@ -189,32 +178,6 @@ namespace Medals
                 }
             }
         }
-
-        private static void OnCreateRandomMedal()
-        {
-            if (SelectedMinion == null)
-            {
-                Debug.Log("[Medals] No minion selected for medal assignment.");
-                return;
-            }
-
-            var medalInfo = SelectedMinion.GetComponent<MedalInfo>();
-            if (medalInfo == null)
-            {
-                medalInfo = SelectedMinion.gameObject.AddComponent<MedalInfo>();
-            }
-
-            // Generate random medal parameters
-            var rand = new System.Random();
-            string name = "Medal " + rand.Next(1000, 9999);
-            string desc = "Randomly generated medal #" + rand.Next(1000, 9999);
-            MedalType type = (MedalType)rand.Next(Enum.GetValues(typeof(MedalType)).Length);
-            bool repeatable = rand.Next(0, 2) == 0;
-
-            var medal = MedalInfo.CreateMedal(name, desc, type, repeatable);
-            medalInfo.Medals.Add(medal);
-
-            Debug.Log($"[Medals] Assigned random medal '{name}' to {SelectedMinion.GetProperName()}.");
-        }
+   
     }
 }

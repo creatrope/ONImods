@@ -83,4 +83,3 @@ public static class BaseMinionConfig_BaseMinion_MedalInfoPatch
         __result.AddOrGet<MedalInfo>();
     }
 }
-

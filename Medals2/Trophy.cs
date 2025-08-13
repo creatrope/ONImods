@@ -50,7 +50,7 @@ public class TrophyConfig : IMultiEntityConfig
     public void OnPrefabInit(GameObject inst) { }
     public void OnSpawn(GameObject inst) { }
 
-    public static void CreateTrophy(TrophyData trophyInfo, MinionIdentity minion)
+    public static void CreateTrophy(TrophyData trophyInfo, MinionIdentity minion, string target = null)
     {
         if (minion == null)
         {
@@ -71,8 +71,8 @@ public class TrophyConfig : IMultiEntityConfig
         }
  
         string minionName = minion.GetProperName();
-        string name = $"{trophyInfo.GetName()} ({minionName})";
-        string desc = $"{trophyInfo.GetDesc()} ({minionName})";
+        string name = $"{trophyInfo.GetName()} {target} ({minionName})";
+        string desc = $"{trophyInfo.GetDesc()} {target} ({minionName})";
 
         GameObject trophy = Util.KInstantiate(prefab, Grid.CellToPosCCC(Grid.PosToCell(minion.transform.position + new Vector3(0, 2f, 0)), Grid.SceneLayer.Ore));
         if (trophy == null)
@@ -119,4 +119,19 @@ public class TrophyModifiable : KMonoBehaviour, ISaveLoadable
 
     public string GetName() => trophyName;
     public string GetDesc() => trophyDesc;
+
+    public override void OnSpawn()
+    {
+        base.OnSpawn();
+        if (!string.IsNullOrEmpty(trophyName))
+            gameObject.name = trophyName;
+
+        var selectable = gameObject.GetComponent<KSelectable>();
+        if (selectable != null)
+            selectable.SetName(trophyName);
+
+        var infoDesc = gameObject.GetComponent<InfoDescription>();
+        if (infoDesc != null)
+            infoDesc.description = trophyDesc;
+    }
 }
