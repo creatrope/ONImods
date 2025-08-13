@@ -1,5 +1,6 @@
 using KSerialization;
 using UnityEngine;
+using System.Collections.Generic;
 
 [SerializationConfig(MemberSerialization.OptIn)]
 public class TrophyInfo : KMonoBehaviour, ISaveLoadable
@@ -9,6 +10,15 @@ public class TrophyInfo : KMonoBehaviour, ISaveLoadable
 
     [Serialize]
     public string trophyDesc;
+
+    public static readonly Dictionary<string, (string Name, string Description)> TrophyTypes =
+        new Dictionary<string, (string Name, string Description)>
+        {
+            { "Injury", ("Injured", "Injured in the Line of Duty") },
+            { "Rescue", ("Rescued", "Rescued Incapacited Duplicant") },
+            { "Space", ("First To Space", "First To Space") },
+            { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet") }
+        };
 
     public void SetInfo(string name, string desc)
     {
