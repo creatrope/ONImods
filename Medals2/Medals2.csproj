@@ -16,6 +16,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Trophy.cs" />
     <Compile Include="TrophyInfo.cs" />
+    <Compile Include="TrophyModifiable.cs" />
   </ItemGroup>
   <PropertyGroup>
     <AnimPath>anim\assets\keepsake_medal</AnimPath>

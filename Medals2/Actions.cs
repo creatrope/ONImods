@@ -18,18 +18,17 @@ namespace Medals2
             var minion = __instance.GetComponent<MinionIdentity>();
             if (minion != null && amount > 0)
             {
-                var found = TrophyInfo.TrophyTypes.TryGetValue("Injury", out var trophy);
-                if (!found) return;
-                string name = $"{trophy.Name}";
-                string desc = $"{trophy.Description}";
+                var trophyInfo = TrophyDb.Trophies["Injury"];
+                string name = trophyInfo.GetName();
+                string desc = trophyInfo.GetDesc();
 
                 var medalInfo = minion.FindOrAddComponent<MedalInfo>();
                 if (medalInfo != null)
                 {
-                    var medal = new Medal(name,desc, MedalType.Citation, true);
+                    var medal = new Medal(name, desc, MedalType.Citation, true);
                     medalInfo.Medals.Add(medal);
 
-                    TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
+                    TrophyConfig.CreateTrophy(trophyInfo, minion);
                 }
                 Debug.Log($"[Health_DamageMedalPatch] (after)");
             }
@@ -70,22 +69,16 @@ namespace Medals2
 
             if (oldWorldId == newWorldId) // first in space
             {
-                var found = TrophyInfo.TrophyTypes.TryGetValue("Space", out var trophy);
-                if (!found) return;
-
-                //Debug.Log("[Medals] oldWorldId == newWorldId, awarding SpaceLaunchMedal.");
-
-                string name = $"{trophy.Name}";
-                string desc = $"{trophy.Description}";
+                var trophyInfo = TrophyDb.Trophies["Space"];
+                string name = trophyInfo.GetName();
+                string desc = trophyInfo.GetDesc();
                 var medal = new Medal(name, desc, MedalType.Citation, true);
                 medalInfo.Medals.Add(medal);
-                TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
-                Debug.Log($"[ArtifactsPlus] Minion migrated and awarded SpaceLaunchMedal.");
+                TrophyConfig.CreateTrophy(trophyInfo, minion);
             }
             else // first visit to a new world
             {
-                var found = TrophyInfo.TrophyTypes.TryGetValue("FirstVisit", out var trophy);
-                if (!found) return;
+                if (!TrophyDb.Trophies.ContainsKey("FirstVisit")) return;
 
                 var world = ClusterManager.Instance.GetWorld(newWorldId);
                 if (world == null)
@@ -97,15 +90,17 @@ namespace Medals2
                     Debug.Log($"[Medals] world id: {world.id}, world name: {world.name}, world type: {world.GetType().FullName}");
                 }
 
+                var trophyInfo = TrophyDb.Trophies["FirstVisit"];
+                string name = trophyInfo.GetName();
+                string desc = trophyInfo.GetDesc();
+
                 string worldName = world != null
                     ? (world.GetComponent<ClusterGridEntity>()?.GetProperName() ?? world.name)
                     : $"World {newWorldId}";
-
-                string name = $"{trophy.Name} {worldName}";
-                string desc = $"{trophy.Description}.";
+                name = $"{trophyInfo.GetName()} {worldName}";
                 var medal = new Medal(name, desc, MedalType.Citation, true);
                 medalInfo.Medals.Add(medal);
-                TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
+                TrophyConfig.CreateTrophy(trophyInfo, minion);
             }
         }
     }
@@ -115,8 +110,8 @@ namespace Medals2
     {
         public static void Postfix(RescueIncapacitatedChore __instance)
         {
-            var found = TrophyInfo.TrophyTypes.TryGetValue("Rescue", out var trophy);
-            if (!found) return; 
+            // Use TrophyDb.Trophies instead of TryGetValue on TrophyTypes
+            if (!TrophyDb.Trophies.ContainsKey("Rescue")) return;
 
             var smi = __instance.smi;
             if (smi == null || smi.sm == null) return;
@@ -143,12 +138,14 @@ namespace Medals2
                         rescuedName = rescuedMinion.GetProperName();
                 }
 
-                string name = $"{trophy.Name} {rescuedName}";
-                string desc = $"{trophy.Description} {rescuedName}.";
+                var trophyInfo = TrophyDb.Trophies["Rescue"];
+                string name = $"{trophyInfo.GetName()} {rescuedName}";
+                string desc = $"{trophyInfo.GetDesc()} {rescuedName}.";
+
                 var medalInfo = minion.FindOrAddComponent<MedalInfo>();
                 var medal = new Medal(name, desc, MedalType.Citation, true);
                 medalInfo.Medals.Add(medal);
-                TrophyConfig.CreateAndAwardTrophy(name, desc, minion);
+                TrophyConfig.CreateTrophy(trophyInfo, minion);
             }
         }
     }
