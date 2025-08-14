@@ -18,7 +18,7 @@ using System.Reflection;
 using TemplateClasses;
 using TUNING;
 using UnityEngine;
-using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
+using Medals2; // Make sure this is present
 
 // --- MOD ENTRY POINT ---
 public class Mod : UserMod2

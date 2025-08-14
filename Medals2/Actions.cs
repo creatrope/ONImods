@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static GarbageCollectionProfiler;
-using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
 using KSerialization;
 using UnityEngine;
 
@@ -20,11 +18,31 @@ namespace Medals2
             var minion = __instance.GetComponent<MinionIdentity>();
             if (minion != null && amount > 0)
             {
-                var trophyInfo = TrophyDb.Trophies["Injury"];
-                if (!trophyInfo.repeatable)
-                    return;
-                MedalInfo.CreateMedal(trophyInfo, minion);
-                TrophyConfig.CreateTrophy(trophyInfo, minion);
+                var mementoInfo = MementoDb.Mementos["Injury"];
+                var medalInfo = minion.FindOrAddComponent<MedalInfo>();
+                string mementoId = "Injury";
+
+                if (mementoInfo.unique)
+                {
+                    if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
+                    {
+                        Debug.Log("[Health_DamageMedalPatch] Injury medal is unique and already awarded, skipping award.");
+                        return;
+                    }
+                }
+                if (!mementoInfo.repeatable)
+                {
+                    if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
+                    {
+                        Debug.Log("[Health_DamageMedalPatch] Injury medal not repeatable and already awarded to this dupe, skipping award.");
+                        return;
+                    }
+                }
+                MementoConfig.CreateMemento(mementoInfo, minion);
+                if (mementoInfo.unique)
+                    MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
+                if (!mementoInfo.repeatable && medalInfo != null)
+                    medalInfo.SetAwardedNonRepeatableMemento(mementoId);
                 Debug.Log($"[Health_DamageMedalPatch] (after)");
             }
         }
@@ -35,7 +53,6 @@ namespace Medals2
     {
         public static void Postfix(AssignmentManager __instance, object data)
         {
-            //Debug.Log("[Medals] AssignmentManager_MinionMigration_Patch.Postfix called.");
             var migrationEventArgs = data as MinionMigrationEventArgs;
             if (data == null)
             {
@@ -48,7 +65,7 @@ namespace Medals2
                 return;
             }
 
-            var minion = migrationEventArgs.minionId; // Use the minion from the event args
+            var minion = migrationEventArgs.minionId;
             var medalInfo = minion != null ? minion.FindOrAddComponent<MedalInfo>() : null;
 
             int oldWorldId = migrationEventArgs.prevWorldId;
@@ -59,15 +76,34 @@ namespace Medals2
 
             if (oldWorldId == newWorldId) // first in space
             {
-                var trophyInfo = TrophyDb.Trophies["Space"];
-                if (!trophyInfo.repeatable)
-                    return;
-                MedalInfo.CreateMedal(trophyInfo, minion);
-                TrophyConfig.CreateTrophy(trophyInfo, minion);
+                var mementoInfo = MementoDb.Mementos["Space"];
+                string mementoId = "Space";
+
+                if (mementoInfo.unique)
+                {
+                    if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
+                    {
+                        Debug.Log("[AssignmentManager_MinionMigration_Patch] Space medal is unique and already awarded, skipping award.");
+                        return;
+                    }
+                }
+                if (!mementoInfo.repeatable)
+                {
+                    if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
+                    {
+                        Debug.Log("[AssignmentManager_MinionMigration_Patch] Space medal not repeatable and already awarded to this dupe, skipping award.");
+                        return;
+                    }
+                }
+                MementoConfig.CreateMemento(mementoInfo, minion);
+                if (mementoInfo.unique)
+                    MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
+                if (!mementoInfo.repeatable && medalInfo != null)
+                    medalInfo.SetAwardedNonRepeatableMemento(mementoId);
             }
             else // first visit to a new world
             {
-                if (!TrophyDb.Trophies.ContainsKey("FirstVisit")) return;
+                if (!MementoDb.Mementos.ContainsKey("FirstVisit")) return;
 
                 var world = ClusterManager.Instance.GetWorld(newWorldId);
                 if (world == null)
@@ -79,11 +115,27 @@ namespace Medals2
                     Debug.Log($"[Medals] world id: {world.id}, world name: {world.name}, world type: {world.GetType().FullName}");
                 }
 
-                var trophyInfo = TrophyDb.Trophies["FirstVisit"];
-                if (!trophyInfo.repeatable)
-                    return;
-                string name = trophyInfo.GetName();
-                string desc = trophyInfo.GetDesc();
+                string mementoId = "FirstVisit";
+                var mementoInfo = MementoDb.Mementos[mementoId];
+
+                if (mementoInfo.unique)
+                {
+                    if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
+                    {
+                        Debug.Log("[AssignmentManager_MinionMigration_Patch] FirstVisit medal is unique and already awarded, skipping award.");
+                        return;
+                    }
+                }
+                if (!mementoInfo.repeatable)
+                {
+                    if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
+                    {
+                        Debug.Log("[AssignmentManager_MinionMigration_Patch] FirstVisit medal not repeatable and already awarded to this dupe, skipping award.");
+                        return;
+                    }
+                }
+                string name = mementoInfo.GetName();
+                string desc = mementoInfo.GetDesc();
 
                 string worldName = world != null
                     ? (world.GetComponent<ClusterGridEntity>()?.GetProperName() ?? world.name)
@@ -93,8 +145,11 @@ namespace Medals2
                     Debug.Log($"[Medals] Homeworld || FirstVisit already awarded for world '{newWorldId}', skipping.");
                     return;
                 }
-                MedalInfo.CreateMedal(trophyInfo, minion, worldName);
-                TrophyConfig.CreateTrophy(trophyInfo, minion, worldName);
+                MementoConfig.CreateMemento(mementoInfo, minion, worldName);
+                if (mementoInfo.unique)
+                    MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
+                if (!mementoInfo.repeatable && medalInfo != null)
+                    medalInfo.SetAwardedNonRepeatableMemento(mementoId);
                 MedalsSaveData.Instance.awardedFirstVisitWorlds.Add(newWorldId);
             }
         }
@@ -118,8 +173,6 @@ namespace Medals2
             string targetName = deliverTarget != null ? deliverTarget.name : "null";
             bool isMedicalCot = deliverTarget != null && deliverTarget.HasTag(new Tag("MedicalCot"));
 
-            // Debug.Log($"[Medals] DropIncapacitatedDuplicant called. deliverTarget: {targetName}, isMedicalCot: {isMedicalCot}");
-
             if (isMedicalCot)
             {
                 string rescuedName = "Unknown";
@@ -130,19 +183,38 @@ namespace Medals2
                     if (rescuedMinion != null)
                         rescuedName = rescuedMinion.GetProperName();
 
-                    var trophyInfo = TrophyDb.Trophies["Rescue"];
-                    if (!trophyInfo.repeatable)
-                        return;
+                    var mementoInfo = MementoDb.Mementos["Rescue"];
                     var medalInfo = minion.FindOrAddComponent<MedalInfo>();
-                    string medalName = trophyInfo.GetName() + $" {rescuedName}";
-                    string medalDesc = trophyInfo.GetDesc() + $" {rescuedName}";
+                    string mementoId = "Rescue";
+
+                    if (mementoInfo.unique)
+                    {
+                        if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
+                        {
+                            Debug.Log("[RescueIncapacitatedChore_RescuedDupeMedalPatch] Rescue medal is unique and already awarded, skipping award.");
+                            return;
+                        }
+                    }
+                    if (!mementoInfo.repeatable)
+                    {
+                        if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
+                        {
+                            Debug.Log("[RescueIncapacitatedChore_RescuedDupeMedalPatch] Rescue medal not repeatable and already awarded to this dupe, skipping award.");
+                            return;
+                        }
+                    }
+                    string medalName = mementoInfo.GetName() + $" {rescuedName}";
+                    string medalDesc = mementoInfo.GetDesc() + $" {rescuedName}";
 
                     // Prevent duplicate medals
                     bool alreadyAwarded = medalInfo.Medals.Any(m => m.Name == medalName && m.Description == medalDesc);
                     if (!alreadyAwarded)
                     {
-                        MedalInfo.CreateMedal(trophyInfo, minion, rescuedName);
-                        TrophyConfig.CreateTrophy(trophyInfo, minion, rescuedName);
+                        MementoConfig.CreateMemento(mementoInfo, minion, rescuedName);
+                        if (mementoInfo.unique)
+                            MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
+                        if (!mementoInfo.repeatable && medalInfo != null)
+                            medalInfo.SetAwardedNonRepeatableMemento(mementoId);
                     }
                 }
             }
@@ -154,6 +226,9 @@ namespace Medals2
     {
         [Serialize]
         public HashSet<int> awardedFirstVisitWorlds = new HashSet<int>();
+
+        [Serialize]
+        public Dictionary<string, string> awardedUnique = new Dictionary<string, string>();
 
         public static MedalsSaveData Instance
         {

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using KSerialization;
 
-// Enum for medal types
 public enum MedalType
 {
     Award,
@@ -30,13 +29,16 @@ public class MedalInfo : KMonoBehaviour, ISaveLoadable
 {
     [Serialize]
     public List<Medal> Medals = new List<Medal>();
-    public static Medal CreateMedal(TrophyData trophyInfo, MinionIdentity minion, string target = null)
+    [Serialize]
+    private HashSet<string> awardedNonRepeatableMementos = new HashSet<string>();
+
+    public bool HasAwardedNonRepeatableMemento(string mementoId)
     {
-        string name = trophyInfo.GetName() + $" {target}";
-        string desc = trophyInfo.GetDesc() + $" {target}";
-        var medalInfo = minion.FindOrAddComponent<MedalInfo>();
-        var medal = new Medal(name, desc);
-        medalInfo.Medals.Add(medal);
-        return medal;
+        return awardedNonRepeatableMementos.Contains(mementoId);
+    }
+
+    public void SetAwardedNonRepeatableMemento(string mementoId)
+    {
+        awardedNonRepeatableMementos.Add(mementoId);
     }
 }
