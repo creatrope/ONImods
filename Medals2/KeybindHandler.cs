@@ -3,31 +3,53 @@ using PeterHan.PLib.PatchManager;
 using UnityEngine;
 using System.Linq;
 using System;
+using System.Collections.Generic;
 
 namespace Medals
 {
+    // Use System.Action for all references
+    private static readonly List<Keybind> keybinds = new List<Keybind>
+        {
+            new Keybind("Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl), HandleIncapacitateHotkey),
+            new Keybind("Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), HandleDamageHotkey),
+            new Keybind("Medals.eraseMedalsAction", "Erase All Medals", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseMedalsHotkey),
+            new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey)
+        };
     internal sealed class KeybindHandler : IInputHandler
     {
-        internal static PAction incapacitateAction;
-        internal static PAction damageAction;
-        private Action incapacitateSnapshotAction;
-        private Action damageSnapshotAction;
+        private class Keybind
+        {
+            public string Id;
+            public string DisplayName;
+            public PKeyBinding Binding;
+            public System.Action Handler; // <-- Use System.Action
+            public PAction Action;
+            public Action Snapshot; // <-- Change to KAction
+
+            public Keybind(string id, string displayName, PKeyBinding binding, System.Action handler)
+            {
+                Id = id;
+                DisplayName = displayName;
+                Binding = binding;
+                Handler = handler;
+            }
+        }
+
+
+
         private float lastSnapshotTime = 0f;
         private readonly float debounceInterval = 1.0f; // seconds
 
         public string handlerName => "KeybindHandler";
         public KInputHandler inputHandler { get; set; }
         internal static MinionIdentity SelectedMinion;
-        internal static PAction eraseMedalsAction;
-        private Action eraseMedalsSnapshotAction;
 
         private bool keyIsDown = false;
 
         public KeybindHandler()
         {
-            incapacitateSnapshotAction = incapacitateAction != null ? incapacitateAction.GetKAction() : PAction.MaxAction;
-            damageSnapshotAction = damageAction != null ? damageAction.GetKAction() : PAction.MaxAction;
-            eraseMedalsSnapshotAction = eraseMedalsAction != null ? eraseMedalsAction.GetKAction() : PAction.MaxAction;
+            foreach (var kb in keybinds)
+                kb.Snapshot = (kb.Action != null) ? kb.Action.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
@@ -38,33 +60,26 @@ namespace Medals
             keyIsDown = true;
 
             float now = Time.time;
+            bool anyPressed = false;
 
-            bool incapacitatePressed = e.TryConsume(incapacitateSnapshotAction);
-            bool damagePressed = e.TryConsume(damageSnapshotAction);
-            bool eraseMedalsPressed = e.TryConsume(eraseMedalsSnapshotAction);
+            foreach (var kb in keybinds)
+            {
+                if (kb.Snapshot == null && kb.Action != null)
+                    kb.Snapshot = kb.Action.GetKAction();
 
-            // Debounce: Only allow one hotkey action per debounceInterval
-            if ((damagePressed || incapacitatePressed || eraseMedalsPressed) && now - lastSnapshotTime < debounceInterval)
-                return;
-
-            if (damagePressed)
-            {
-                lastSnapshotTime = now;
-                HandleDamageHotkey();
-            }
-            else if (incapacitatePressed)
-            {
-                lastSnapshotTime = now;
-                HandleIncapacitateHotkey();
-            }
-            else if (eraseMedalsPressed)
-            {
-                lastSnapshotTime = now;
-                HandleEraseMedalsHotkey();
+                if (e.TryConsume(kb.Snapshot))
+                {
+                    anyPressed = true;
+                    if (now - lastSnapshotTime >= debounceInterval)
+                    {
+                        lastSnapshotTime = now;
+                        kb.Handler?.Invoke();
+                    }
+                    break;
+                }
             }
         }
 
-        // Add this method to handle key up events
         public void OnKeyUp(KButtonEvent e)
         {
             keyIsDown = false;
@@ -86,17 +101,16 @@ namespace Medals
         public static void Register(PPatchManager manager)
         {
             manager.RegisterPatchClass(typeof(KeybindHandler));
-            incapacitateAction = new PActionManager().CreateAction(
-                "Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl));
-            damageAction = new PActionManager().CreateAction(
-                "Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl));
-            eraseMedalsAction = new PActionManager().CreateAction(
-                "Medals.eraseMedalsAction", "Erase All Medals", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl));
-       }
+            foreach (var kb in keybinds)
+            {
+                kb.Action = new PActionManager().CreateAction(kb.Id, kb.DisplayName, kb.Binding);
+                kb.Snapshot = kb.Action.GetKAction();
+            }
+        }
 
         // --- SUPPORT FUNCTIONS BELOW ---
 
-        private void HandleDamageHotkey()
+        private static void HandleDamageHotkey()
         {
             Debug.Log("[OnKeyDown] Damage hotkey detected.");
             if (SelectedMinion != null)
@@ -120,7 +134,7 @@ namespace Medals
             }
         }
 
-        private void HandleIncapacitateHotkey()
+        private static void HandleIncapacitateHotkey()
         {
             Debug.Log("[OnKeyDown] Incapacitate hotkey detected.");
             if (SelectedMinion != null)
@@ -151,11 +165,10 @@ namespace Medals
             }
         }
 
-        private void HandleEraseMedalsHotkey()
+        private static void HandleEraseMedalsHotkey()
         {
             Debug.Log("[EraseMedals] Erase medals hotkey pressed. Removing all medals, effects, keepsakes, and minions.");
 
-            // Remove keepsake medal objects from the scene
             foreach (var go in UnityEngine.Object.FindObjectsOfType<GameObject>())
             {
                 if (go.name.StartsWith("keepsake_medal"))
@@ -164,7 +177,6 @@ namespace Medals
                 }
             }
 
-            // Remove medal-related prefabs from the prefab map
             if (Assets.Prefabs != null)
             {
                 var medalPrefabs = Assets.Prefabs
@@ -178,6 +190,15 @@ namespace Medals
                 }
             }
         }
-   
+
+        private static void HandlePrintAllMementosHotkey()
+        {
+            Debug.Log("[PrintAllMementos] Print all mementos hotkey pressed.");
+            var allMementos = UnityEngine.Object.FindObjectsOfType<Medals2.MementoModifiable>();
+            foreach (var memento in allMementos)
+            {
+                Debug.Log($"Memento: {memento.GetName()} - {memento.GetDesc()}");
+            }
+        }
     }
 }

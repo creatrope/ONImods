@@ -18,7 +18,7 @@ namespace Medals2
             var minion = __instance.GetComponent<MinionIdentity>();
             if (minion != null && amount > 0)
             {
-                var mementoInfo = MementoDb.Mementos["Injury"];
+                var mementoInfo = MementoPrototypes.Mementos["Injury"];
                 var medalInfo = minion.FindOrAddComponent<MedalInfo>();
                 string mementoId = "Injury";
 
@@ -76,7 +76,7 @@ namespace Medals2
 
             if (oldWorldId == newWorldId) // first in space
             {
-                var mementoInfo = MementoDb.Mementos["Space"];
+                var mementoInfo = MementoPrototypes.Mementos["Space"];
                 string mementoId = "Space";
 
                 if (mementoInfo.unique)
@@ -103,7 +103,7 @@ namespace Medals2
             }
             else // first visit to a new world
             {
-                if (!MementoDb.Mementos.ContainsKey("FirstVisit")) return;
+                if (!MementoPrototypes.Mementos.ContainsKey("FirstVisit")) return;
 
                 var world = ClusterManager.Instance.GetWorld(newWorldId);
                 if (world == null)
@@ -116,7 +116,7 @@ namespace Medals2
                 }
 
                 string mementoId = "FirstVisit";
-                var mementoInfo = MementoDb.Mementos[mementoId];
+                var mementoInfo = MementoPrototypes.Mementos[mementoId];
 
                 if (mementoInfo.unique)
                 {
@@ -183,7 +183,7 @@ namespace Medals2
                     if (rescuedMinion != null)
                         rescuedName = rescuedMinion.GetProperName();
 
-                    var mementoInfo = MementoDb.Mementos["Rescue"];
+                    var mementoInfo = MementoPrototypes.Mementos["Rescue"];
                     var medalInfo = minion.FindOrAddComponent<MedalInfo>();
                     string mementoId = "Rescue";
 
