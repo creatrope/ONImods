@@ -10,7 +10,7 @@
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <ItemGroup>
     <Compile Include="Actions.cs" />
-    <Compile Include="BlankScreenButtonPatch.cs" />
+    <Compile Include="MementoGallery.cs" />
     <Compile Include="KeybindHandler.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
