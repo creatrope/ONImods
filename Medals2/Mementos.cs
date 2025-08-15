@@ -26,11 +26,11 @@ namespace Medals2
             foreach (var kvp in MementoData.MementoTypes)
             {
                 var info = ScriptableObject.CreateInstance<MementoData>();
-                info.SetInfo(kvp.Value.Name, kvp.Value.Description);
+                info.mementoName = kvp.Value.Name;
+                info.mementoDesc = kvp.Value.Description;
                 info.rewardType = kvp.Value.RewardType;
                 info.repeatable = kvp.Value.Repeatable;
                 info.unique = kvp.Value.Unique;
-
                 Mementos.Add(kvp.Key, info);
             }
         }
@@ -106,13 +106,6 @@ namespace Medals2
                 { "Space", ("First To Space", "First To Space", Reward.Trophy, false, true) },
                 { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet", Reward.Trophy, true, true) }
             };
-
-        public void SetInfo(string name, string desc)
-        {
-            mementoName = name;
-            mementoDesc = desc;
-        }
-
         public string GetName() => mementoName;
         public string GetDesc() => mementoDesc;
         public Reward GetRewardType() => rewardType;
@@ -132,10 +125,14 @@ namespace Medals2
         [Serialize]
         public string mementoDesc;
 
-        public void SetInfo(string name, string desc)
+        [Serialize]
+        public MementoData.Reward rewardType;
+
+        public void SetInfo(string name, string desc, MementoData.Reward rew)
         {
             mementoName = name;
             mementoDesc = desc;
+            rewardType = rew;
         }
 
         public string GetName() => mementoName;
@@ -261,11 +258,11 @@ namespace Medals2
 
             string name = $"{mementoInfo.GetName()} {target}";
             string desc = $"{mementoInfo.GetDesc()} {target}";
-            var medal = new Medal(name, $"{desc} @cycle {cycle}");
+            var medal = new Medal(name, $"{desc} at cycle {cycle}");
             medalInfo.Medals.Add(medal);
 
-            name = $"{name} ({minionName}) @cycle {cycle}";
-            desc = $"{desc} ({minionName}) @cycle {cycle}";
+            name = $"{name} ({minionName})";
+            desc = $"{desc} ({minionName}) at cycle {cycle}";
 
             GameObject memento = Util.KInstantiate(prefab, Grid.CellToPosCCC(Grid.PosToCell(minion.transform.position + new Vector3(0, 2f, 0)), Grid.SceneLayer.Ore));
             if (memento == null)
@@ -278,7 +275,7 @@ namespace Medals2
 
             var newMementoInfo = memento.GetComponent<MementoModifiable>();
             if (newMementoInfo != null)
-                newMementoInfo.SetInfo(name, desc);
+                newMementoInfo.SetInfo(name, desc, mementoInfo.rewardType);
 
             var selectable = memento.GetComponent<KSelectable>();
             if (selectable != null)
@@ -291,6 +288,36 @@ namespace Medals2
             memento.transform.position = minion.transform.position + new Vector3(0, 2f, 0); // above head
             memento.SetActive(true);
             Debug.Log($"[MementoConfig] Awarded memento '{name}' to minion '{minion.GetProperName()}'.");
+        }
+
+        // Utility method to get the anim file for a MementoModifiable by examining the reward of its parent
+        public static string GetAnimForMementoComponent(MementoModifiable memento)
+        {
+            if (memento == null)
+                return null;
+
+            // Try to find the parent GameObject that has a MementoData reference
+            // This assumes the parent is the prefab created in MementoConfig.CreatePrefabs
+            // and that the prefab is registered in MementoPrototypes.Mementos
+
+            // Find the MementoData prototype by matching the memento's name
+            foreach (var kvp in MementoPrototypes.Mementos)
+            {
+                var data = kvp.Value;
+                if (data != null && data.GetName() == memento.GetName())
+                {
+                    // Get the anim file for the reward type
+                    return MementoData.GetAnimForReward(data.GetRewardType());
+                }
+            }
+
+            // Fallback: try to infer from mementoName if it matches a key in MementoTypes
+            if (MementoData.MementoTypes.TryGetValue(memento.GetName(), out var tuple))
+            {
+                return MementoData.GetAnimForReward(tuple.RewardType);
+            }
+
+            return null;
         }
     }
 }

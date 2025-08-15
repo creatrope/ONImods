@@ -7,14 +7,6 @@ using System.Collections.Generic;
 
 namespace Medals
 {
-    // Use System.Action for all references
-    private static readonly List<Keybind> keybinds = new List<Keybind>
-        {
-            new Keybind("Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl), HandleIncapacitateHotkey),
-            new Keybind("Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), HandleDamageHotkey),
-            new Keybind("Medals.eraseMedalsAction", "Erase All Medals", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseMedalsHotkey),
-            new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey)
-        };
     internal sealed class KeybindHandler : IInputHandler
     {
         private class Keybind
@@ -22,9 +14,9 @@ namespace Medals
             public string Id;
             public string DisplayName;
             public PKeyBinding Binding;
-            public System.Action Handler; // <-- Use System.Action
+            public System.Action Handler;
             public PAction Action;
-            public Action Snapshot; // <-- Change to KAction
+            public Action Snapshot;
 
             public Keybind(string id, string displayName, PKeyBinding binding, System.Action handler)
             {
@@ -35,7 +27,14 @@ namespace Medals
             }
         }
 
-
+        // Use System.Action for all references
+        private static readonly List<Keybind> keybinds = new List<Keybind>
+        {
+            new Keybind("Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl), HandleIncapacitateHotkey),
+            new Keybind("Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), HandleDamageHotkey),
+            new Keybind("Medals.eraseMedalsAction", "Erase All Medals", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseMedalsHotkey),
+            new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey)
+        };
 
         private float lastSnapshotTime = 0f;
         private readonly float debounceInterval = 1.0f; // seconds

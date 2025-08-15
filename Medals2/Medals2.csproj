@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="Actions.cs" />
     <Compile Include="KeybindHandler.cs" />
+    <Compile Include="MementoGallerySideScreen.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Mementos.cs" />
@@ -32,6 +33,14 @@
     <Content Include="assets\keepsake_medal_0.png" />
     <Content Include="assets\place_0.png" />
     <Content Include="assets\ui_0.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\OxygenNotIncluded\OxygenNotIncluded_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

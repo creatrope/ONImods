@@ -1,5 +1,4 @@
 using Database;
-using Epic.OnlineServices;
 using HarmonyLib;
 using Klei.AI;
 using KMod;
@@ -20,7 +19,11 @@ using TUNING;
 using UnityEngine;
 using Medals2; // Make sure this is present
 
-// --- MOD ENTRY POINT ---
+public class Config
+{
+    public bool EnableMedals { get; set; } = true;
+    public int MaxMedals { get; set; } = 10;
+}
 public class Mod : UserMod2
 {
     public override void OnLoad(Harmony harmony)
@@ -83,3 +86,4 @@ public static class BaseMinionConfig_BaseMinion_MedalInfoPatch
         __result.AddOrGet<MedalInfo>();
     }
 }
+
