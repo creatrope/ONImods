@@ -61,10 +61,8 @@ namespace Mementos
             }
             .AddButton("ok", "OK", null, PUITuning.Colors.ButtonPinkStyle);
 
-            // Use the dialog's Body as the main container
             var dialogBody = dialog.Body;
 
-            // Use a panel with clearable children for easy refresh (optional)
             var dialogBodyChild = new PPanel("MementoGallery_RecordsPanel")
             {
                 Direction = PanelDirection.Vertical,
@@ -73,7 +71,6 @@ namespace Mementos
             };
             dialogBody.AddChild(dialogBodyChild);
 
-            // Create the scrollable content panel
             var scrollBody = new PPanel("ScrollContent")
             {
                 Spacing = 2,
@@ -82,13 +79,15 @@ namespace Mementos
                 FlexSize = Vector2.right
             };
 
-            // Add your lines
-            for (int i = 1; i <= 50; i++)
+            var mementos = UnityEngine.Object.FindObjectsOfType<Mementos.MementoModifiable>();
+            Debug.Log($"[Mementos] Found {mementos.Length} mementos.");
+
+            foreach (var memento in mementos)
             {
-                scrollBody.AddChild(new PLabel($"Line{i}") { Text = GetRandomLine(i) });
+                Debug.Log($"[Mementos] Adding memento: {memento.GetName()} - {memento.GetDesc()}");
+                scrollBody.AddChild(new PLabel(memento.GetName()) { Text = memento.GetDesc() });
             }
 
-            // Add the scroll pane
             var scrollPane = new PScrollPane()
             {
                 ScrollHorizontal = false,
@@ -102,26 +101,6 @@ namespace Mementos
             dialogBodyChild.AddChild(scrollPane);
 
             dialog.Show();
-        }
-
-        private static string GetRandomLine(int i)
-        {
-            string[] samples = new[]
-            {
-                "The quick brown fox jumps over the lazy dog.",
-                "Lorem ipsum dolor sit amet.",
-                "Random value: " + Random.Range(1000, 9999),
-                "Unity modding is fun!",
-                "Hello, world!",
-                "Sample text line.",
-                "Another random thought.",
-                "ONI rocks!",
-                "Plib makes UI easy.",
-                "Test entry."
-            };
-            // Pick a random sample and append the line number
-            var sample = samples[Random.Range(0, samples.Length)];
-            return $"Line {i}: {sample}";
         }
     }
 }

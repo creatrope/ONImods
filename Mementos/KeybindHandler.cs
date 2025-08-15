@@ -166,28 +166,49 @@ namespace Mementos
 
         private static void HandleEraseMedalsHotkey()
         {
-            Debug.Log("[EraseMedals] Erase medals hotkey pressed. Removing all medals, effects, keepsakes, and minions.");
+            Debug.Log("[EraseMedals] Erase medals hotkey pressed. Removing all MementoModifiable objects, medals, and minions.");
 
-            foreach (var go in UnityEngine.Object.FindObjectsOfType<GameObject>())
+            // 1. Delete all objects with MementoModifiable component
+            var mementos = UnityEngine.Object.FindObjectsOfType<Mementos.MementoModifiable>();
+            foreach (var memento in mementos)
             {
-                if (go.name.StartsWith("keepsake_medal"))
-                {
-                    UnityEngine.Object.Destroy(go);
-                }
+                Debug.Log($"[EraseMedals] Destroying memento object: {memento.GetName()}");
+                UnityEngine.Object.Destroy(memento.gameObject);
             }
 
-            if (Assets.Prefabs != null)
+            // 2. Clear awardedNonRepeatableMementos and Medals for all MedalInfo components
+            var medalInfos = UnityEngine.Object.FindObjectsOfType<Mementos.MedalInfo>();
+            foreach (var medalInfo in medalInfos)
             {
-                var medalPrefabs = Assets.Prefabs
-                    .Where(p => p != null && p.name.StartsWith("keepsake_medal"))
-                    .ToList();
-
-                foreach (var prefab in medalPrefabs)
+                // Clear awardedNonRepeatableMementos
+                var field = typeof(Mementos.MedalInfo).GetField("awardedNonRepeatableMementos", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (field != null)
                 {
-                    Assets.Prefabs.Remove(prefab);
-                    Debug.Log($"[EraseMedals] Removed prefab '{prefab.name}' from prefab map.");
+                    var set = field.GetValue(medalInfo) as HashSet<string>;
+                    if (set != null)
+                    {
+                        set.Clear();
+                        Debug.Log("[EraseMedals] Cleared awardedNonRepeatableMementos for a MedalInfo.");
+                    }
                 }
+                // Clear Medals list
+                medalInfo.Medals.Clear();
+                Debug.Log("[EraseMedals] Cleared Medals list for a MedalInfo.");
             }
+
+            // 3. Delete all minions (MinionIdentity components)
+            var minions = UnityEngine.Object.FindObjectsOfType<MinionIdentity>();
+            foreach (var minion in minions)
+            {
+                Debug.Log($"[EraseMedals] Destroying minion: {minion.GetProperName()}");
+                UnityEngine.Object.Destroy(minion.gameObject);
+            }
+
+            // 4. Clear any static or global state for "first to land on the planets"
+            // Example (replace with your actual implementation):
+            // Mementos.FirstToLandTracker.Clear();
+
+            Debug.Log("[EraseMedals] All memento-related global state and minions cleared.");
         }
 
         private static void HandlePrintAllMementosHotkey()
