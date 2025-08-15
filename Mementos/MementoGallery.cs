@@ -19,21 +19,22 @@ namespace Mementos
             if (parent == null)
                 return;
 
-            // Clone the summary button as a template
-            var blankButtonObj = Object.Instantiate(summaryButton.gameObject, parent);
-            blankButtonObj.name = "BlankScreenButton";
-            blankButtonObj.transform.SetAsLastSibling();
+            // Prevent duplicate button creation
+            if (parent.Find("MementoGalleryButton") != null)
+                return;
 
-            // Set button text
-            var text = blankButtonObj.GetComponentInChildren<Text>(true);
+            var mgButtonObj = Object.Instantiate(summaryButton.gameObject, parent);
+            mgButtonObj.name = "MementoGalleryButton";
+            mgButtonObj.transform.SetAsLastSibling();
+
+            var text = mgButtonObj.GetComponentInChildren<Text>(true);
             if (text != null)
                 text.text = "Memento Gallery";
-            var tmpText = blankButtonObj.GetComponentInChildren<TMPro.TMP_Text>(true);
+            var tmpText = mgButtonObj.GetComponentInChildren<TMPro.TMP_Text>(true);
             if (tmpText != null)
                 tmpText.text = "Memento Gallery";
 
-            // Wire up click to open Plib modal
-            var button = blankButtonObj.GetComponent<Button>();
+            var button = mgButtonObj.GetComponent<Button>();
             if (button != null)
             {
                 button.onClick.RemoveAllListeners();
@@ -41,7 +42,7 @@ namespace Mementos
             }
             else
             {
-                var kbutton = blankButtonObj.GetComponent<KButton>();
+                var kbutton = mgButtonObj.GetComponent<KButton>();
                 if (kbutton != null)
                 {
                     kbutton.ClearOnClick();
@@ -79,16 +80,25 @@ namespace Mementos
                 row.AddChild(new PLabel("Icon")
                 {
                     Sprite = iconSprite,
-                    Text = "", // No text, just the sprite
-                    TextAlignment = TextAnchor.MiddleCenter
+                    Text = "",
+                    TextAlignment = TextAnchor.MiddleCenter,
                 });
             }
             else
             {
-                row.AddChild(new PLabel("NoIcon") { Text = "?", TextAlignment = TextAnchor.MiddleCenter });
+                row.AddChild(new PLabel("NoIcon")
+                {
+                    Text = "?",
+                    TextAlignment = TextAnchor.MiddleCenter,
+                });
             }
 
-            row.AddChild(new PLabel("Desc") { Text = memento.GetDesc(), FlexSize = Vector2.right });
+            // Only show the description, not the name
+            row.AddChild(new PLabel("Desc")
+            {
+                Text = memento.GetDesc(),
+                FlexSize = Vector2.right
+            });
 
             return row;
         }
