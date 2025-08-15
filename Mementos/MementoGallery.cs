@@ -52,38 +52,56 @@ namespace Mementos
 
         private static void ShowPlibModal()
         {
-            var dialog = new PDialog("TestModal");
-            dialog.Title = "Test Modal";
-            dialog.Size = new Vector2(400, 200); // Locks the dialog window size
+            var dialog = new PDialog("MementoGalleryDialog")
+            {
+                Title = "Memento Gallery",
+                Size = new Vector2(300, 250),
+                MaxSize = new Vector2(300, 250),
+                SortKey = 300.0f
+            }
+            .AddButton("ok", "OK", null, PUITuning.Colors.ButtonPinkStyle);
 
-            // Create a vertical layout for the lines
-            var vbox = new PPanel("VBox")
+            // Use the dialog's Body as the main container
+            var dialogBody = dialog.Body;
+
+            // Use a panel with clearable children for easy refresh (optional)
+            var dialogBodyChild = new PPanel("MementoGallery_RecordsPanel")
             {
                 Direction = PanelDirection.Vertical,
-                Spacing = 2,
-                DynamicSize = false // Prevents the panel from expanding to fit all children
+                Spacing = 4,
+                FlexSize = Vector2.one
             };
+            dialogBody.AddChild(dialogBodyChild);
 
-            var scrollPane = new PScrollPane("ScrollPane")
+            // Create the scrollable content panel
+            var scrollBody = new PPanel("ScrollContent")
             {
-                Child = vbox,
-                ScrollVertical = true,
-                ScrollHorizontal = false,
-                TrackSize = 16f,
-                FlexSize = new Vector2(0, 18 * 5),
-                AlwaysShowVertical = true
+                Spacing = 2,
+                Direction = PanelDirection.Vertical,
+                Alignment = TextAnchor.UpperCenter,
+                FlexSize = Vector2.right
             };
 
-
+            // Add your lines
             for (int i = 1; i <= 50; i++)
             {
-                vbox.AddChild(new PLabel($"Line{i}") { Text = GetRandomLine(i) });
+                scrollBody.AddChild(new PLabel($"Line{i}") { Text = GetRandomLine(i) });
             }
 
-            dialog.Body.AddChild(scrollPane);
-            dialog.AddButton("ok", "OK", null, null, null);
-            dialog.Show();
+            // Add the scroll pane
+            var scrollPane = new PScrollPane()
+            {
+                ScrollHorizontal = false,
+                ScrollVertical = true,
+                Child = scrollBody,
+                FlexSize = Vector2.one,
+                TrackSize = 16f,
+                AlwaysShowHorizontal = false,
+                AlwaysShowVertical = true
+            };
+            dialogBodyChild.AddChild(scrollPane);
 
+            dialog.Show();
         }
 
         private static string GetRandomLine(int i)
