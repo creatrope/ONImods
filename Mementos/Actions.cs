@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using KSerialization;
 using UnityEngine;
 
-namespace Medals2
+namespace Mementos
 {
 
     [HarmonyPatch(typeof(Health), "Damage")]

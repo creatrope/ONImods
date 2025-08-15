@@ -5,7 +5,7 @@ using System.Linq;
 using System;
 using System.Collections.Generic;
 
-namespace Medals
+namespace Mementos
 {
     internal sealed class KeybindHandler : IInputHandler
     {
@@ -193,7 +193,7 @@ namespace Medals
         private static void HandlePrintAllMementosHotkey()
         {
             Debug.Log("[PrintAllMementos] Print all mementos hotkey pressed.");
-            var allMementos = UnityEngine.Object.FindObjectsOfType<Medals2.MementoModifiable>();
+            var allMementos = UnityEngine.Object.FindObjectsOfType<Mementos.MementoModifiable>();
             foreach (var memento in allMementos)
             {
                 Debug.Log($"Memento: {memento.GetName()} - {memento.GetDesc()}");

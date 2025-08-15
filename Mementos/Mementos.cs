@@ -1,4 +1,4 @@
-namespace Medals2
+namespace Mementos
 {
     using HarmonyLib;
     using KSerialization;
