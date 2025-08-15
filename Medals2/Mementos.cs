@@ -93,7 +93,7 @@ namespace Medals2
         public static readonly Dictionary<Reward, RewardTypeInfo> RewardTypeInfos =
             new Dictionary<Reward, RewardTypeInfo>
             {
-                { Reward.Trophy,   new RewardTypeInfo(Reward.Trophy,   "keepsake_medal_kanim") },
+                { Reward.Trophy,   new RewardTypeInfo(Reward.Trophy,   "keepsake_trophy_kanim") },
                 { Reward.Citation, new RewardTypeInfo(Reward.Citation, "keepsake_proclamation_kanim") },
                 { Reward.Oops,     new RewardTypeInfo(Reward.Oops,     "keepsake_medal_kanim") }
             };
