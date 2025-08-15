@@ -38,6 +38,8 @@
 		<Reference Include="UnityEngine" HintPath="$(ONIManaged)\UnityEngine.dll" />
 		<Reference Include="UnityEngine.CoreModule" HintPath="$(ONIManaged)\UnityEngine.CoreModule.dll" />
 		<Reference Include="UnityEngine.UI" HintPath="$(ONIManaged)\UnityEngine.UI.dll" />
+		<Reference Include="UnityEngine.TextRenderingModule" HintPath="$(ONIManaged)\UnityEngine.TextRenderingModule.dll" />
+		<Reference Include="UnityEngine.UIModule" HintPath="$(ONIManaged)\UnityEngine.UIModule.dll" />
 	</ItemGroup>
 
 	<PropertyGroup>
