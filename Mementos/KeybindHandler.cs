@@ -32,7 +32,7 @@ namespace Mementos
         {
             new Keybind("Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl), HandleIncapacitateHotkey),
             new Keybind("Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), HandleDamageHotkey),
-            new Keybind("Medals.eraseMedalsAction", "Erase All Medals", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseMedalsHotkey),
+            new Keybind("Medals.eraseMedalsAction", "Erase All", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseMedalsHotkey),
             new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey)
         };
 

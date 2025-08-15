@@ -50,6 +50,49 @@ namespace Mementos
             }
         }
 
+        private static PPanel CreateMementoRow(Mementos.MementoModifiable memento)
+        {
+            // Get anim string from reward
+            var animName = Mementos.MementoData.GetAnimForReward(memento.rewardType);
+            Debug.Log($"[Mementos] {memento.GetName()} anim: {animName}");
+
+            // Get KAnimFile asset
+            KAnimFile kanim = null;
+            if (!string.IsNullOrEmpty(animName))
+                kanim = Assets.GetAnim(animName);
+
+            // Use Def.GetUISpriteFromMultiObjectAnim to get the "icon" sprite
+            Sprite iconSprite = null;
+            if (kanim != null)
+                iconSprite = Def.GetUISpriteFromMultiObjectAnim(kanim, "icon");
+
+            // Compose a horizontal panel for icon + desc
+            var row = new PPanel("MementoRow")
+            {
+                Direction = PanelDirection.Horizontal,
+                Spacing = 4,
+                FlexSize = Vector2.right
+            };
+
+            if (iconSprite != null)
+            {
+                row.AddChild(new PLabel("Icon")
+                {
+                    Sprite = iconSprite,
+                    Text = "", // No text, just the sprite
+                    TextAlignment = TextAnchor.MiddleCenter
+                });
+            }
+            else
+            {
+                row.AddChild(new PLabel("NoIcon") { Text = "?", TextAlignment = TextAnchor.MiddleCenter });
+            }
+
+            row.AddChild(new PLabel("Desc") { Text = memento.GetDesc(), FlexSize = Vector2.right });
+
+            return row;
+        }
+
         private static void ShowPlibModal()
         {
             var dialog = new PDialog("MementoGalleryDialog")
@@ -85,7 +128,8 @@ namespace Mementos
             foreach (var memento in mementos)
             {
                 Debug.Log($"[Mementos] Adding memento: {memento.GetName()} - {memento.GetDesc()}");
-                scrollBody.AddChild(new PLabel(memento.GetName()) { Text = memento.GetDesc() });
+                var row = CreateMementoRow(memento);
+                scrollBody.AddChild(row);
             }
 
             var scrollPane = new PScrollPane()
