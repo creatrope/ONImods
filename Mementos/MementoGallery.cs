@@ -67,23 +67,36 @@ namespace Mementos
                 Debug.Log("kanim is null, skipping icon generation.");
             }
 
-            var linePanel = new PPanel("MementoLinePanel")
-            {
+            var linePanel = new PPanel("MementoLinePanel") {
                 Direction = PanelDirection.Horizontal,
                 Spacing = 4
             };
 
-            if (icon != null)
-            {
-                var labelWithIcon = new PLabel() {
-                    Sprite = icon, // your Sprite object
-                    Text = rewardName,
-                    ToolTip = rewardName
+            if (icon != null) {
+                var iconLabel = new PLabel()
+                {
+                    Sprite = icon,
+                    ToolTip = rewardName,
+                    FlexSize = new Vector2(1, 1) // Minimal flex to avoid stretching
                 };
-                linePanel.AddChild(labelWithIcon);
+                // Set a small margin to control spacing if needed
+                linePanel.AddChild(iconLabel);
+
+                // Scale down the icon after realization
+                iconLabel.AddOnRealize(go => {
+                    var img = go.GetComponentInChildren<UnityEngine.UI.Image>();
+                    if (img != null) {
+                        img.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 24);
+                        img.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 24);
+                        img.preserveAspect = true;
+                    }
+                });
             }
 
-            linePanel.AddChild(new PLabel() { Text = $"{rewardName}: {memento.GetDesc()}" });
+            linePanel.AddChild(new PLabel() {
+                Text = $"{memento.GetDesc()}",
+                TextAlignment = TextAnchor.MiddleLeft 
+            });
 
             return linePanel;
         }
