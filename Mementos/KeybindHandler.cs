@@ -33,7 +33,8 @@ namespace Mementos
             new Keybind("Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl), HandleIncapacitateHotkey),
             new Keybind("Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), HandleDamageHotkey),
             new Keybind("Medals.eraseMedalsAction", "Erase All", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseMedalsHotkey),
-            new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey)
+            new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey),
+            new Keybind("Medals.printDetailsScreens", "Print Details Screens", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl), HandlePrintDetailsScreensHotkey)
         };
 
         private float lastSnapshotTime = 0f;
@@ -218,6 +219,23 @@ namespace Mementos
             foreach (var memento in allMementos)
             {
                 Debug.Log($"Memento: {memento.GetName()} - {memento.GetDesc()}");
+            }
+        }
+
+        private static void HandlePrintDetailsScreensHotkey()
+        {
+            Debug.Log("[Mementos] Print DetailsScreen side screens hotkey pressed.");
+            var detailsScreen = DetailsScreen.Instance;
+            if (detailsScreen != null && detailsScreen.sideScreens != null)
+            {
+                foreach (var sideScreenRef in detailsScreen.sideScreens)
+                {
+                    Debug.Log($"[Mementos] SideScreen: {sideScreenRef.name}, Prefab: {sideScreenRef.screenPrefab?.GetType().Name}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[Mementos] DetailsScreen.Instance or sideScreens is null.");
             }
         }
     }

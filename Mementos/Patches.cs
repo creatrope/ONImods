@@ -38,6 +38,7 @@ namespace Mementos
     }
 
 
+
     [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
     public static class MinionPersonalityPanel_AddMedalsPanelPatch
     {

@@ -3,13 +3,15 @@ using HarmonyLib;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using PeterHan.PLib.UI;
+using System;
+using System.Linq;
 
 namespace Mementos
 {
     [HarmonyPatch(typeof(TelepadSideScreen), "OnSpawn")]
     public static class TelepadSideScreen_AddBlankScreenButtonPatch
     {
-        private static void Postfix(TelepadSideScreen __instance)
+        public static void Postfix(TelepadSideScreen __instance)
         {
             var summaryButton = __instance.viewColonySummaryBtn;
             if (summaryButton == null || summaryButton.gameObject == null || summaryButton.transform == null)
@@ -19,141 +21,93 @@ namespace Mementos
             if (parent == null)
                 return;
 
-            // Prevent duplicate button creation
             if (parent.Find("MementoGalleryButton") != null)
                 return;
 
-            var mgButtonObj = Object.Instantiate(summaryButton.gameObject, parent);
-            mgButtonObj.name = "MementoGalleryButton";
+            var mgButtonObj = UnityEngine.Object.Instantiate(summaryButton.gameObject, parent); mgButtonObj.name = "MementoGalleryButton";
             mgButtonObj.transform.SetAsLastSibling();
 
-            var text = mgButtonObj.GetComponentInChildren<Text>(true);
-            if (text != null)
-                text.text = "Memento Gallery";
-            var tmpText = mgButtonObj.GetComponentInChildren<TMPro.TMP_Text>(true);
-            if (tmpText != null)
-                tmpText.text = "Memento Gallery";
-
+            var kbutton = mgButtonObj.GetComponent<KButton>();
+            if (kbutton != null)
+                kbutton.ClearOnClick();
             var button = mgButtonObj.GetComponent<Button>();
             if (button != null)
-            {
                 button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(ShowPlibModal);
+
+            var tmp = mgButtonObj.GetComponentInChildren<TMPro.TMP_Text>(true);
+            if (tmp != null) tmp.text = "Memento Gallery";
+
+            kbutton.onClick += MementoGallery.ShowSideScreen;
+        }
+    }
+
+    public class MementoGallery : MonoBehaviour
+    {
+        // Returns a combined line for a given memento object: icon + reward name + desc
+        public static PPanel GetMementoLine(MementoModifiable memento)
+        {
+            // Get reward type and name
+            var reward = memento.rewardType;
+            var rewardName = reward.ToString();
+
+            var anim = Mementos.MementoData.GetAnimForReward(reward);
+            Debug.Log($"GetAnimForReward({reward}) returned: {anim}");
+
+            var kanim = Assets.GetAnim(anim); // Returns KAnimFile
+            Debug.Log($"Assets.GetAnim({anim}) returned: {kanim}");
+
+            Sprite icon = null;
+            if (kanim != null)
+            {
+                icon = Def.GetUISpriteFromMultiObjectAnim(kanim, "icon", false);
+                Debug.Log($"Def.GetUISpriteFromMultiObjectAnim({kanim}, \"icon\", false) returned: {icon}");
             }
             else
             {
-                var kbutton = mgButtonObj.GetComponent<KButton>();
-                if (kbutton != null)
-                {
-                    kbutton.ClearOnClick();
-                    kbutton.onClick += ShowPlibModal;
-                }
+                Debug.Log("kanim is null, skipping icon generation.");
             }
-        }
 
-        private static PPanel CreateMementoRow(Mementos.MementoModifiable memento)
-        {
-            // Get anim string from reward
-            var animName = Mementos.MementoData.GetAnimForReward(memento.rewardType);
-            Debug.Log($"[Mementos] {memento.GetName()} anim: {animName}");
-
-            // Get KAnimFile asset
-            KAnimFile kanim = null;
-            if (!string.IsNullOrEmpty(animName))
-                kanim = Assets.GetAnim(animName);
-
-            // Use Def.GetUISpriteFromMultiObjectAnim to get the "icon" sprite
-            Sprite iconSprite = null;
-            if (kanim != null)
-                iconSprite = Def.GetUISpriteFromMultiObjectAnim(kanim, "icon");
-
-            // Compose a horizontal panel for icon + desc
-            var row = new PPanel("MementoRow")
+            var linePanel = new PPanel("MementoLinePanel")
             {
                 Direction = PanelDirection.Horizontal,
-                Spacing = 4,
-                FlexSize = Vector2.right
+                Spacing = 4
             };
 
-            if (iconSprite != null)
+            if (icon != null)
             {
-                row.AddChild(new PLabel("Icon")
-                {
-                    Sprite = iconSprite,
-                    Text = "",
-                    TextAlignment = TextAnchor.MiddleCenter,
-                });
-            }
-            else
-            {
-                row.AddChild(new PLabel("NoIcon")
-                {
-                    Text = "?",
-                    TextAlignment = TextAnchor.MiddleCenter,
-                });
+                var labelWithIcon = new PLabel() {
+                    Sprite = icon, // your Sprite object
+                    Text = rewardName,
+                    ToolTip = rewardName
+                };
+                linePanel.AddChild(labelWithIcon);
             }
 
-            // Only show the description, not the name
-            row.AddChild(new PLabel("Desc")
-            {
-                Text = memento.GetDesc(),
-                FlexSize = Vector2.right
-            });
+            linePanel.AddChild(new PLabel() { Text = $"{rewardName}: {memento.GetDesc()}" });
 
-            return row;
+            return linePanel;
         }
 
-        private static void ShowPlibModal()
+        public static void ShowSideScreen()
         {
-            var dialog = new PDialog("MementoGalleryDialog")
-            {
-                Title = "Memento Gallery",
-                Size = new Vector2(300, 250),
-                MaxSize = new Vector2(300, 250),
-                SortKey = 300.0f
-            }
-            .AddButton("ok", "OK", null, PUITuning.Colors.ButtonPinkStyle);
+            var mementos = GameObject.FindObjectsOfType<MementoModifiable>().ToList();
 
-            var dialogBody = dialog.Body;
-
-            var dialogBodyChild = new PPanel("MementoGallery_RecordsPanel")
+            var panel = new PPanel("RandomListPanel")
             {
                 Direction = PanelDirection.Vertical,
-                Spacing = 4,
-                FlexSize = Vector2.one
+                Spacing = 4
             };
-            dialogBody.AddChild(dialogBodyChild);
-
-            var scrollBody = new PPanel("ScrollContent")
-            {
-                Spacing = 2,
-                Direction = PanelDirection.Vertical,
-                Alignment = TextAnchor.UpperCenter,
-                FlexSize = Vector2.right
-            };
-
-            var mementos = UnityEngine.Object.FindObjectsOfType<Mementos.MementoModifiable>();
-            Debug.Log($"[Mementos] Found {mementos.Length} mementos.");
 
             foreach (var memento in mementos)
             {
-                Debug.Log($"[Mementos] Adding memento: {memento.GetName()} - {memento.GetDesc()}");
-                var row = CreateMementoRow(memento);
-                scrollBody.AddChild(row);
+                var linePanel = GetMementoLine(memento);
+                panel.AddChild(linePanel);
             }
 
-            var scrollPane = new PScrollPane()
-            {
-                ScrollHorizontal = false,
-                ScrollVertical = true,
-                Child = scrollBody,
-                FlexSize = Vector2.one,
-                TrackSize = 16f,
-                AlwaysShowHorizontal = false,
-                AlwaysShowVertical = true
-            };
-            dialogBodyChild.AddChild(scrollPane);
-
+            var dialog = new PDialog("Memento Gallery");
+            dialog.Body.AddChild(panel);
+            dialog.Title = "Memento Gallery";
+            dialog.AddButton("ok", "OK", null); 
             dialog.Show();
         }
     }
