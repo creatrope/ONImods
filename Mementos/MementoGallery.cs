@@ -1,10 +1,11 @@
-using UnityEngine;
 using HarmonyLib;
-using UnityEngine.UI;
-using System.Collections.Generic;
 using PeterHan.PLib.UI;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
+using UnityEngine.UI;
+using static PeterHan.PLib.UI.PUIDelegates;
 
 namespace Mementos
 {
@@ -67,12 +68,14 @@ namespace Mementos
                 Debug.Log("kanim is null, skipping icon generation.");
             }
 
-            var linePanel = new PPanel("MementoLinePanel") {
+            var linePanel = new PPanel("MementoLinePanel")
+            {
                 Direction = PanelDirection.Horizontal,
                 Spacing = 4
             };
 
-            if (icon != null) {
+            if (false && icon != null)
+            {
                 var iconLabel = new PLabel()
                 {
                     Sprite = icon,
@@ -83,9 +86,11 @@ namespace Mementos
                 linePanel.AddChild(iconLabel);
 
                 // Scale down the icon after realization
-                iconLabel.AddOnRealize(go => {
+                iconLabel.AddOnRealize(go =>
+                {
                     var img = go.GetComponentInChildren<UnityEngine.UI.Image>();
-                    if (img != null) {
+                    if (img != null)
+                    {
                         img.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 24);
                         img.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 24);
                         img.preserveAspect = true;
@@ -93,9 +98,12 @@ namespace Mementos
                 });
             }
 
-            linePanel.AddChild(new PLabel() {
+            linePanel.AddChild(new PLabel()
+            {
                 Text = $"{memento.GetDesc()}",
-                TextAlignment = TextAnchor.MiddleLeft 
+                TextAlignment = TextAnchor.MiddleLeft,
+                FlexSize = new Vector2(500, 0),
+                TextStyle = PUITuning.Fonts.TextDarkStyle // Ensures black font
             });
 
             return linePanel;
@@ -103,25 +111,64 @@ namespace Mementos
 
         public static void ShowSideScreen()
         {
-            var mementos = GameObject.FindObjectsOfType<MementoModifiable>().ToList();
-
-            var panel = new PPanel("RandomListPanel")
-            {
-                Direction = PanelDirection.Vertical,
-                Spacing = 4
+            var dialog = new PDialog("ScrollPaneDialog") {
+                Size = new Vector2(700, 700),
+                MaxSize = new Vector2(700, 700),
+                SortKey = 300f
             };
 
-            foreach (var memento in mementos)
-            {
-                var linePanel = GetMementoLine(memento);
-                panel.AddChild(linePanel);
-            }
+            // Create an empty vertical panel as the scroll body
+            var scrollBody = new PPanel("ScrollBody") {
+                Direction = PanelDirection.Vertical,
+                FlexSize = Vector2.right,
+                BackColor = PUITuning.Colors.BackgroundLight
+            };
 
-            var dialog = new PDialog("Memento Gallery");
-            dialog.Body.AddChild(panel);
-            dialog.Title = "Memento Gallery";
-            dialog.AddButton("ok", "OK", null); 
-            dialog.Show();
+            // Create the scroll pane exactly as requested
+            var scrollPane = new PScrollPane("ScrollPane") {
+                ScrollHorizontal = false,
+                ScrollVertical = true,
+                Child = scrollBody,
+                FlexSize = Vector2.right,
+                TrackSize = 15,
+                AlwaysShowHorizontal = false,
+                AlwaysShowVertical = false,
+            };
+
+            AddLinesToScrollBody(scrollBody, 50);
+
+            dialog.Body.AddChild(scrollPane);
+            dialog.Title = "ScrollPane Example";
+            dialog.AddButton("ok", "OK", null);
+
+            // Build the dialog and set ConsumeMouseScroll on the root KScreen
+            var dialogGO = dialog.Build();
+            var kscreen = dialogGO.GetComponent<KScreen>();
+            if (kscreen != null)
+                kscreen.ConsumeMouseScroll = true;
+            kscreen?.Activate(); // Ensure it's active
+
+            // Show the dialog (if not already shown by Build/Activate)
+        }
+
+        public static void AddLinesToScrollBody(PPanel scrollBody, int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                var linePanel = new PPanel($"LinePanel_{i}")
+                {
+                    Direction = PanelDirection.Horizontal,
+                    Spacing = 4
+                };
+                linePanel.AddChild(new PLabel()
+                {
+                    Text = $"Line {i + 1}",
+                    TextAlignment = TextAnchor.MiddleLeft,
+                    FlexSize = new Vector2(1, 0),
+                    TextStyle = PUITuning.Fonts.TextDarkStyle
+                });
+                scrollBody.AddChild(linePanel);
+            }
         }
     }
 }
