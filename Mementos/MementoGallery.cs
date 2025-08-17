@@ -71,6 +71,7 @@ namespace Mementos
             var linePanel = new PPanel("MementoLinePanel")
             {
                 Direction = PanelDirection.Horizontal,
+                Alignment = TextAnchor.MiddleLeft,
             };
 
             if (icon != null)
@@ -97,7 +98,7 @@ namespace Mementos
             {
                 Text = $"{memento.GetDesc()}",
                 TextAlignment = TextAnchor.MiddleLeft,
-                FlexSize = new Vector2(500, 0),
+                FlexSize = Vector2.right, // Use Vector2.right to fill horizontally
                 TextStyle = PUITuning.Fonts.TextDarkStyle
             });
 
@@ -119,8 +120,8 @@ namespace Mementos
                 FlexSize = Vector2.right,
                 Spacing = -5,
                 Margin = new RectOffset(0, 0, -5, -5),
-                //BackColor = PUITuning.Colors.BackgroundLight
-                BackColor = Color.white
+                BackColor = Color.white,
+                Alignment = TextAnchor.UpperLeft // Add this line
             };
 
             var scrollPane = new PScrollPane("ScrollPane")
