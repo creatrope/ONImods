@@ -101,10 +101,10 @@ namespace Mementos
         public static readonly Dictionary<string, (string Name, string Description, Reward RewardType, bool Repeatable, bool Unique)> MementoTypes =
             new Dictionary<string, (string Name, string Description, Reward RewardType, bool Repeatable, bool Unique)>
             {
-                { "Injury", ("Injured", "Injured in the Line of Duty", Reward.Citation, true, false) },
+                { "Injury", ("Injured", "Injured in the Line of Duty", Reward.Citation, false, false) },
                 { "Rescue", ("Rescued", "Rescued Incapacited Duplicant", Reward.Trophy, true, false) },
                 { "Space", ("First To Space", "First To Space", Reward.Trophy, false, true) },
-                { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet", Reward.Trophy, true, true) }
+                { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet", Reward.Trophy, true, false) }
             };
         public string GetName() => mementoName;
         public string GetDesc() => mementoDesc;

@@ -18,6 +18,35 @@ namespace Mementos
             var minion = __instance.GetComponent<MinionIdentity>();
             if (minion != null && amount > 0)
             {
+                // Print the current schedule block if available
+                var schedAssignable = minion.GetComponent<Schedulable>();
+                string blockName = null;
+                string blockTypeId = null;
+                bool inWorkBlock = false;
+                if (schedAssignable != null && schedAssignable.GetSchedule() != null)
+                {
+                    var schedule = schedAssignable.GetSchedule();
+                    var block = schedule.GetBlock(schedule.GetCurrentBlockIdx());
+                    blockName = block?.name ?? "Unknown";
+                    blockTypeId = block?.GroupId ?? "Unknown";
+                    inWorkBlock = string.Equals(blockTypeId, "Worktime", StringComparison.OrdinalIgnoreCase);
+                    Debug.Log($"[Health_DamageMedalPatch] {minion.GetProperName()} is in schedule block: {blockName} (type: {blockTypeId})");
+                }
+                else
+                {
+                    Debug.Log($"[Health_DamageMedalPatch] {minion.GetProperName()} has no schedule or schedule block.");
+                }
+
+                if (!inWorkBlock)
+                {
+                    Debug.Log($"[Health_DamageMedalPatch] Skipping Injury medal: {minion.GetProperName()} is not in a Work block (current: {blockName ?? "none"}, type: {blockTypeId ?? "none"}).");
+                    return;
+                }
+                else
+                {
+                    Debug.Log($"[Health_DamageMedalPatch] {minion.GetProperName()} is in a Work block, proceeding to award Injury medal.");
+                }
+
                 var mementoInfo = MementoPrototypes.Mementos["Injury"];
                 var medalInfo = minion.FindOrAddComponent<MedalInfo>();
                 string mementoId = "Injury";
