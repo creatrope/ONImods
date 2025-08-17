@@ -81,4 +81,14 @@ namespace RocketSpeed
             MinimalKeybindHandler.Register(new PPatchManager(harmony));
         }
     }
+
+	[HarmonyPatch(typeof(ConditionDestinationReachable), "CanReachSpacecraftDestination")]
+	public static class NoSpacecraftRangeRestrictionPatch
+	{
+		public static void Postfix(ref bool __result)
+		{
+			// Always allow destination to be reachable for spacecraft
+			__result = true;
+		}
+	}
 }
