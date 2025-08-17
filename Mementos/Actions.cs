@@ -158,8 +158,19 @@ namespace Mementos
     [HarmonyPatch(typeof(RescueIncapacitatedChore), "DropIncapacitatedDuplicant")]
     public static class RescueIncapacitatedChore_RescuedDupeMedalPatch
     {
+        private static HashSet<int> rescueAwardedChores = new HashSet<int>();
+
         public static void Postfix(RescueIncapacitatedChore __instance)
         {
+            if (__instance == null) return;
+            int choreId = __instance.GetHashCode();
+            if (rescueAwardedChores.Contains(choreId))
+            {
+                Debug.Log("[RescuePatch] Rescue already awarded for this chore instance, skipping.");
+                return;
+            }
+            rescueAwardedChores.Add(choreId);
+
 
             var smi = __instance.smi;
             if (smi == null || smi.sm == null) return;
@@ -216,8 +227,11 @@ namespace Mementos
                         if (!mementoInfo.repeatable && medalInfo != null)
                             medalInfo.SetAwardedNonRepeatableMemento(mementoId);
                     }
+                    Debug.Log($"[RescuePatch] Called for minion: {minion?.GetProperName()}, rescued: {rescuedName}, isMedicalCot: {isMedicalCot}");
+Debug.Log($"[RescuePatch] MedalInfo.Medals count: {medalInfo.Medals.Count}, alreadyAwarded: {alreadyAwarded}");
                 }
             }
+            Debug.Log("[RescuePatch] Postfix called");
         }
     }
 

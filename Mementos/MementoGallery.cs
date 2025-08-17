@@ -137,7 +137,6 @@ namespace Mementos
 
             var mementos = UnityEngine.Object.FindObjectsOfType<MementoModifiable>().ToList();
             foreach (var memento in mementos)
-                for (int i = 0; i < 50; i++)
                     scrollBody.AddChild(GetMementoLine(memento));
 
             dialog.Body.AddChild(scrollPane);
