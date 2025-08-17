@@ -189,7 +189,7 @@ namespace Mementos
     {
         public List<GameObject> CreatePrefabs()
         {
-            Debug.LogWarning("[MementoConfig] CreatePrefabs.");
+            // Debug.LogWarning("[MementoConfig] CreatePrefabs.");
 
             var prefabs = new List<GameObject>();
 
@@ -201,7 +201,7 @@ namespace Mementos
                 var rewardType = kvp.Value.RewardType;
                 string kanim = MementoData.GetAnimForReward(rewardType);
 
-                Debug.Log($"[MementoConfig] Creating keepsake with id='{id}', name='{name}', desc='{desc}', kanim='{kanim}', rewardType='{rewardType}'");
+                // Debug.Log($"[MementoConfig] Creating keepsake with id='{id}', name='{name}', desc='{desc}', kanim='{kanim}', rewardType='{rewardType}'");
 
                 var mementopf = KeepsakeConfig.CreateKeepsake(
                     id,
@@ -215,7 +215,7 @@ namespace Mementos
                 mementopf.AddComponent<MementoModifiable>();
                 var prefabid = mementopf.GetComponent<KPrefabID>();
 
-                Debug.Log($"[MementoConfig] Created prefab id={id}, KPrefabID='{prefabid}'");
+                // Debug.Log($"[MementoConfig] Created prefab id={id}, KPrefabID='{prefabid}'");
 
                 if (MementoPrototypes.Mementos.TryGetValue(kvp.Key, out var mementoData))
                 {
@@ -233,19 +233,19 @@ namespace Mementos
         {
             if (minion == null)
             {
-                Debug.LogError("[MementoConfig] CreateMemento called with null minion!");
+                // Debug.LogError("[MementoConfig] CreateMemento called with null minion!");
                 return;
             }
             if (mementoInfo == null)
             {
-                Debug.LogError("[MementoConfig] CreateMemento called with null mementoInfo!");
+                // Debug.LogError("[MementoConfig] CreateMemento called with null mementoInfo!");
                 return;
             }
 
             var prefab = mementoInfo.prefab;
             if (prefab == null)
             {
-                Debug.LogError("[MementoConfig] mementoInfo.prefab is null!");
+                // Debug.LogError("[MementoConfig] mementoInfo.prefab is null!");
                 return;
             }
 
@@ -267,7 +267,7 @@ namespace Mementos
             GameObject memento = Util.KInstantiate(prefab, Grid.CellToPosCCC(Grid.PosToCell(minion.transform.position + new Vector3(0, 2f, 0)), Grid.SceneLayer.Ore));
             if (memento == null)
             {
-                Debug.LogError("[MementoConfig] Failed to instantiate memento prefab.");
+                // Debug.LogError("[MementoConfig] Failed to instantiate memento prefab.");
                 return;
             }
 
@@ -287,7 +287,7 @@ namespace Mementos
 
             memento.transform.position = minion.transform.position + new Vector3(0, 2f, 0); // above head
             memento.SetActive(true);
-            Debug.Log($"[MementoConfig] Awarded memento '{name}' to minion '{minion.GetProperName()}'.");
+            // Debug.Log($"[MementoConfig] Awarded memento '{name}' to minion '{minion.GetProperName()}'.");
         }
 
         // Utility method to get the anim file for a MementoModifiable by examining the reward of its parent

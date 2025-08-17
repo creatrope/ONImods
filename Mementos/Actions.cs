@@ -1,11 +1,12 @@
 ﻿using HarmonyLib;
+using KSerialization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using KSerialization;
 using UnityEngine;
+using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
 
 namespace Mementos
 {
@@ -30,21 +31,10 @@ namespace Mementos
                     blockName = block?.name ?? "Unknown";
                     blockTypeId = block?.GroupId ?? "Unknown";
                     inWorkBlock = string.Equals(blockTypeId, "Worktime", StringComparison.OrdinalIgnoreCase);
-                    Debug.Log($"[Health_DamageMedalPatch] {minion.GetProperName()} is in schedule block: {blockName} (type: {blockTypeId})");
                 }
-                else
-                {
-                    Debug.Log($"[Health_DamageMedalPatch] {minion.GetProperName()} has no schedule or schedule block.");
-                }
-
                 if (!inWorkBlock)
                 {
-                    Debug.Log($"[Health_DamageMedalPatch] Skipping Injury medal: {minion.GetProperName()} is not in a Work block (current: {blockName ?? "none"}, type: {blockTypeId ?? "none"}).");
                     return;
-                }
-                else
-                {
-                    Debug.Log($"[Health_DamageMedalPatch] {minion.GetProperName()} is in a Work block, proceeding to award Injury medal.");
                 }
 
                 var mementoInfo = MementoPrototypes.Mementos["Injury"];
@@ -55,7 +45,6 @@ namespace Mementos
                 {
                     if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
                     {
-                        Debug.Log("[Health_DamageMedalPatch] Injury medal is unique and already awarded, skipping award.");
                         return;
                     }
                 }
@@ -63,7 +52,6 @@ namespace Mementos
                 {
                     if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
                     {
-                        Debug.Log("[Health_DamageMedalPatch] Injury medal not repeatable and already awarded to this dupe, skipping award.");
                         return;
                     }
                 }
@@ -72,7 +60,6 @@ namespace Mementos
                     MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
                 if (!mementoInfo.repeatable && medalInfo != null)
                     medalInfo.SetAwardedNonRepeatableMemento(mementoId);
-                Debug.Log($"[Health_DamageMedalPatch] (after)");
             }
         }
     }
@@ -82,17 +69,20 @@ namespace Mementos
     {
         public static void Postfix(AssignmentManager __instance, object data)
         {
-            var migrationEventArgs = data as MinionMigrationEventArgs;
+            Debug.Log("[Mementos] MinionMigration called.");
             if (data == null)
             {
-                Debug.Log("[Medals] MinionMigration data is null.");
+                Debug.LogWarning("[Mementos] MinionMigration: data is null.");
                 return;
             }
+            var migrationEventArgs = data as MinionMigrationEventArgs;
             if (migrationEventArgs == null)
             {
-                Debug.Log("[Medals] MinionMigrationEventArgs cast failed.");
+                Debug.LogWarning($"[Mementos] MinionMigration: data is not MinionMigrationEventArgs, it is {data.GetType().FullName}");
                 return;
             }
+
+            Debug.Log($"[Mementos] MinionMigration: minionId={migrationEventArgs.minionId}, prevWorldId={migrationEventArgs.prevWorldId}, targetWorldId={migrationEventArgs.targetWorldId}");
 
             var minion = migrationEventArgs.minionId;
             var medalInfo = minion != null ? minion.FindOrAddComponent<MedalInfo>() : null;
@@ -100,19 +90,23 @@ namespace Mementos
             int oldWorldId = migrationEventArgs.prevWorldId;
             int newWorldId = migrationEventArgs.targetWorldId;
 
-            var selectable = minion.GetComponent<KSelectable>();
+            var selectable = minion != null ? minion.GetComponent<KSelectable>() : null;
             string minionName = selectable != null ? selectable.GetProperName() : "Unknown Minion";
+            Debug.Log($"[Mementos] MinionMigration: minionName={minionName}");
 
             if (oldWorldId == newWorldId) // first in space
             {
+                Debug.Log("[Mementos] MinionMigration: Minion is first in space.");
                 var mementoInfo = MementoPrototypes.Mementos["Space"];
                 string mementoId = "Space";
+
+                Debug.Log($"[Mementos] MinionMigration: mementoInfo.unique={mementoInfo.unique}, mementoInfo.repeatable={mementoInfo.repeatable}");
 
                 if (mementoInfo.unique)
                 {
                     if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
                     {
-                        Debug.Log("[AssignmentManager_MinionMigration_Patch] Space medal is unique and already awarded, skipping award.");
+                        Debug.Log("[Mementos] MinionMigration: Unique memento already awarded.");
                         return;
                     }
                 }
@@ -120,10 +114,11 @@ namespace Mementos
                 {
                     if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
                     {
-                        Debug.Log("[AssignmentManager_MinionMigration_Patch] Space medal not repeatable and already awarded to this dupe, skipping award.");
+                        Debug.Log("[Mementos] MinionMigration: Non-repeatable memento already awarded.");
                         return;
                     }
                 }
+                Debug.Log("[Mementos] MinionMigration: Awarding Space memento.");
                 MementoConfig.CreateMemento(mementoInfo, minion);
                 if (mementoInfo.unique)
                     MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
@@ -132,26 +127,26 @@ namespace Mementos
             }
             else // first visit to a new world
             {
-                if (!MementoPrototypes.Mementos.ContainsKey("FirstVisit")) return;
+                Debug.Log("[Mementos] MinionMigration: Minion is visiting a new world.");
+                if (!MementoPrototypes.Mementos.ContainsKey("FirstVisit"))
+                {
+                    Debug.LogWarning("[Mementos] MinionMigration: No FirstVisit memento defined.");
+                    return;
+                }
 
                 var world = ClusterManager.Instance.GetWorld(newWorldId);
-                if (world == null)
-                {
-                    Debug.Log($"[Medals] ClusterManager.Instance.GetWorld({newWorldId}) returned null.");
-                }
-                else
-                {
-                    Debug.Log($"[Medals] world id: {world.id}, world name: {world.name}, world type: {world.GetType().FullName}");
-                }
+                Debug.Log($"[Mementos] MinionMigration: world={world}");
 
                 string mementoId = "FirstVisit";
                 var mementoInfo = MementoPrototypes.Mementos[mementoId];
+
+                Debug.Log($"[Mementos] MinionMigration: mementoInfo.unique={mementoInfo.unique}, mementoInfo.repeatable={mementoInfo.repeatable}");
 
                 if (mementoInfo.unique)
                 {
                     if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
                     {
-                        Debug.Log("[AssignmentManager_MinionMigration_Patch] FirstVisit medal is unique and already awarded, skipping award.");
+                        Debug.Log("[Mementos] MinionMigration: Unique memento already awarded.");
                         return;
                     }
                 }
@@ -159,7 +154,7 @@ namespace Mementos
                 {
                     if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
                     {
-                        Debug.Log("[AssignmentManager_MinionMigration_Patch] FirstVisit medal not repeatable and already awarded to this dupe, skipping award.");
+                        Debug.Log("[Mementos] MinionMigration: Non-repeatable memento already awarded.");
                         return;
                     }
                 }
@@ -169,11 +164,14 @@ namespace Mementos
                 string worldName = world != null
                     ? (world.GetComponent<ClusterGridEntity>()?.GetProperName() ?? world.name)
                     : $"World {newWorldId}";
+                Debug.Log($"[Mementos] MinionMigration: worldName={worldName}");
+
                 if (newWorldId == 0 || MedalsSaveData.Instance.awardedFirstVisitWorlds.Contains(newWorldId))
                 {
-                    Debug.Log($"[Medals] Homeworld || FirstVisit already awarded for world '{newWorldId}', skipping.");
+                    Debug.Log("[Mementos] MinionMigration: First visit already awarded for this world or worldId is 0.");
                     return;
                 }
+                Debug.Log("[Mementos] MinionMigration: Awarding FirstVisit memento.");
                 MementoConfig.CreateMemento(mementoInfo, minion, worldName);
                 if (mementoInfo.unique)
                     MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
@@ -183,6 +181,7 @@ namespace Mementos
             }
         }
     }
+
 
     [HarmonyPatch(typeof(RescueIncapacitatedChore), "DropIncapacitatedDuplicant")]
     public static class RescueIncapacitatedChore_RescuedDupeMedalPatch
@@ -195,11 +194,9 @@ namespace Mementos
             int choreId = __instance.GetHashCode();
             if (rescueAwardedChores.Contains(choreId))
             {
-                Debug.Log("[RescuePatch] Rescue already awarded for this chore instance, skipping.");
                 return;
             }
             rescueAwardedChores.Add(choreId);
-
 
             var smi = __instance.smi;
             if (smi == null || smi.sm == null) return;
@@ -231,7 +228,6 @@ namespace Mementos
                     {
                         if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
                         {
-                            Debug.Log("[RescueIncapacitatedChore_RescuedDupeMedalPatch] Rescue medal is unique and already awarded, skipping award.");
                             return;
                         }
                     }
@@ -239,7 +235,6 @@ namespace Mementos
                     {
                         if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
                         {
-                            Debug.Log("[RescueIncapacitatedChore_RescuedDupeMedalPatch] Rescue medal not repeatable and already awarded to this dupe, skipping award.");
                             return;
                         }
                     }
@@ -256,11 +251,8 @@ namespace Mementos
                         if (!mementoInfo.repeatable && medalInfo != null)
                             medalInfo.SetAwardedNonRepeatableMemento(mementoId);
                     }
-                    Debug.Log($"[RescuePatch] Called for minion: {minion?.GetProperName()}, rescued: {rescuedName}, isMedicalCot: {isMedicalCot}");
-Debug.Log($"[RescuePatch] MedalInfo.Medals count: {medalInfo.Medals.Count}, alreadyAwarded: {alreadyAwarded}");
                 }
             }
-            Debug.Log("[RescuePatch] Postfix called");
         }
     }
 
@@ -287,6 +279,71 @@ Debug.Log($"[RescuePatch] MedalInfo.Medals count: {medalInfo.Medals.Count}, alre
             }
         }
         private static MedalsSaveData _instance;
+    }
+
+    public static class MementosEvents
+    {
+        public static void OnLandedStatic(object data)
+        {
+            Debug.Log("[Mementos] Landed event received!");
+
+        }
+
+
+        public static void OnRocketLandedStatic(object data)
+        {
+            Debug.Log("[Mementos] RocketLanded event received!");
+
+            if (data is GameObject rocket)
+            {
+                // Print all available components on the rocket GameObject
+                var components = rocket.GetComponents<Component>();
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine("[Mementos] Rocket GameObject Components:");
+                foreach (var comp in components)
+                {
+                    if (comp != null)
+                        sb.AppendLine($"- {comp.GetType().FullName}");
+                }
+                Debug.Log(sb.ToString());
+
+                var rocketModule = rocket.GetComponent<RocketModuleCluster>();
+
+                var worldID = ClusterManager.Instance.GetWorld(rocketModule.GetMyWorldId());
+                if (worldID != null)
+                {
+                    var clusterEntity = worldID.GetComponent<ClusterGridEntity>();
+                    string properName = clusterEntity != null ? clusterEntity.GetProperName() : worldID.name;
+                    Debug.Log($"[Mementos] Rocket landed on world: {properName} {worldID}");
+                }
+                else
+                {
+                    Debug.Log("[Mementos] worldLanded is null.");
+                }
+
+                var clustercraft = rocketModule.CraftInterface.GetComponent<Clustercraft>();
+
+                if (clustercraft != null && clustercraft.ModuleInterface != null)
+                {
+                    var interiorWorld = clustercraft.ModuleInterface.GetInteriorWorld();
+                    if (interiorWorld != null && interiorWorld.IsModuleInterior)
+                    {
+                        Debug.Log($"[Mementos] Found rocket interior: {interiorWorld.name} (id: {interiorWorld.id})");
+                        var minionsInInterior = Components.MinionIdentities.GetWorldItems(interiorWorld.id);
+                        foreach (var minion in minionsInInterior)
+                            Debug.Log($"[Mementos] Minion onboard: {minion.GetProperName()}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Mementos] No valid rocket interior found.");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[Mementos] No Clustercraft or ModuleInterface found on rocket GameObject.");
+                }
+            }
+        }
     }
 
 }

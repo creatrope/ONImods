@@ -26,7 +26,7 @@ namespace Mementos
         public bool EnableMedals { get; set; } = true;
         public int MaxMedals { get; set; } = 10;
     }
-    public class Mod : UserMod2
+    public class Mod : KMod.UserMod2
     {
         public override void OnLoad(Harmony harmony)
         {
@@ -35,59 +35,67 @@ namespace Mementos
             base.OnLoad(harmony);
             Mementos.KeybindHandler.Register(new PPatchManager(harmony));
         }
-    }
 
 
-
-    [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
-    public static class MinionPersonalityPanel_AddMedalsPanelPatch
-    {
-        internal static CollapsibleDetailContentPanel medalsPanel;
-
-        private static void Postfix(MinionPersonalityPanel __instance)
+        [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
+        public static class MinionPersonalityPanel_AddMedalsPanelPatch
         {
-            var method = typeof(DetailScreenTab).GetMethod("CreateCollapsableSection", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            if (method != null)
+            internal static CollapsibleDetailContentPanel medalsPanel;
+
+            private static void Postfix(MinionPersonalityPanel __instance)
             {
-                medalsPanel = (CollapsibleDetailContentPanel)method.Invoke(__instance, new object[] { "Medals" });
-                __instance.GetType().GetField("medalsPanel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)
-                    ?.SetValue(__instance, medalsPanel);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(MinionPersonalityPanel), "OnSelectTarget")]
-    public static class MinionPersonalityPanel_OnSelectTargetMedalsPatch
-    {
-        private static void Postfix(MinionPersonalityPanel __instance, GameObject target)
-        {
-            if (target == null)
-                return;
-
-            Mementos.KeybindHandler.SelectedMinion = target.GetComponent<MinionIdentity>();
-
-            var minion = target.GetComponent<MinionIdentity>();
-            if (minion != null && MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel != null)
-            {
-                var medalInfo = minion.FindOrAddComponent<MedalInfo>();
-                string medalsText = "No mementos awarded.";
-                if (medalInfo != null && medalInfo.Medals.Count > 0)
+                var method = typeof(DetailScreenTab).GetMethod("CreateCollapsableSection", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                if (method != null)
                 {
-                    medalsText = string.Join("\n", medalInfo.Medals.Select(m => $"{m.Name}: {m.Description}"));
+                    medalsPanel = (CollapsibleDetailContentPanel)method.Invoke(__instance, new object[] { "Medals" });
+                    __instance.GetType().GetField("medalsPanel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)
+                        ?.SetValue(__instance, medalsPanel);
                 }
-                MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel.SetLabel("Mementos", medalsText, "Mementos awarded to this minion.");
-                MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel.Commit();
             }
         }
-    }
 
-    [HarmonyPatch(typeof(BaseMinionConfig), "BaseMinion")]
-    public static class BaseMinionConfig_BaseMinion_MedalInfoPatch
-    {
-        public static void Postfix(GameObject __result)
+        [HarmonyPatch(typeof(MinionPersonalityPanel), "OnSelectTarget")]
+        public static class MinionPersonalityPanel_OnSelectTargetMedalsPatch
         {
-            __result.AddOrGet<MedalInfo>();
+            private static void Postfix(MinionPersonalityPanel __instance, GameObject target)
+            {
+                if (target == null)
+                    return;
+
+                Mementos.KeybindHandler.SelectedMinion = target.GetComponent<MinionIdentity>();
+
+                var minion = target.GetComponent<MinionIdentity>();
+                if (minion != null && MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel != null)
+                {
+                    var medalInfo = minion.FindOrAddComponent<MedalInfo>();
+                    string medalsText = "No mementos awarded.";
+                    if (medalInfo != null && medalInfo.Medals.Count > 0)
+                    {
+                        medalsText = string.Join("\n", medalInfo.Medals.Select(m => $"{m.Name}: {m.Description}"));
+                    }
+                    MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel.SetLabel("Mementos", medalsText, "Mementos awarded to this minion.");
+                    MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel.Commit();
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(BaseMinionConfig), "BaseMinion")]
+        public static class BaseMinionConfig_BaseMinion_MedalInfoPatch
+        {
+            public static void Postfix(GameObject __result)
+            {
+                __result.AddOrGet<MedalInfo>();
+            }
+        }
+
+        [HarmonyPatch(typeof(Game), "OnSpawn")]
+        public static class Game_OnSpawn_MementosPatch
+        {
+            public static void Postfix(Game __instance)
+            {
+                __instance.Subscribe((int)GameHashes.RocketLanded, Mementos.MementosEvents.OnRocketLandedStatic);
+                __instance.Subscribe((int)GameHashes.Landed, Mementos.MementosEvents.OnLandedStatic);
+            }
         }
     }
 }
-

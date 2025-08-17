@@ -52,20 +52,13 @@ namespace Mementos
             var rewardName = reward.ToString();
 
             var anim = Mementos.MementoData.GetAnimForReward(reward);
-            Debug.Log($"GetAnimForReward({reward}) returned: {anim}");
 
             var kanim = Assets.GetAnim(anim); // Returns KAnimFile
-            Debug.Log($"Assets.GetAnim({anim}) returned: {kanim}");
 
             Sprite icon = null;
             if (kanim != null)
             {
                 icon = Def.GetUISpriteFromMultiObjectAnim(kanim, "icon", false);
-                Debug.Log($"Def.GetUISpriteFromMultiObjectAnim({kanim}, \"icon\", false) returned: {icon}");
-            }
-            else
-            {
-                Debug.Log("kanim is null, skipping icon generation.");
             }
 
             var linePanel = new PPanel("MementoLinePanel")
@@ -111,20 +104,22 @@ namespace Mementos
             {
                 Size = new Vector2(600, 700),
                 MaxSize = new Vector2(600, 700),
-                SortKey = 300f,
+                SortKey = 300f
             };
 
-            var scrollBody = new PPanel("ScrollBody")
+            // Create the scroll body panel
+            PPanel scrollBody = new PPanel("ScrollBody")
             {
                 Direction = PanelDirection.Vertical,
                 FlexSize = Vector2.right,
                 Spacing = -5,
                 Margin = new RectOffset(0, 0, -5, -5),
                 BackColor = Color.white,
-                Alignment = TextAnchor.UpperLeft // Add this line
+                Alignment = TextAnchor.UpperLeft
             };
 
-            var scrollPane = new PScrollPane("ScrollPane")
+            // Create the scroll pane
+            PScrollPane scrollPane = new PScrollPane("ScrollPane")
             {
                 ScrollHorizontal = false,
                 ScrollVertical = true,
@@ -136,9 +131,10 @@ namespace Mementos
                 BackColor = Color.white,
             };
 
+            // Add memento lines
             var mementos = UnityEngine.Object.FindObjectsOfType<MementoModifiable>().ToList();
             foreach (var memento in mementos)
-                    scrollBody.AddChild(GetMementoLine(memento));
+                scrollBody.AddChild(GetMementoLine(memento));
 
             dialog.Body.AddChild(scrollPane);
             dialog.Title = "Memento Gallery";
