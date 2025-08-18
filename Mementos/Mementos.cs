@@ -70,7 +70,8 @@ namespace Mementos
         {
             Trophy,
             Citation,
-            Oops
+            Oops,
+            Planet,
         }
 
         [Serialize]
@@ -93,6 +94,7 @@ namespace Mementos
         public static readonly Dictionary<Reward, RewardTypeInfo> RewardTypeInfos =
             new Dictionary<Reward, RewardTypeInfo>
             {
+                { Reward.Planet,   new RewardTypeInfo(Reward.Planet,   "keepsake_planet_kanim") },
                 { Reward.Trophy,   new RewardTypeInfo(Reward.Trophy,   "keepsake_trophy_kanim") },
                 { Reward.Citation, new RewardTypeInfo(Reward.Citation, "keepsake_proclamation_kanim") },
                 { Reward.Oops,     new RewardTypeInfo(Reward.Oops,     "keepsake_medal_kanim") }
@@ -103,8 +105,8 @@ namespace Mementos
             {
                 { "Injury", ("Injured", "Injured in the Line of Duty", Reward.Citation, false, false) },
                 { "Rescue", ("Rescued", "Rescued Incapacited Duplicant", Reward.Trophy, true, false) },
-                { "Space", ("First To Space", "First To Space", Reward.Trophy, false, true) },
-                { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet", Reward.Trophy, true, false) }
+                { "Space", ("First To Space", "First To Space", Reward.Planet, false, true) },
+                { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet", Reward.Planet, true, false) }
             };
         public string GetName() => mementoName;
         public string GetDesc() => mementoDesc;
