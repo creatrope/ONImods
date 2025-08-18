@@ -18,15 +18,6 @@ namespace KeybindLogTest
             base.OnLoad(harmony);
             KeybindHandler.Register(new PPatchManager(harmony));
             Debug.Log("[KeybindLogTest] loaded");
-
-            // Ensure TestData instance exists and is attached to a persistent GameObject
-            if (UnityEngine.Object.FindObjectOfType<TestSerialize.TestSerialize.TestData>() == null)
-            {
-                var go = new UnityEngine.GameObject("TestData");
-                go.AddComponent<TestSerialize.TestSerialize.TestData>();
-                UnityEngine.Object.DontDestroyOnLoad(go); // Make persistent across scene loads
-                Debug.Log("[KeybindLogTest] TestData GameObject created and marked DontDestroyOnLoad.");
-            }
         }
     }
 
@@ -151,6 +142,19 @@ namespace KeybindLogTest
             }
             else
                 Debug.LogWarning("[KeybindLogTest] TestData instance is null (cannot print test data).");
+        }
+    }
+
+    [HarmonyPatch(typeof(Game), "OnSpawn")]
+    public static class Game_OnSpawn_TestData
+    {
+        public static void Postfix(Game __instance)
+        {
+            if (__instance.GetComponent<TestSerialize.TestSerialize.TestData>() == null)
+            {
+                __instance.gameObject.AddComponent<TestSerialize.TestSerialize.TestData>();
+                Debug.Log("[KeybindLogTest] TestData component added to Game object (OnSpawn).");
+            }
         }
     }
 }
