@@ -1,22 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-	<PropertyGroup>
-		<ProjectName>KeybindLogTest</ProjectName>
-		<ProjectGuid>{9E16CD56-B939-407B-ABFE-56E0B16D4668}</ProjectGuid>
-		<RootNamespace>$(ProjectName)</RootNamespace>
-		<AssemblyName>$(ProjectName)</AssemblyName>
-		<TargetFrameworkProfile />
-	</PropertyGroup>
-	<Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-	<ItemGroup>
-		<Compile Include="Patches.cs" />
-		<Compile Include="Properties\AssemblyInfo.cs" />
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\HLib\HLib.csproj">
-			<Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
-			<Name>HLib</Name>
-		</ProjectReference>
-	</ItemGroup>
-	<Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <ProjectName>KeybindLogTest</ProjectName>
+    <ProjectGuid>{9E16CD56-B939-407B-ABFE-56E0B16D4668}</ProjectGuid>
+    <RootNamespace>$(ProjectName)</RootNamespace>
+    <AssemblyName>$(ProjectName)</AssemblyName>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <ItemGroup>
+    <Compile Include="Patches.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestSerialize.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HLib\HLib.csproj">
+      <Project>{f446a1c4-7859-4b1a-a508-32997511c3bf}</Project>
+      <Name>HLib</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

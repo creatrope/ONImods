@@ -1,77 +1,156 @@
-using Database;
-using Epic.OnlineServices.Platform;
 using HarmonyLib;
-using HLib;
-using KMod;
-using KSerialization;
-using Newtonsoft.Json; // Ensure this using directive is present
 using PeterHan.PLib.Actions;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
-using PeterHan.PLib.UI;
 using System;
-using System.Collections.Generic; 
-using System.Runtime.CompilerServices; 
-using TUNING;
+using System.Collections.Generic;
 using UnityEngine;
-using static Rendering.BlockTileRenderer;
+using TestSerialize;
 
 namespace KeybindLogTest
 {
-    internal sealed class MinimalKeybindHandler : IInputHandler
+    public class Mod : KMod.UserMod2
     {
-        private static PAction KeyTestAction;
-        private static PAction KeyTestAction2; // Add second action
-        private readonly Action snapshotAction;
-        private readonly Action snapshotAction2; // Add second action field
+        public override void OnLoad(Harmony harmony)
+        {
+            PUtil.InitLibrary(false);
+            base.OnLoad(harmony);
+            KeybindHandler.Register(new PPatchManager(harmony));
+            Debug.Log("[KeybindLogTest] loaded");
 
-        public string handlerName => "MinimalKeybindHandler";
+            // Ensure TestData instance exists and is attached to a persistent GameObject
+            if (UnityEngine.Object.FindObjectOfType<TestSerialize.TestSerialize.TestData>() == null)
+            {
+                var go = new UnityEngine.GameObject("TestData");
+                go.AddComponent<TestSerialize.TestSerialize.TestData>();
+                UnityEngine.Object.DontDestroyOnLoad(go); // Make persistent across scene loads
+                Debug.Log("[KeybindLogTest] TestData GameObject created and marked DontDestroyOnLoad.");
+            }
+        }
+    }
+
+    internal sealed class KeybindHandler : IInputHandler
+    {
+        private class Keybind
+        {
+            public string Id;
+            public string DisplayName;
+            public PKeyBinding Binding;
+            public System.Action Handler;
+            public PAction Action;
+            public Action Snapshot;
+
+            public Keybind(string id, string displayName, PKeyBinding binding, System.Action handler)
+            {
+                Id = id;
+                DisplayName = displayName;
+                Binding = binding;
+                Handler = handler;
+            }
+        }
+
+        private static readonly List<Keybind> keybinds = new List<Keybind>
+        {
+            new Keybind("TestF1", "Test F1", new PKeyBinding(KKeyCode.F1, Modifier.Ctrl), OnF1),
+            new Keybind("TestF2", "Test F2", new PKeyBinding(KKeyCode.F2, Modifier.Ctrl), OnF2)
+        };
+
+        private float lastSnapshotTime = 0f;
+        private readonly float debounceInterval = 1.0f; // seconds
+
+        public string handlerName => "KeybindHandler";
         public KInputHandler inputHandler { get; set; }
 
-        internal MinimalKeybindHandler()
+        private bool keyIsDown = false;
+
+        public KeybindHandler()
         {
-            snapshotAction = KeyTestAction != null ? KeyTestAction.GetKAction() : PAction.MaxAction;
-            snapshotAction2 = KeyTestAction2 != null ? KeyTestAction2.GetKAction() : PAction.MaxAction;
+            foreach (var kb in keybinds)
+                kb.Snapshot = (kb.Action != null) ? kb.Action.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
         {
-            if (e.TryConsume(snapshotAction))
+            if (keyIsDown)
+                return; // Ignore repeated keydown until keyup
+
+            keyIsDown = true;
+
+            float now = Time.time;
+
+            foreach (var kb in keybinds)
             {
-                Debug.Log("[MinimalKeybindHandler] Hotkey 1 pressed!");
-            }
-            else if (e.TryConsume(snapshotAction2))
-            {
-                Debug.Log("[MinimalKeybindHandler] Hotkey 2 pressed!");
+                if (kb.Snapshot == null && kb.Action != null)
+                    kb.Snapshot = kb.Action.GetKAction();
+
+                if (e.TryConsume(kb.Snapshot))
+                {
+                    if (now - lastSnapshotTime >= debounceInterval)
+                    {
+                        lastSnapshotTime = now;
+                        kb.Handler?.Invoke();
+                    }
+                    break;
+                }
             }
         }
+
+        public void OnKeyUp(KButtonEvent e)
+        {
+            keyIsDown = false;
+        }
+
+        private static bool handlerRegistered = false;
 
         [PLibMethod(RunAt.AfterLayerableLoad)]
-        internal static void AddKeycodeHandler()
+        public static void AddKeycodeHandler()
         {
-            KInputHandler.Add(Global.GetInputManager().GetDefaultController(),
-                new MinimalKeybindHandler(), 512);
+            if (!handlerRegistered)
+            {
+                KInputHandler.Add(Global.GetInputManager().GetDefaultController(),
+                    new KeybindHandler(), 512);
+                handlerRegistered = true;
+            }
         }
 
-        internal static void Register(PPatchManager manager)
+        public static void Register(PPatchManager manager)
         {
-            manager.RegisterPatchClass(typeof(MinimalKeybindHandler));
-            KeyTestAction = new PActionManager().CreateAction(
-                "KeybindLogTest.KeyTestAction", "Test Key Action", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl));
-            KeyTestAction2 = new PActionManager().CreateAction(
-                "KeybindLogTest.KeyTestAction2", "Test Key Action 2", new PKeyBinding(KKeyCode.F12, Modifier.Ctrl));
+            manager.RegisterPatchClass(typeof(KeybindHandler));
+            foreach (var kb in keybinds)
+            {
+                kb.Action = new PActionManager().CreateAction(kb.Id, kb.DisplayName, kb.Binding);
+                kb.Snapshot = kb.Action.GetKAction();
+            }
         }
-    }
 
-    public class Mod : UserMod2 
-    {
-        public override void OnLoad(Harmony harmony)
+        // --- SUPPORT FUNCTIONS BELOW ---
+
+        private static void OnF1()
         {
-            base.OnLoad(harmony);
-            harmony.PatchAll();
-            PUtil.InitLibrary();
-            MinimalKeybindHandler.Register(new PPatchManager(harmony));
+            var instance = UnityEngine.Object.FindObjectOfType<TestSerialize.TestSerialize.TestData>();
+            if (instance != null)
+            {
+                Debug.Log("[KeybindLogTest] onF1 clearing & creating test data (0-9) into testHashSet.");
+                instance.LoadTestData();
+                instance.PrintTestData();
+            }
+            else
+            {
+                Debug.LogWarning("[KeybindLogTest] TestData instance is null (cannot load test data).");
+            }
+        }
+
+        private static void OnF2()
+        {
+            var instance = UnityEngine.Object.FindObjectOfType<TestSerialize.TestSerialize.TestData>();
+            if (instance != null)
+            {
+                Debug.Log("[KeybindLogTest] OnF2 printing saved data");
+                instance.PrintTestData();
+            }
+            else
+                Debug.LogWarning("[KeybindLogTest] TestData instance is null (cannot print test data).");
         }
     }
 }
