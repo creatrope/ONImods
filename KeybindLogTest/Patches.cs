@@ -145,15 +145,15 @@ namespace KeybindLogTest
         }
     }
 
-    [HarmonyPatch(typeof(Game), "OnSpawn")]
-    public static class Game_OnSpawn_TestData
+    [HarmonyPatch(typeof(SaveGame), nameof(SaveGame.OnPrefabInit))]
+    public static class SaveGameOnSpawnTestData
     {
         public static void Postfix(Game __instance)
         {
             if (__instance.GetComponent<TestSerialize.TestSerialize.TestData>() == null)
             {
                 __instance.gameObject.AddComponent<TestSerialize.TestSerialize.TestData>();
-                Debug.Log("[KeybindLogTest] TestData component added to Game object (OnSpawn).");
+                Debug.Log("[KeybindLogTest] TestData component added to SaveGame object (OnPrefabInit).");
             }
         }
     }

@@ -157,6 +157,7 @@ namespace Mementos
     }
 
     // 4. Info/manager classes
+    // this is the per minion data
     [SerializationConfig(MemberSerialization.OptIn)]
     public class MedalInfo : KMonoBehaviour, ISaveLoadable
     {
@@ -235,19 +236,19 @@ namespace Mementos
         {
             if (minion == null)
             {
-                // Debug.LogError("[MementoConfig] CreateMemento called with null minion!");
+                Debug.LogError("[MementoConfig] CreateMemento called with null minion!");
                 return;
             }
             if (mementoInfo == null)
             {
-                // Debug.LogError("[MementoConfig] CreateMemento called with null mementoInfo!");
+                Debug.LogError("[MementoConfig] CreateMemento called with null mementoInfo!");
                 return;
             }
 
             var prefab = mementoInfo.prefab;
             if (prefab == null)
             {
-                // Debug.LogError("[MementoConfig] mementoInfo.prefab is null!");
+                Debug.LogError("[MementoConfig] mementoInfo.prefab is null!");
                 return;
             }
 
@@ -269,7 +270,7 @@ namespace Mementos
             GameObject memento = Util.KInstantiate(prefab, Grid.CellToPosCCC(Grid.PosToCell(minion.transform.position + new Vector3(0, 2f, 0)), Grid.SceneLayer.Ore));
             if (memento == null)
             {
-                // Debug.LogError("[MementoConfig] Failed to instantiate memento prefab.");
+                Debug.LogError("[MementoConfig] Failed to instantiate memento prefab.");
                 return;
             }
 
@@ -287,9 +288,8 @@ namespace Mementos
             if (infoDesc != null)
                 infoDesc.description = desc;
 
-            memento.transform.position = minion.transform.position + new Vector3(0, 2f, 0); // above head
+            MementoConfig.PlaceMemento(memento, minion);
             memento.SetActive(true);
-            // Debug.Log($"[MementoConfig] Awarded memento '{name}' to minion '{minion.GetProperName()}'.");
         }
 
         // Utility method to get the anim file for a MementoModifiable by examining the reward of its parent
@@ -298,17 +298,11 @@ namespace Mementos
             if (memento == null)
                 return null;
 
-            // Try to find the parent GameObject that has a MementoData reference
-            // This assumes the parent is the prefab created in MementoConfig.CreatePrefabs
-            // and that the prefab is registered in MementoPrototypes.Mementos
-
-            // Find the MementoData prototype by matching the memento's name
             foreach (var kvp in MementoPrototypes.Mementos)
             {
                 var data = kvp.Value;
                 if (data != null && data.GetName() == memento.GetName())
                 {
-                    // Get the anim file for the reward type
                     return MementoData.GetAnimForReward(data.GetRewardType());
                 }
             }
@@ -320,6 +314,50 @@ namespace Mementos
             }
 
             return null;
+        }
+
+        public static bool PlaceMemento(GameObject memento, MinionIdentity minion)
+        {
+            if (memento == null || minion == null)
+                return false;
+
+            var navigator = minion.GetComponent<Navigator>();
+            if (navigator == null)
+                return false;
+
+            Vector3[] offsets = new Vector3[]
+            {
+                new Vector3(0, 2f, 0),    // Up
+                new Vector3(2f, 2f, 0),   // Up-Right
+                new Vector3(2f, 0, 0),    // Right
+                new Vector3(2f, -2f, 0),  // Down-Right
+                new Vector3(0, -2f, 0),   // Down
+                new Vector3(-2f, -2f, 0), // Down-Left
+                new Vector3(-2f, 0, 0),   // Left
+                new Vector3(-2f, 2f, 0),  // Up-Left
+                Vector3.zero              // Center (last)
+            };
+
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                Vector3 offset = offsets[i];
+                Vector3 targetPos = minion.transform.position + offset;
+                int targetCell = Grid.PosToCell(targetPos);
+                bool canReach = navigator.CanReach(targetCell);
+
+                Debug.Log($"[Mementos] PlaceMemento: Trying offset {offset} (targetPos={targetPos}, cell={targetCell}) - CanReach={canReach}");
+
+                if (Grid.Solid[targetCell])
+                    continue;
+
+                if (!canReach)
+                    continue;
+
+                memento.transform.position = targetPos;
+                return true;
+            }
+            Debug.LogWarning("[Mementos] PlaceMemento: No reachable position found for memento.");
+            return false;
         }
     }
 }

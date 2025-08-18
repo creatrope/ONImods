@@ -69,11 +69,14 @@ namespace Mementos
     {
         public static void Postfix(AssignmentManager __instance, object data)
         {
+            Debug.Log("[Mementos] MinionMigration: Postfix called.");
             if (data == null)
             {
                 Debug.LogWarning("[Mementos] MinionMigration: data is null.");
                 return;
             }
+
+            Debug.Log($"[Mementos] MinionMigration: data type is {data.GetType().FullName}");
 
             var migrationEventArgs = data as MinionMigrationEventArgs;
 
@@ -83,24 +86,37 @@ namespace Mementos
                 return;
             }
 
+            Debug.Log($"[Mementos] MinionMigration: migrationEventArgs found. minionId={migrationEventArgs.minionId}, prevWorldId={migrationEventArgs.prevWorldId}, targetWorldId={migrationEventArgs.targetWorldId}");
+
             var minion = migrationEventArgs.minionId;
+            Debug.Log($"[Mementos] MinionMigration: minion={(minion != null ? minion.ToString() : "null")}");
+
             var medalInfo = minion != null ? minion.FindOrAddComponent<MedalInfo>() : null;
+            Debug.Log($"[Mementos] MinionMigration: medalInfo {(medalInfo != null ? "found/created" : "is null")}");
 
             int oldWorldId = migrationEventArgs.prevWorldId;
             int newWorldId = migrationEventArgs.targetWorldId;
 
             var selectable = minion != null ? minion.GetComponent<KSelectable>() : null;
             string minionName = selectable != null ? selectable.GetProperName() : "Unknown Minion";
+            Debug.Log($"[Mementos] MinionMigration: minionName={minionName}");
+
+            Debug.Log($"[Mementos] MinionMigration: oldWorldId={oldWorldId}, newWorldId={newWorldId}");
 
             if (oldWorldId == newWorldId) // first in space
             {
+                Debug.Log("[Mementos] MinionMigration: oldWorldId == newWorldId, treating as 'first in space'.");
+
                 var mementoInfo = MementoPrototypes.Mementos["Space"];
                 string mementoId = "Space";
+
+                Debug.Log($"[Mementos] MinionMigration: mementoInfo for 'Space' found: unique={mementoInfo.unique}, repeatable={mementoInfo.repeatable}");
 
                 if (mementoInfo.unique)
                 {
                     if (MedalsSaveData.Instance.awardedUnique.ContainsKey(mementoId))
                     {
+                        Debug.LogWarning("[Mementos] MinionMigration: unique memento already awarded.");
                         return;
                     }
                 }
@@ -108,17 +124,27 @@ namespace Mementos
                 {
                     if (medalInfo != null && medalInfo.HasAwardedNonRepeatableMemento(mementoId))
                     {
+                        Debug.LogWarning("[Mementos] MinionMigration: non-repeatable memento already awarded to this minion.");
                         return;
                     }
                 }
+                Debug.Log("[Mementos] MinionMigration: Creating memento for 'Space'.");
                 MementoConfig.CreateMemento(mementoInfo, minion);
                 if (mementoInfo.unique)
+                {
+                    Debug.Log("[Mementos] MinionMigration: Recording unique memento award.");
                     MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
+                }
                 if (!mementoInfo.repeatable && medalInfo != null)
+                {
+                    Debug.Log("[Mementos] MinionMigration: Recording non-repeatable memento award in MedalInfo.");
                     medalInfo.SetAwardedNonRepeatableMemento(mementoId);
+                }
             }
             else // seems to be teleporter only case
             {
+                Debug.Log("[Mementos] MinionMigration: oldWorldId != newWorldId, treating as teleporter/first visit case.");
+
                 if (!MementoPrototypes.Mementos.ContainsKey("FirstVisit"))
                 {
                     Debug.LogWarning("[Mementos] MinionMigration: No FirstVisit memento defined.");
@@ -126,8 +152,11 @@ namespace Mementos
                 }
 
                 var world = ClusterManager.Instance.GetWorld(newWorldId);
+                Debug.Log($"[Mementos] MinionMigration: ClusterManager.Instance.GetWorld({newWorldId}) = {world}");
 
-                MementosEvents.AwardFirstVisitifEligible("FirstVisit", minion, newWorldId);
+                Debug.Log("[Mementos] MinionMigration: Attempting to award FirstVisit if eligible.");
+                bool awarded = MementosEvents.AwardFirstVisitifEligible("FirstVisit", minion, newWorldId);
+                Debug.Log($"[Mementos] MinionMigration: AwardFirstVisitifEligible returned {awarded}");
             }
         }
     }
@@ -206,8 +235,11 @@ namespace Mementos
         }
     }
 
+    // --- MedalsSaveData singleton and initialization fixes ---
+
+    // this is global memento information
     [SerializationConfig(MemberSerialization.OptIn)]
-    public class MedalsSaveData : KMonoBehaviour, ISaveLoadable
+    public class MedalsSaveData : KMonoBehaviour
     {
         [Serialize]
         public HashSet<int> awardedFirstVisitWorlds = new HashSet<int>();
@@ -215,20 +247,25 @@ namespace Mementos
         [Serialize]
         public Dictionary<string, string> awardedUnique = new Dictionary<string, string>();
 
+        private static MedalsSaveData _instance;
+
         public static MedalsSaveData Instance
         {
             get
             {
                 if (_instance == null)
                 {
-                    var go = GameObject.Find("MedalsSaveData") ?? new GameObject("MedalsSaveData");
-                    _instance = go.GetComponent<MedalsSaveData>() ?? go.AddComponent<MedalsSaveData>();
-                    UnityEngine.Object.DontDestroyOnLoad(go);
+                    _instance = UnityEngine.Object.FindObjectOfType<MedalsSaveData>();
+                    if (_instance == null)
+                    {
+                        var go = new GameObject("MedalsSaveData");
+                        _instance = go.AddComponent<MedalsSaveData>();
+                        Debug.Log("[Mementos] MedalsSaveData Instance created.");
+                    }
                 }
                 return _instance;
             }
         }
-        private static MedalsSaveData _instance;
     }
 
     public static class MementosEvents
@@ -245,25 +282,48 @@ namespace Mementos
 
         public static void OnRocketLanded(object data)
         {
+            Debug.Log($"[Mementos] OnRocketLanded called. data: {(data != null ? data.ToString() : "null")}");
+
             if (data is GameObject rocket)
             {
+                Debug.Log($"[Mementos] OnRocketLanded: data is GameObject, name: {rocket.name}");
+
                 var rocketModule = rocket.GetComponent<RocketModuleCluster>();
-                string worldName = "Unknown World";
-                var worldId = ClusterManager.Instance.GetWorld(rocketModule.GetMyWorldId());
-                var worldname = MementosUtils.GetWorldName(worldId.id);
+                if (rocketModule == null)
+                {
+                    Debug.LogWarning("[Mementos] OnRocketLanded: RocketModuleCluster not found on rocket GameObject.");
+                    return;
+                }
+                Debug.Log($"[Mementos] OnRocketLanded: RocketModuleCluster found: {rocketModule}");
+
+                int worldIdValue = rocketModule.GetMyWorldId();
+                Debug.Log($"[Mementos] OnRocketLanded: RocketModuleCluster.GetMyWorldId() = {worldIdValue}");
+
+                var world = ClusterManager.Instance.GetWorld(worldIdValue);
+                Debug.Log($"[Mementos] OnRocketLanded: ClusterManager.Instance.GetWorld({worldIdValue}) = {world}");
+
+                string worldName = MementosUtils.GetWorldName(worldIdValue);
+                Debug.Log($"[Mementos] OnRocketLanded: worldName = {worldName}");
 
                 var clustercraft = rocketModule.CraftInterface.GetComponent<Clustercraft>();
+                Debug.Log($"[Mementos] OnRocketLanded: clustercraft = {clustercraft}");
 
                 MinionIdentity oldestMinion = null;
 
                 if (clustercraft != null && clustercraft.ModuleInterface != null)
                 {
+                    Debug.Log("[Mementos] OnRocketLanded: clustercraft.ModuleInterface is not null.");
                     var interiorWorld = clustercraft.ModuleInterface.GetInteriorWorld();
+                    Debug.Log($"[Mementos] OnRocketLanded: interiorWorld = {interiorWorld}");
+
                     if (interiorWorld != null && interiorWorld.IsModuleInterior)
                     {
+                        Debug.Log("[Mementos] OnRocketLanded: interiorWorld.IsModuleInterior is true.");
                         var minionsInInterior = Components.MinionIdentities.GetWorldItems(interiorWorld.id);
+                        Debug.Log($"[Mementos] OnRocketLanded: minionsInInterior.Count = {minionsInInterior.Count}");
                         if (minionsInInterior.Count == 0)
                         {
+                            Debug.Log("[Mementos] OnRocketLanded: No minions in interior.");
                             return;
                         }
 
@@ -272,65 +332,131 @@ namespace Mementos
                         foreach (var tminion in minionsInInterior)
                         {
                             float age = MementosUtils.GetMinionAge(tminion);
+                            Debug.Log($"[Mementos] OnRocketLanded: Checking minion {tminion.GetProperName()} (age={age})");
                             if (age > oldestAge)
                             {
                                 oldestAge = age;
                                 oldestMinion = tminion;
+                                Debug.Log($"[Mementos] OnRocketLanded: New oldest minion: {tminion.GetProperName()} (age={age})");
                             }
                         }
                     }
+                    else
+                    {
+                        Debug.Log("[Mementos] OnRocketLanded: interiorWorld is null or not a module interior.");
+                    }
 
-                    AwardFirstVisitifEligible("FirstVisit", oldestMinion, worldId.id);
-
+                    if (oldestMinion != null)
+                    {
+                        Debug.Log($"[Mementos] OnRocketLanded: Awarding FirstVisit to oldest minion: {oldestMinion.GetProperName()}");
+                        bool awarded = AwardFirstVisitifEligible("FirstVisit", oldestMinion, worldIdValue);
+                        Debug.Log($"[Mementos] OnRocketLanded: AwardFirstVisitifEligible returned {awarded}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Mementos] OnRocketLanded: No eligible minion found for FirstVisit award.");
+                    }
+                }
+                else
+                {
+                    Debug.Log("[Mementos] OnRocketLanded: clustercraft or clustercraft.ModuleInterface is null.");
                 }
             }
+            else
+            {
+                Debug.LogWarning("[Mementos] OnRocketLanded: data is not a GameObject.");
+            }
         }
-
         public static bool AwardFirstVisitifEligible(string mementoId, MinionIdentity minion, int worldID)
         {
-            var mementoInfo = MementoPrototypes.Mementos[mementoId];
+            Debug.Log($"[Mementos] AwardFirstVisitifEligible called with mementoId='{mementoId}', minion='{(minion != null ? minion.GetProperName() : "null")}', worldID={worldID}");
 
-            string name = mementoInfo.GetName();
-            string desc = mementoInfo.GetDesc();
-            var medalInfo = minion.FindOrAddComponent<MedalInfo>();
 
             if (worldID == 0)
             {
+                Debug.LogWarning("[Mementos] AwardFirstVisitifEligible: worldID is 0, aborting.");
                 return false;
             }
+
+            if (string.IsNullOrEmpty(mementoId) || string.IsNullOrEmpty(mementoId) || minion == null || !MementoPrototypes.Mementos.ContainsKey(mementoId))
+            {
+                Debug.LogWarning($"[Mementos] AwardFirstVisitifEligible: Invalid arguments. mementoId='{mementoId}', minion={(minion != null ? minion.GetProperName() : "null")}, mementoId found={MementoPrototypes.Mementos.ContainsKey(mementoId)}");
+                return false;
+            }
+
+            if (!MementoPrototypes.Mementos.ContainsKey(mementoId))
+            {
+                Debug.LogWarning($"[Mementos] AwardFirstVisitifEligible: mementoId '{mementoId}' not found in prototypes.");
+                return false;
+            }
+
+            var mementoInfo = MementoPrototypes.Mementos[mementoId];
+            var medalInfo = minion.FindOrAddComponent<MedalInfo>();
+
+            Debug.Log($"[Mementos] AwardFirstVisitifEligible (before) awardedFirstVisitWorlds: {string.Join(", ", MedalsSaveData.Instance.awardedFirstVisitWorlds)}");
+
             if (MedalsSaveData.Instance.awardedFirstVisitWorlds.Contains(worldID))
             {
+                Debug.LogWarning($"[Mementos] AwardFirstVisitifEligible: worldID {worldID} already awarded. Not eligible.");
                 return false;
             }
 
             var worldName = MementosUtils.GetWorldName(worldID);
+
+            Debug.Log($"[Mementos] AwardFirstVisitifEligible: about to create memento for minion '{minion.GetProperName()}' in world '{worldName}'");
             MementoConfig.CreateMemento(mementoInfo, minion, worldName);
-            if (mementoInfo.unique)
-                MedalsSaveData.Instance.awardedUnique[mementoId] = minion.GetProperName();
-            if (!mementoInfo.repeatable && medalInfo != null)
-                medalInfo.SetAwardedNonRepeatableMemento(mementoId);
+
+            Debug.Log($"[Mementos] AwardFirstVisitifEligible: Adding worldID {worldID} to awardedFirstVisitWorlds.");
             MedalsSaveData.Instance.awardedFirstVisitWorlds.Add(worldID);
+
+            Debug.Log($"[Mementos] AwardFirstVisitifEligible (after) awardedFirstVisitWorlds: {string.Join(", ", MedalsSaveData.Instance.awardedFirstVisitWorlds)}");
+
+            Debug.Log("[Mementos] AwardFirstVisitifEligible: Awarded successfully.");
             return true;
         }
     }
 
-    [HarmonyPatch(typeof(ClustercraftExteriorDoor), "FerryMinion")]
-    public static class ClustercraftExteriorDoor_FerryMinion_Postfix
+
+    [HarmonyPatch(typeof(JettisonableCargoModule.StatesInstance), "FinalDeploy")]
+    public static class JettisonableCargoModule_FinalDeploy_MementosPrefix
     {
-        public static void Postfix(ClustercraftExteriorDoor __instance, GameObject minion)
+        public static void Prefix(JettisonableCargoModule.StatesInstance __instance)
         {
-            // Only null/error checks remain
-            if (minion != null)
+            Debug.Log("[Mementos] (Prefix) FinalDeploy called.");
+            if (__instance == null)
             {
-                int minionWorldId = minion.GetMyWorldId();
-                if (minionWorldId != __instance.targetWorldId)
+                Debug.LogWarning("[Mementos] (Prefix) FinalDeploy: __instance is null.");
+                return;
+            }
+
+            Debug.Log($"[Mementos] (Prefix) FinalDeploy: __instance type: {__instance.GetType().FullName}");
+
+            string minionName = "Unknown";
+            MinionIdentity minion = null;
+            string worldName = "Unknown World";
+            int worldId = -1;
+
+            if (__instance.chosenDuplicant != null)
+            {
+                Debug.Log($"[Mementos] (Prefix) FinalDeploy: chosenDuplicant is not null, type: {__instance.chosenDuplicant.GetType().FullName}");
+                minion = __instance.chosenDuplicant.GetComponent<MinionIdentity>();
+                if (minion != null)
                 {
-                    Debug.LogWarning($"[Mementos] FerryMinion Postfix: Minion {minion.name} expected in world {__instance.targetWorldId} but is in {minionWorldId}");
+                    Debug.Log($"[Mementos] (Prefix) FinalDeploy: MinionIdentity found: {minion}");
                 }
+                else
+                {
+                    Debug.LogWarning("[Mementos] (Prefix) FinalDeploy: MinionIdentity not found on chosenDuplicant.");
+                }
+                minionName = __instance.chosenDuplicant.GetProperName();
+                worldId = __instance.chosenDuplicant.gameObject.GetMyWorldId();
+                worldName = MementosUtils.GetWorldName(worldId);
+
+                Debug.Log($"[Mementos] (Prefix) FinalDeploy: Minion '{minionName}' about to deploy to world '{worldName}' (id={worldId})");
+                MementosEvents.AwardFirstVisitifEligible("FirstVisit", minion, worldId);
             }
         }
     }
-
     public static class MementosUtils
     {
         public static string GetWorldName(int worldId)
@@ -351,57 +477,17 @@ namespace Mementos
         }
     }
 
-    public static class ReflectionUtil
+    // Ensure MedalsSaveData is created only if not present, and never in the Instance getter
+    [HarmonyPatch(typeof(Game), "OnSpawn")]
+    public static class Game_OnSpawn_MedalsSaveDataEnsure
     {
-        public static void DumpAllFieldsAndProperties(object obj)
+        public static void Postfix()
         {
-            if (obj == null)
+            if (UnityEngine.Object.FindObjectOfType<Mementos.MedalsSaveData>() == null)
             {
-                Debug.Log("[Mementos] DumpAllFieldsAndProperties: object is null.");
-                return;
-            }
-            var type = obj.GetType();
-            var sb = new StringBuilder();
-            sb.AppendLine($"[Mementos] Dumping all fields and properties of {type.FullName}:");
-            foreach (var field in type.GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
-            {
-                object value = field.GetValue(obj);
-                sb.AppendLine($"Field: {field.Name} = {value}");
-            }
-            foreach (var prop in type.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
-            {
-                if (prop.CanRead)
-                {
-                    object value = null;
-                    try { value = prop.GetValue(obj, null); }
-                    catch { value = "[unreadable]"; }
-                    sb.AppendLine($"Property: {prop.Name} = {value}");
-                }
-            }
-            Debug.Log(sb.ToString());
-        }
-    }
-
-
-    [HarmonyPatch(typeof(JettisonableCargoModule.StatesInstance), "FinalDeploy")]
-    public static class JettisonableCargoModule_FinalDeploy_MementosPrefix
-    {
-        public static void Prefix(JettisonableCargoModule.StatesInstance __instance)
-        {
-            string minionName = "Unknown";
-            MinionIdentity minion = null;
-            string worldName = "Unknown World";
-            int worldId = -1;
-
-            if (__instance.chosenDuplicant != null)
-            {
-                minion = __instance.chosenDuplicant.GetComponent<MinionIdentity>();
-                minionName = __instance.chosenDuplicant.GetProperName();
-                worldId = __instance.chosenDuplicant.gameObject.GetMyWorldId();
-                worldName = MementosUtils.GetWorldName(worldId);
-
-                Debug.Log($"[Mementos] (Prefix) FinalDeploy: Minion '{minionName}' about to deploy to world '{worldName}' (id={worldId})");
-                MementosEvents.AwardFirstVisitifEligible("FirstVisit", minion, worldId);
+                var go = new GameObject("MedalsSaveData");
+                go.AddComponent<Mementos.MedalsSaveData>();
+                Debug.Log("[Mementos] MedalsSaveData GameObject created and registered for serialization.");
             }
         }
     }

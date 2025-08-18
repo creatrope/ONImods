@@ -98,15 +98,18 @@ namespace Mementos
                 __instance.Subscribe((int)GameHashes.Landed, Mementos.MementosEvents.OnModuleLanderLanded);
             }
         }
-    }
 
-    [HarmonyPatch(typeof(PioneerLanderConfig), "OnSpawn")]
-    public static class PioneerLanderConfig_OnSpawn_MementosPatch
-    {
-        public static void Postfix(GameObject inst)
+        [HarmonyPatch(typeof(SaveGame), nameof(SaveGame.OnPrefabInit))]
+        public static class SaveGamePatch
         {
-            // Your custom logic here, for example:
-            Debug.Log("[Mementos] PioneerLander spawned: " + inst.name);
+            public static void Postfix(Game __instance)
+            {
+                if (__instance.GetComponent<MedalsSaveData>() == null)
+                {
+                    __instance.gameObject.AddComponent<MedalsSaveData>();
+                    Debug.Log("[Mementos] MedalsSaveData added to SaveGame object.");
+                }
+            }
         }
     }
 }
