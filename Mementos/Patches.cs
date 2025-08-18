@@ -93,9 +93,20 @@ namespace Mementos
         {
             public static void Postfix(Game __instance)
             {
-                __instance.Subscribe((int)GameHashes.RocketLanded, Mementos.MementosEvents.OnRocketLandedStatic);
-                __instance.Subscribe((int)GameHashes.Landed, Mementos.MementosEvents.OnLandedStatic);
+                __instance.Subscribe((int)GameHashes.RocketLanded, Mementos.MementosEvents.OnRocketLanded);
+                __instance.Subscribe((int)GameHashes.Landed, Mementos.MementosEvents.OnLanded);
+                __instance.Subscribe((int)GameHashes.Landed, Mementos.MementosEvents.OnModuleLanderLanded);
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(PioneerLanderConfig), "OnSpawn")]
+    public static class PioneerLanderConfig_OnSpawn_MementosPatch
+    {
+        public static void Postfix(GameObject inst)
+        {
+            // Your custom logic here, for example:
+            Debug.Log("[Mementos] PioneerLander spawned: " + inst.name);
         }
     }
 }
