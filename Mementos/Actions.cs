@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using static MementosGlobalData;
 
 namespace Mementos
 {
@@ -13,12 +12,12 @@ namespace Mementos
     {
         public static void OnLanded(object data)
         {
-            Debug.Log("[Mementos] OnLanded called with data: " + (data != null ? data.ToString() : "null"));
+            //Debug.Log("[Mementos] OnLanded called with data: " + (data != null ? data.ToString() : "null"));
         }
 
         public static void OnModuleLanderLanded(object data)
         {
-            Debug.Log("[Mementos] OnModuleLanderLanded called with data: " + (data != null ? data.ToString() : "null"));
+            //Debug.Log("[Mementos] OnModuleLanderLanded called with data: " + (data != null ? data.ToString() : "null"));
         }
 
         public static void OnRocketLanded(object data)
@@ -93,14 +92,14 @@ namespace Mementos
         {
             public static void Postfix(Clustercraft __instance, bool automated = false)
             {
-                Debug.Log($"[Mementos] Clustercraft '{__instance.m_name}' launched. Automated: {automated}");
+                //Debug.Log($"[Mementos] Clustercraft '{__instance.m_name}' launched. Automated: {automated}");
                 var interiorWorld = __instance.ModuleInterface.GetInteriorWorld();
                 if (interiorWorld != null)
                 {
                     var minions = Components.MinionIdentities.GetWorldItems(interiorWorld.id);
                     foreach (var minion in minions)
                     {
-                        Debug.Log($"[Mementos] Minion onboard: {minion.GetProperName()}");
+                        //Debug.Log($"[Mementos] Minion onboard: {minion.GetProperName()}");
                     }
 
                     var mementoInfo = MementoPrototypes.Mementos["Space"];
@@ -207,39 +206,39 @@ namespace Mementos
                         if (rescuedMinion != null)
                             rescuedName = rescuedMinion.GetProperName();
 
-                        MementoUtils.AwardMementosOnce("Rescue", new List<MinionIdentity> { minion }, rescuedMinion); 
+                        MementoUtils.AwardMementosOnce("Rescue", new List<MinionIdentity> { minion }, rescuedMinion);
                     }
                 }
             }
         }
-    
+
     }
- }
 
-// this is global memento information
-[SerializationConfig(MemberSerialization.OptIn)]
-public class MementosGlobalData : KMonoBehaviour
-{
-    [Serialize]
-    public Dictionary<string, bool> Issued = new Dictionary<string, bool>();
-
-    private static MementosGlobalData _instance;
-
-    public static MementosGlobalData Instance
+     // this is global memento information
+    [SerializationConfig(MemberSerialization.OptIn)]
+    public class MementosGlobalData : KMonoBehaviour
     {
-        get
+        [Serialize]
+        public Dictionary<string, bool> Issued = new Dictionary<string, bool>();
+
+        private static MementosGlobalData _instance;
+
+        public static MementosGlobalData Instance
         {
-            if (_instance == null)
+            get
             {
-                _instance = UnityEngine.Object.FindObjectOfType<MementosGlobalData>();
                 if (_instance == null)
                 {
-                    var go = new GameObject("MementosGlobalData");
-                    _instance = go.AddComponent<MementosGlobalData>();
-                    Debug.Log("[Mementos] MementosGlobalData Instance created.");
+                    _instance = UnityEngine.Object.FindObjectOfType<MementosGlobalData>();
+                    if (_instance == null)
+                    {
+                        var go = new GameObject("MementosGlobalData");
+                        _instance = go.AddComponent<MementosGlobalData>();
+                        //Debug.Log("[Mementos] MementosGlobalData Instance created.");
+                    }
                 }
+                return _instance;
             }
-            return _instance;
         }
     }
 }

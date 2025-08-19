@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Linq;
 using System;
 using System.Collections.Generic;
+using Mementos;
 
 namespace Mementos
 {
@@ -17,26 +18,28 @@ namespace Mementos
             public System.Action Handler;
             public PAction Action;
             public Action Snapshot;
+            public bool LocalOnly; // Add this flag
 
-            public Keybind(string id, string displayName, PKeyBinding binding, System.Action handler)
+            public Keybind(string id, string displayName, PKeyBinding binding, System.Action handler, bool localOnly = false)
             {
                 Id = id;
                 DisplayName = displayName;
                 Binding = binding;
                 Handler = handler;
+                LocalOnly = localOnly;
             }
         }
 
         // Use System.Action for all references
         private static readonly List<Keybind> keybinds = new List<Keybind>
         {
-            new Keybind("Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl), HandleIncapacitateHotkey),
-            new Keybind("Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), HandleDamageHotkey),
-            new Keybind("Medals.eraseMedalsAction", "Erase All", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseMedalsHotkey),
-            new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey),
-            new Keybind("Medals.printDetailsScreens", "Print Details Screens", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl), HandlePrintDetailsScreensHotkey),
-            new Keybind("Medals.createMementoAction", "Create Memento", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl), HandleCreateMementoHotkey),
-            new Keybind("Medals.printIssuedMementosAction", "Print Issued Mementos", new PKeyBinding(KKeyCode.F10, Modifier.Ctrl), HandlePrintIssuedMementosHotkey),
+            new Keybind("Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl), HandleIncapacitateHotkey, true),
+            new Keybind("Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), HandleDamageHotkey, true),
+            new Keybind("Medals.eraseAllAction", "Erase All", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseAllHotkey, false),
+            new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey, true),
+            new Keybind("Medals.printDetailsScreens", "Print Details Screens", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl), HandlePrintDetailsScreensHotkey, true),
+            new Keybind("Medals.createMementoAction", "Create Memento", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl), HandleCreateMementoHotkey, true),
+            new Keybind("Medals.printIssuedMementosAction", "Print Issued Mementos", new PKeyBinding(KKeyCode.F10, Modifier.Ctrl), HandlePrintIssuedMementosHotkey, true),
         };
 
         private float lastSnapshotTime = 0f;
@@ -50,8 +53,15 @@ namespace Mementos
 
         public KeybindHandler()
         {
+            bool isLocal = ModEnvironment.IsLocal();
+            Debug.Log($"[Mementos] installed " + (isLocal ? "locally." : "via steamapp."));
             foreach (var kb in keybinds)
-                kb.Snapshot = (kb.Action != null) ? kb.Action.GetKAction() : PAction.MaxAction;
+            {
+                if (!kb.LocalOnly || isLocal)
+                    kb.Snapshot = (kb.Action != null) ? kb.Action.GetKAction() : Action.Invalid;
+                else
+                    kb.Snapshot = Action.Invalid;
+            }
         }
 
         public void OnKeyDown(KButtonEvent e)
@@ -167,57 +177,37 @@ namespace Mementos
             }
         }
 
-        private static void HandleEraseMedalsHotkey()
+        private static void HandleEraseAllHotkey()
         {
-            Debug.Log("[EraseMedals] Erase medals hotkey pressed. Removing all MementoModifiable objects, medals, and minions.");
+            Debug.Log("[EraseMedals] Erase all hotkey pressed. Removing all MementoModifiable objects, medals.");
 
-            // 1. Delete all objects with MementoModifiable component
             var mementos = UnityEngine.Object.FindObjectsOfType<Mementos.MementoModifiable>();
-            foreach (var memento in mementos)
-            {
-                Debug.Log($"[EraseMedals] Destroying memento object: {memento.GetName()}");
-                UnityEngine.Object.Destroy(memento.gameObject);
-            }
+            Debug.Log($"[EraseMedals] Cleared {mementos.Length} mementos.");
 
-            // 2. Clear awardedNonRepeatableMementos and Medals for all MedalInfo components
+            foreach (var memento in mementos)
+                UnityEngine.Object.Destroy(memento.gameObject);
+
             var medalInfos = UnityEngine.Object.FindObjectsOfType<Mementos.MedalInfo>();
+            Debug.Log("[EraseMedals] Cleared {medalInfos.Count} MedalInfo components(s).");
+
             foreach (var medalInfo in medalInfos)
-            {
-                // Clear awardedNonRepeatableMementos
-                var field = typeof(Mementos.MedalInfo).GetField("awardedNonRepeatableMementos", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (field != null)
-                {
-                    var set = field.GetValue(medalInfo) as HashSet<string>;
-                    if (set != null)
-                    {
-                        set.Clear();
-                        Debug.Log("[EraseMedals] Cleared awardedNonRepeatableMementos for a MedalInfo.");
-                    }
-                }
-                // Clear Medals list
                 medalInfo.Medals.Clear();
-                Debug.Log("[EraseMedals] Cleared Medals list for a MedalInfo.");
-            }
 
             // 3. Delete all minions (MinionIdentity components)
-            var minions = UnityEngine.Object.FindObjectsOfType<MinionIdentity>();
-            foreach (var minion in minions)
+            //var minions = UnityEngine.Object.FindObjectsOfType<MinionIdentity>();
+            //foreach (var minion in minions)
+            //{
+            //    Debug.Log($"[EraseMedals] Destroying minion: {minion.GetProperName()}");
+            //    UnityEngine.Object.Destroy(minion.gameObject);
+            //}
+
+            var globalData = Mementos.MementosGlobalData.Instance;
+
+            if (globalData != null && globalData.Issued != null)
             {
-                Debug.Log($"[EraseMedals] Destroying minion: {minion.GetProperName()}");
-                UnityEngine.Object.Destroy(minion.gameObject);
+                Debug.Log("[EraseMedals] Cleared {globalData.Issued.Count} state flag(s).");
+                globalData.Issued.Clear();
             }
-
-            // 4. Clear MedalsSaveData info
-            //var data = Mementos.MementosGlobalData.Instance;
-            //data.awardedUnique.Clear();
-           // data.awardedFirstVisitWorlds.Clear();
-            Debug.Log("[EraseMedals] Cleared MedalsSaveData awardedUnique and awardedFirstVisitWorlds.");
-
-            // 5. Clear any static or global state for "first to land on the planets"
-            // Example (replace with your actual implementation):
-            // Mementos.FirstToLandTracker.Clear();
-
-            Debug.Log("[EraseMedals] All memento-related global state and minions cleared.");
         }
 
         private static void HandlePrintAllMementosHotkey()
@@ -257,7 +247,7 @@ namespace Mementos
 
         private static void PrintMedalsSaveDataHotkey()
         {
-          
+
         }
 
         private static void HandleCreateMementoHotkey()
@@ -268,7 +258,7 @@ namespace Mementos
                 foreach (var kvp in MementoPrototypes.Mementos)
                 {
                     var mementoData = kvp.Value;
-                    MementoUtils.CreateMemento(mementoData, SelectedMinion, "label");
+                    MementoUtils.CreateMemento(mementoData, SelectedMinion, "");
                 }
                 Debug.Log($"[OnKeyDown] Created mementos for '{SelectedMinion.GetProperName()}' via hotkey.");
             }
@@ -292,6 +282,19 @@ namespace Mementos
                 if (kvp.Value)
                     Debug.Log($"[PrintIssuedMementos] Key: {kvp.Key}");
             }
+        }
+    }
+
+    // Add this class somewhere in your project, e.g., in a Utils or Settings file.
+    internal static class ModEnvironment
+    {
+        public static bool IsLocal()
+        {
+            // Example: check if the mod is running from a local folder (not Steam)
+            // You may need to adjust the logic based on your mod loader/environment.
+            // This checks if the assembly location contains "steamapps" (Steam) or not.
+            var location = typeof(ModEnvironment).Assembly.Location;
+            return !location.ToLowerInvariant().Contains("steamapps");
         }
     }
 }

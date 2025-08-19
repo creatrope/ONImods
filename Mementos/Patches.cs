@@ -1,12 +1,8 @@
 using HarmonyLib;
-using KMod;
-using PeterHan.PLib.PatchManager;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using UnityEngine;
 using PeterHan.PLib.Core;
+using PeterHan.PLib.PatchManager;
+using System.Linq;
+using UnityEngine;
 
 namespace Mementos
 {
@@ -62,7 +58,7 @@ namespace Mementos
                     string medalsText = "No mementos awarded.";
                     if (medalInfo != null && medalInfo.Medals.Count > 0)
                     {
-                        medalsText = string.Join("\n", medalInfo.Medals.Select(m => $"{m.Name}: {m.Description}"));
+                        medalsText = string.Join("\n", medalInfo.Medals.Select(m => $"{m.Description}"));
                     }
                     MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel.SetLabel("Mementos", medalsText, "Mementos awarded to this minion.");
                     MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel.Commit();
@@ -98,7 +94,7 @@ namespace Mementos
                 if (__instance.GetComponent<MementosGlobalData>() == null)
                 {
                     __instance.gameObject.AddComponent<MementosGlobalData>();
-                    Debug.Log("[Mementos] MementosGlobalData added to SaveGame object.");
+                    //Debug.Log("[Mementos] MementosGlobalData added to SaveGame object.");
                 }
             }
         }

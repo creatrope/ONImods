@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace Mementos
 {
-    using static STRINGS.UI;
-    using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
+    using static STRINGS.MEMENTOS; 
+    using static UnityEngine.GraphicsBuffer;
 
     public static class MementoPrototypes
     {
@@ -90,10 +90,10 @@ namespace Mementos
         public static readonly Dictionary<string, (string Name, string Description, Reward RewardType)> MementoTypes =
             new Dictionary<string, (string Name, string Description, Reward RewardType)>
             {
-                { "Injury", ("Injured", "Injured in the Line of Duty", Reward.Proclamation) },
-                { "Rescue", ("Rescued", "Rescued Incapacited Duplicant", Reward.Trophy) },
-                { "Space", ("First To Space", "First To Space", Reward.Rocket) },
-                { "FirstVisit", ("First Visitor", "First Visitor To Planet", Reward.Planet) }
+                { "Injury", (INJURY_NAME, INJURY_DESC, Reward.Proclamation) },
+                { "Rescue", (RESCUE_NAME, RESCUE_DESC, Reward.Trophy) },
+                { "Space", (SPACE_NAME, SPACE_DESC, Reward.Rocket) },
+                { "FirstVisit", (FIRSTVISIT_NAME, FIRSTVISIT_DESC, Reward.Planet) }
             };
         public string GetName() => mementoName;
         public string GetDesc() => mementoDesc;
@@ -143,15 +143,12 @@ namespace Mementos
         }
     }
 
-    // 4. Info/manager classes
     // this is the per minion data
     [SerializationConfig(MemberSerialization.OptIn)]
     public class MedalInfo : KMonoBehaviour, ISaveLoadable
     {
         [Serialize]
         public List<Medal> Medals = new List<Medal>();
-        [Serialize]
-        private HashSet<string> myGlobalData = new HashSet<string>();
 
         public void PrintAllMementos()
         {
@@ -163,7 +160,6 @@ namespace Mementos
         }
     }
 
-    // 5. Config/creation classes
     [SerializationConfig(MemberSerialization.OptIn)]
     public class MementoConfig : IMultiEntityConfig
     {
@@ -258,7 +254,8 @@ namespace Mementos
                     MementoUtils.CreateMemento(mementoInfo, minion, targetName);
                 MementosGlobalData.Instance.Issued[key] = true;
                 anyAwarded = true;
-            } else
+            }
+            else
             {
                 Debug.Log($"[Mementos] AwardMementosOnce {key} exists, skipping...");
 
@@ -273,24 +270,13 @@ namespace Mementos
         }
         public static void CreateMemento(MementoData mementoInfo, MinionIdentity minion, string target = null)
         {
-            if (minion == null)
+            if (minion == null || mementoInfo == null || mementoInfo.prefab == null)
             {
-                Debug.LogError("[MementoConfig] CreateMemento called with null minion!");
-                return;
-            }
-            if (mementoInfo == null)
-            {
-                Debug.LogError("[MementoConfig] CreateMemento called with null mementoInfo!");
+                Debug.LogError($"[MementoConfig] CreateMemento called with null argument(s): minion={(minion == null ? "null" : "ok")}, mementoInfo={(mementoInfo == null ? "null" : "ok")}, prefab={(mementoInfo?.prefab == null ? "null" : "ok")}");
                 return;
             }
 
             var prefab = mementoInfo.prefab;
-            if (prefab == null)
-            {
-                Debug.LogError("[MementoConfig] mementoInfo.prefab is null!");
-                return;
-            }
-
             string minionName = minion.GetProperName();
 
             var medalInfo = minion.FindOrAddComponent<MedalInfo>();
@@ -298,13 +284,14 @@ namespace Mementos
             var worldTime = GameClock.Instance;
             int cycle = worldTime.GetCycle();
 
-            string name = $"{mementoInfo.GetName()} {target}";
-            string desc = $"{mementoInfo.GetDesc()} {target}";
-            var medal = new Medal(name, $"{desc} at cycle {cycle}");
+            string name = mementoInfo.GetName();
+            string desc = mementoInfo.GetDesc();
+
+            string medalInscription = MakeMedalInscription(minionName, name, desc, target, cycle);
+            var medal = new Medal(name, medalInscription);
             medalInfo.Medals.Add(medal);
 
-            name = $"{name} ({minionName})";
-            desc = $"{desc} ({minionName}) at cycle {cycle}";
+            string mementoInscription = MakeMementoInscription(minionName, name, desc, target, cycle);
 
             GameObject memento = Util.KInstantiate(prefab, Grid.CellToPosCCC(Grid.PosToCell(minion.transform.position + new Vector3(0, 2f, 0)), Grid.SceneLayer.Ore));
             if (memento == null)
@@ -317,7 +304,7 @@ namespace Mementos
 
             var newMementoInfo = memento.GetComponent<MementoModifiable>();
             if (newMementoInfo != null)
-                newMementoInfo.SetInfo(name, desc, mementoInfo.rewardType);
+                newMementoInfo.SetInfo(name, mementoInscription, mementoInfo.rewardType);
 
             var selectable = memento.GetComponent<KSelectable>();
             if (selectable != null)
@@ -325,10 +312,37 @@ namespace Mementos
 
             var infoDesc = memento.GetComponent<InfoDescription>();
             if (infoDesc != null)
-                infoDesc.description = desc;
+                infoDesc.description = mementoInscription;
 
             MementoUtils.PlaceMemento(memento, minion);
             memento.SetActive(true);
+        }
+
+        public static string MakeMedalInscription(string minionName, string name, string desc, string target, int cycle)
+        {
+            string inscription = null;
+            if (target == minionName)
+            {
+                inscription = string.Format(MEDAL_INSCRIPTION, desc, cycle); // ready for translate
+            }
+            else
+            {
+                inscription = string.Format(MEDAL_INSCRIPTION_WITH_TARGET, desc, target, cycle); // ready for translate
+            }
+            return inscription;
+        }
+        public static string MakeMementoInscription(string minionName, string name, string desc, string target, int cycle)
+        {
+            string inscription = null;
+            if (target == minionName)
+            {
+                inscription = string.Format(MEMENTO_INSCRIPTION, minionName, desc, cycle); // ready for translate
+            } 
+            else
+            {
+                inscription = string.Format(MEMENTO_INSCRIPTION_WITH_TARGET, minionName, desc, target, cycle); // ready for translate
+            }
+            return inscription;
         }
 
         public static string GetAnimForMementoComponent(MementoModifiable memento)
@@ -345,7 +359,6 @@ namespace Mementos
                 }
             }
 
-            // Fallback: try to infer from mementoName if it matches a key in MementoTypes
             if (MementoData.MementoTypes.TryGetValue(memento.GetName(), out var tuple))
             {
                 return MementoData.GetAnimForReward(tuple.RewardType);
@@ -356,7 +369,6 @@ namespace Mementos
 
         public static bool PlaceMemento(GameObject memento, MinionIdentity minion)
         {
-            Debug.Log($"[Mementos] PlaceMemento");
             if (memento == null || minion == null)
                 return false;
 
@@ -368,7 +380,7 @@ namespace Mementos
             placePos.y += (float)0.5;
 
             memento.transform.position = placePos;
-            Debug.Log($"[Mementos] PlaceMemento: {memento.name} (targetPos={placePos}");
+            //Debug.Log($"[Mementos] PlaceMemento: {memento.name} (targetPos={placePos}");
             return true;
         }
     }
