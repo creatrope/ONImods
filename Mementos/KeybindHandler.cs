@@ -30,13 +30,13 @@ namespace Mementos
         // Use System.Action for all references
         private static readonly List<Keybind> keybinds = new List<Keybind>
         {
-            new Keybind("Medals.testLoadMedalsAction", "Test Load Medals", new PKeyBinding(KKeyCode.F2, Modifier.Ctrl), HandleTestLoadMedalsHotkey),
-            new Keybind("Medals.printMedalsSaveDataAction", "Print Medals Save Data", new PKeyBinding(KKeyCode.F3, Modifier.Ctrl), HandlePrintMedalsSaveDataHotkey),
             new Keybind("Medals.incapacitateAction", "Incapacitate", new PKeyBinding(KKeyCode.F5, Modifier.Ctrl), HandleIncapacitateHotkey),
             new Keybind("Medals.damageAction", "Damage", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), HandleDamageHotkey),
             new Keybind("Medals.eraseMedalsAction", "Erase All", new PKeyBinding(KKeyCode.F6, Modifier.Ctrl), HandleEraseMedalsHotkey),
             new Keybind("Medals.printAllMementosAction", "Print All Mementos", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl), HandlePrintAllMementosHotkey),
-            new Keybind("Medals.printDetailsScreens", "Print Details Screens", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl), HandlePrintDetailsScreensHotkey)
+            new Keybind("Medals.printDetailsScreens", "Print Details Screens", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl), HandlePrintDetailsScreensHotkey),
+            new Keybind("Medals.createMementoAction", "Create Memento", new PKeyBinding(KKeyCode.F7, Modifier.Ctrl), HandleCreateMementoHotkey),
+            new Keybind("Medals.printIssuedMementosAction", "Print Issued Mementos", new PKeyBinding(KKeyCode.F10, Modifier.Ctrl), HandlePrintIssuedMementosHotkey),
         };
 
         private float lastSnapshotTime = 0f;
@@ -208,9 +208,9 @@ namespace Mementos
             }
 
             // 4. Clear MedalsSaveData info
-            var data = Mementos.MedalsSaveData.Instance;
-            data.awardedUnique.Clear();
-            data.awardedFirstVisitWorlds.Clear();
+            //var data = Mementos.MementosGlobalData.Instance;
+            //data.awardedUnique.Clear();
+           // data.awardedFirstVisitWorlds.Clear();
             Debug.Log("[EraseMedals] Cleared MedalsSaveData awardedUnique and awardedFirstVisitWorlds.");
 
             // 5. Clear any static or global state for "first to land on the planets"
@@ -249,50 +249,48 @@ namespace Mementos
 
         private static void HandleTestLoadMedalsHotkey()
         {
-            Debug.Log("[Mementos] Test Load Medals hotkey pressed. Clearing and loading MedalsSaveData with test values.");
-            var data = Mementos.MedalsSaveData.Instance;
-            data.awardedUnique.Clear();
-            data.awardedFirstVisitWorlds.Clear();
-
-            // Add half a dozen test values
-            for (int i = 1; i <= 6; i++)
-            {
-                data.awardedUnique[$"TestMemento{i}"] = $"Minion{i}";
-                data.awardedFirstVisitWorlds.Add(100 + i);
-            }
-            PrintMedalsSaveDataHotkey();
         }
 
         private static void HandlePrintMedalsSaveDataHotkey()
         {
-            Debug.Log("[Mementos] Print MedalsSaveData hotkey pressed.");
-            PrintMedalsSaveDataHotkey();
         }
 
         private static void PrintMedalsSaveDataHotkey()
         {
-            var data = Mementos.MedalsSaveData.Instance;
+          
+        }
 
-            Debug.Log("[Mementos] --- awardedUnique ---");
-            if (data.awardedUnique != null && data.awardedUnique.Count > 0)
+        private static void HandleCreateMementoHotkey()
+        {
+            Debug.Log("[OnKeyDown] Create Memento hotkey detected.");
+            if (SelectedMinion != null)
             {
-                foreach (var kvp in data.awardedUnique)
-                    Debug.Log($"[Mementos] awardedUnique: mementoId='{kvp.Key}', minion='{kvp.Value}'");
+                foreach (var kvp in MementoPrototypes.Mementos)
+                {
+                    var mementoData = kvp.Value;
+                    MementoUtils.CreateMemento(mementoData, SelectedMinion, "label");
+                }
+                Debug.Log($"[OnKeyDown] Created mementos for '{SelectedMinion.GetProperName()}' via hotkey.");
             }
             else
             {
-                Debug.Log("[Mementos] awardedUnique is empty or null.");
+                Debug.Log("[OnKeyDown] No minion selected.");
             }
+        }
 
-            Debug.Log("[Mementos] --- awardedFirstVisitWorlds ---");
-            if (data.awardedFirstVisitWorlds != null && data.awardedFirstVisitWorlds.Count > 0)
+        private static void HandlePrintIssuedMementosHotkey()
+        {
+            Debug.Log("[PrintIssuedMementos] Print all true keys in Issued hotkey pressed.");
+            var issued = MementosGlobalData.Instance?.Issued;
+            if (issued == null)
             {
-                foreach (var worldId in data.awardedFirstVisitWorlds)
-                    Debug.Log($"[Mementos] awardedFirstVisitWorlds: worldId={worldId}");
+                Debug.LogWarning("[PrintIssuedMementos] Issued dictionary is null.");
+                return;
             }
-            else
+            foreach (var kvp in issued)
             {
-                Debug.Log("[Mementos] awardedFirstVisitWorlds is empty or null.");
+                if (kvp.Value)
+                    Debug.Log($"[PrintIssuedMementos] Key: {kvp.Key}");
             }
         }
     }

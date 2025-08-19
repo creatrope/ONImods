@@ -1,21 +1,14 @@
+using HarmonyLib;
+using KSerialization;
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
 namespace Mementos
 {
-    using HarmonyLib;
-    using KSerialization;
-    using System;
-    using System.Collections.Generic;
-    using UnityEngine;
     using static STRINGS.UI;
+    using static STRINGS.UI.UISIDESCREENS.AUTOPLUMBERSIDESCREEN.BUTTONS;
 
-    // 1. Enums
-    public enum MedalType
-    {
-        Trophy,
-        Demerit,
-        Citation,
-    }
-
-    // 2. Static Prototypes
     public static class MementoPrototypes
     {
         public static readonly Dictionary<string, MementoData> Mementos;
@@ -29,8 +22,6 @@ namespace Mementos
                 info.mementoName = kvp.Value.Name;
                 info.mementoDesc = kvp.Value.Description;
                 info.rewardType = kvp.Value.RewardType;
-                info.repeatable = kvp.Value.Repeatable;
-                info.unique = kvp.Value.Unique;
                 Mementos.Add(kvp.Key, info);
             }
         }
@@ -69,9 +60,10 @@ namespace Mementos
         public enum Reward
         {
             Trophy,
-            Citation,
-            Oops,
+            Proclamation,
+            Rocket,
             Planet,
+            Oops
         }
 
         [Serialize]
@@ -83,12 +75,6 @@ namespace Mementos
         [Serialize]
         public Reward rewardType = Reward.Trophy;
 
-        [Serialize]
-        public bool repeatable;
-
-        [Serialize]
-        public bool unique;
-
         public GameObject prefab;
 
         public static readonly Dictionary<Reward, RewardTypeInfo> RewardTypeInfos =
@@ -96,17 +82,18 @@ namespace Mementos
             {
                 { Reward.Planet,   new RewardTypeInfo(Reward.Planet,   "keepsake_planet_kanim") },
                 { Reward.Trophy,   new RewardTypeInfo(Reward.Trophy,   "keepsake_trophy_kanim") },
-                { Reward.Citation, new RewardTypeInfo(Reward.Citation, "keepsake_proclamation_kanim") },
-                { Reward.Oops,     new RewardTypeInfo(Reward.Oops,     "keepsake_medal_kanim") }
-            };
+                { Reward.Proclamation, new RewardTypeInfo(Reward.Proclamation, "keepsake_proclamation_kanim") },
+                { Reward.Oops,     new RewardTypeInfo(Reward.Oops,     "keepsake_medal_kanim") },
+                   { Reward.Rocket,     new RewardTypeInfo(Reward.Rocket,     "keepsake_rocket_kanim") }
+         };
 
-        public static readonly Dictionary<string, (string Name, string Description, Reward RewardType, bool Repeatable, bool Unique)> MementoTypes =
-            new Dictionary<string, (string Name, string Description, Reward RewardType, bool Repeatable, bool Unique)>
+        public static readonly Dictionary<string, (string Name, string Description, Reward RewardType)> MementoTypes =
+            new Dictionary<string, (string Name, string Description, Reward RewardType)>
             {
-                { "Injury", ("Injured", "Injured in the Line of Duty", Reward.Citation, false, false) },
-                { "Rescue", ("Rescued", "Rescued Incapacited Duplicant", Reward.Trophy, true, false) },
-                { "Space", ("First To Space", "First To Space", Reward.Planet, false, true) },
-                { "FirstVisit", ("First Visitor", "First Duplicant Visitor To Planet", Reward.Planet, true, false) }
+                { "Injury", ("Injured", "Injured in the Line of Duty", Reward.Proclamation) },
+                { "Rescue", ("Rescued", "Rescued Incapacited Duplicant", Reward.Trophy) },
+                { "Space", ("First To Space", "First To Space", Reward.Rocket) },
+                { "FirstVisit", ("First Visitor", "First Visitor To Planet", Reward.Planet) }
             };
         public string GetName() => mementoName;
         public string GetDesc() => mementoDesc;
@@ -164,17 +151,7 @@ namespace Mementos
         [Serialize]
         public List<Medal> Medals = new List<Medal>();
         [Serialize]
-        private HashSet<string> awardedNonRepeatableMementos = new HashSet<string>();
-
-        public bool HasAwardedNonRepeatableMemento(string mementoId)
-        {
-            return awardedNonRepeatableMementos.Contains(mementoId);
-        }
-
-        public void SetAwardedNonRepeatableMemento(string mementoId)
-        {
-            awardedNonRepeatableMementos.Add(mementoId);
-        }
+        private HashSet<string> myGlobalData = new HashSet<string>();
 
         public void PrintAllMementos()
         {
@@ -231,7 +208,69 @@ namespace Mementos
 
         public void OnPrefabInit(GameObject inst) { }
         public void OnSpawn(GameObject inst) { }
+    }
 
+    public static class MementoUtils
+    {
+        public static string GetWorldName(WorldContainer world)
+        {
+            string worldName = "Unknown World";
+            if (world != null)
+            {
+                var clusterEntity = world.GetComponent<ClusterGridEntity>();
+                worldName = clusterEntity != null ? clusterEntity.GetProperName() : world.name;
+            }
+            return worldName;
+        }
+        public static float GetMinionAge(MinionIdentity minion)
+        {
+            if (minion == null) return -1f;
+            return GameClock.Instance != null ? GameClock.Instance.GetCycle() - minion.arrivalTime : -1f;
+        }
+        public static bool AwardMementosOnce(string mementoId, List<MinionIdentity> minions, object target = null)
+        {
+            if (minions == null || minions.Count == 0)
+                return false;
+
+            if (string.IsNullOrEmpty(mementoId) || !MementoPrototypes.Mementos.ContainsKey(mementoId))
+            {
+                Debug.LogWarning($"[Mementos] AwardMementosConditional: Invalid arguments. mementoId='{mementoId}', minions count={minions?.Count ?? 0}, mementoId found={MementoPrototypes.Mementos.ContainsKey(mementoId)}");
+                return false;
+            }
+
+            var mementoInfo = MementoPrototypes.Mementos[mementoId];
+            string targetName = null;
+
+            if (target is WorldContainer world)
+                targetName = MementoUtils.GetWorldName(world);
+            else if (target is MinionIdentity minion)
+                targetName = minion.GetProperName();
+            else if (target != null)
+                targetName = target.ToString();
+            bool anyAwarded = false;
+
+            string key = MementoUtils.makeKey(mementoId, targetName);
+
+            if (!MementosGlobalData.Instance.Issued.ContainsKey(key))
+            {
+                Debug.Log($"[Mementos] AwardMementosOnce {key} doesn't exist, creating...");
+                foreach (var minion in minions)
+                    MementoUtils.CreateMemento(mementoInfo, minion, targetName);
+                MementosGlobalData.Instance.Issued[key] = true;
+                anyAwarded = true;
+            } else
+            {
+                Debug.Log($"[Mementos] AwardMementosOnce {key} exists, skipping...");
+
+            }
+
+            return anyAwarded;
+        }
+
+        public static string makeKey(string mementoId, string targetName)
+        {
+            return (string.IsNullOrEmpty(targetName)) ? mementoId : $"{mementoId}_{targetName}";
+        }
         public static void CreateMemento(MementoData mementoInfo, MinionIdentity minion, string target = null)
         {
             if (minion == null)
@@ -288,11 +327,10 @@ namespace Mementos
             if (infoDesc != null)
                 infoDesc.description = desc;
 
-            MementoConfig.PlaceMemento(memento, minion);
+            MementoUtils.PlaceMemento(memento, minion);
             memento.SetActive(true);
         }
 
-        // Utility method to get the anim file for a MementoModifiable by examining the reward of its parent
         public static string GetAnimForMementoComponent(MementoModifiable memento)
         {
             if (memento == null)
@@ -318,6 +356,7 @@ namespace Mementos
 
         public static bool PlaceMemento(GameObject memento, MinionIdentity minion)
         {
+            Debug.Log($"[Mementos] PlaceMemento");
             if (memento == null || minion == null)
                 return false;
 
@@ -325,39 +364,12 @@ namespace Mementos
             if (navigator == null)
                 return false;
 
-            Vector3[] offsets = new Vector3[]
-            {
-                new Vector3(0, 2f, 0),    // Up
-                new Vector3(2f, 2f, 0),   // Up-Right
-                new Vector3(2f, 0, 0),    // Right
-                new Vector3(2f, -2f, 0),  // Down-Right
-                new Vector3(0, -2f, 0),   // Down
-                new Vector3(-2f, -2f, 0), // Down-Left
-                new Vector3(-2f, 0, 0),   // Left
-                new Vector3(-2f, 2f, 0),  // Up-Left
-                Vector3.zero              // Center (last)
-            };
+            Vector3 placePos = minion.transform.position;
+            placePos.y += (float)0.5;
 
-            for (int i = 0; i < offsets.Length; i++)
-            {
-                Vector3 offset = offsets[i];
-                Vector3 targetPos = minion.transform.position + offset;
-                int targetCell = Grid.PosToCell(targetPos);
-                bool canReach = navigator.CanReach(targetCell);
-
-                Debug.Log($"[Mementos] PlaceMemento: Trying offset {offset} (targetPos={targetPos}, cell={targetCell}) - CanReach={canReach}");
-
-                if (Grid.Solid[targetCell])
-                    continue;
-
-                if (!canReach)
-                    continue;
-
-                memento.transform.position = targetPos;
-                return true;
-            }
-            Debug.LogWarning("[Mementos] PlaceMemento: No reachable position found for memento.");
-            return false;
+            memento.transform.position = placePos;
+            Debug.Log($"[Mementos] PlaceMemento: {memento.name} (targetPos={placePos}");
+            return true;
         }
     }
 }

@@ -1,39 +1,30 @@
-using Database;
 using HarmonyLib;
-using Klei.AI;
 using KMod;
-using KSerialization;
-using Newtonsoft.Json;
-using PeterHan.PLib.Actions;
-using PeterHan.PLib.Core;
-using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
-using PeterHan.PLib.UI;
-using STRINGS;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using TemplateClasses;
-using TUNING;
 using UnityEngine;
+using PeterHan.PLib.Core;
 
 namespace Mementos
 {
-
-    public class Config
+    public static class MementosGlobals
     {
-        public bool EnableMedals { get; set; } = true;
-        public int MaxMedals { get; set; } = 10;
+        public static bool KeybindsEnabled = true;
     }
+
     public class Mod : KMod.UserMod2
     {
         public override void OnLoad(Harmony harmony)
         {
             PUtil.InitLibrary(false);
-            new POptions().RegisterOptions(this, typeof(Config));
             base.OnLoad(harmony);
-            Mementos.KeybindHandler.Register(new PPatchManager(harmony));
+            if (MementosGlobals.KeybindsEnabled)
+            {
+                Mementos.KeybindHandler.Register(new PPatchManager(harmony));
+            }
         }
 
 
@@ -104,12 +95,13 @@ namespace Mementos
         {
             public static void Postfix(Game __instance)
             {
-                if (__instance.GetComponent<MedalsSaveData>() == null)
+                if (__instance.GetComponent<MementosGlobalData>() == null)
                 {
-                    __instance.gameObject.AddComponent<MedalsSaveData>();
-                    Debug.Log("[Mementos] MedalsSaveData added to SaveGame object.");
+                    __instance.gameObject.AddComponent<MementosGlobalData>();
+                    Debug.Log("[Mementos] MementosGlobalData added to SaveGame object.");
                 }
             }
         }
+
     }
 }
