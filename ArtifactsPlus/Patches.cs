@@ -119,6 +119,29 @@ namespace ArtifactsPlus
             }
         }
 
+        [HarmonyPatch(typeof(BionicMinionConfig), "OnSpawn")]
+        public static class BionicMinionConfig_OnSpawn_Patch
+        {
+            public static void Postfix(GameObject go)
+            {
+                if (go == null)
+                    return;
+
+                // Recalculate the allMinions list
+                ArtifactStateTracker.InitializeAllMinions();
+
+                string minionName = go.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+                logger.LogDebug($"[BionicMinionConfig] BionicMinion '{minionName}' spawned.");
+
+                var prefabId = go.GetComponent<KPrefabID>();
+                if (prefabId)
+                {
+                    prefabId.AddTag("worldChanged"); // Add the "worldChanged" tag to indicate the minion was freshly spawned
+                }
+
+            }
+        }
+
         [HarmonyPatch(typeof(MinionConfig), "OnSpawn")]
         public static class MinionConfig_OnSpawn_Patch
         {
@@ -224,6 +247,29 @@ namespace ArtifactsPlus
             {
                 string keepsakeName = keepsake.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Keepsake";
                 logger.LogDebug($"- {keepsakeName}");
+            }
+        }
+
+        public static void PrintAllMinionsBionic()
+        {
+            var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
+                .Where(kp => kp != null && (kp.HasTag("Minion")) || kp.HasTag("BionicMinion"))
+                .Select(kp => kp.gameObject)
+                .ToArray();
+
+            if (allMinions.Length == 0)
+            {
+                logger.LogDebug("[ArtifactsPlus] No minions found in the game.");
+                return;
+            }
+
+            logger.LogDebug("[ArtifactsPlus] All Minions (Bionic status):");
+            foreach (var minion in allMinions)
+            {
+                string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+                var prefabId = minion.GetComponent<KPrefabID>();
+                bool isBionic = prefabId != null && prefabId.HasTag("Bionic");
+                logger.LogDebug($"- {minionName} (Bionic: {(isBionic ? "Yes" : "No")})");
             }
         }
     }
@@ -381,7 +427,7 @@ namespace ArtifactsPlus
         public static void InitializeAllMinions()
         {
             allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag("Minion"))
+                .Where(kp => kp != null && (kp.HasTag("Minion") || kp.HasTag("BionicMinion")))
                 .Select(kp => kp.gameObject)
                 .ToArray();
         }
@@ -1079,7 +1125,7 @@ namespace ArtifactsPlus
                             }
                         }
                     }
- 
+
                     int ncell = Grid.PosToCell(minion.transform.position);
                     int worldId = Grid.WorldIdx[ncell];
 
@@ -1267,10 +1313,13 @@ namespace ArtifactsPlus
         private static PAction PrintAllArtifactsAction;
         private static PAction PrintAllAttributesAction;
         private static PAction PrintAllKeepsakesAction; // NEW
+        private static PAction PrintAllMinionsBionicAction;
+
         private readonly Action printActiveArtifactsSnapshot;
         private readonly Action printAllArtifactsSnapshot;
         private readonly Action printAllAttributesSnapshot;
         private readonly Action printAllKeepsakesSnapshot; // NEW
+        private readonly Action printAllMinionsBionicSnapshot;
 
         public string handlerName => "ArtifactsPlusKeybindHandler";
         public KInputHandler inputHandler { get; set; }
@@ -1281,26 +1330,21 @@ namespace ArtifactsPlus
             printAllArtifactsSnapshot = PrintAllArtifactsAction != null ? PrintAllArtifactsAction.GetKAction() : PAction.MaxAction;
             printAllAttributesSnapshot = PrintAllAttributesAction != null ? PrintAllAttributesAction.GetKAction() : PAction.MaxAction;
             printAllKeepsakesSnapshot = PrintAllKeepsakesAction != null ? PrintAllKeepsakesAction.GetKAction() : PAction.MaxAction;
+            printAllMinionsBionicSnapshot = PrintAllMinionsBionicAction != null ? PrintAllMinionsBionicAction.GetKAction() : PAction.MaxAction;
         }
 
         public void OnKeyDown(KButtonEvent e)
         {
             if (e.TryConsume(printActiveArtifactsSnapshot))
-            {
-                ArtifactsPlus.Patches.PrintAllArtifacts(true); // Only active artifacts
-            }
+                ArtifactsPlus.Patches.PrintAllArtifacts(true);
             if (e.TryConsume(printAllArtifactsSnapshot))
-            {
-                ArtifactsPlus.Patches.PrintAllArtifacts(null); // All artifacts
-            }
+                ArtifactsPlus.Patches.PrintAllArtifacts(null);
             if (e.TryConsume(printAllAttributesSnapshot))
-            {
                 ArtifactsPlus.Patches.PrintAllMinionAttributesInGame();
-            }
             if (e.TryConsume(printAllKeepsakesSnapshot))
-            {
                 ArtifactsPlus.Patches.PrintAllKeepsakes();
-            }
+            if (e.TryConsume(printAllMinionsBionicSnapshot))
+                ArtifactsPlus.Patches.PrintAllMinionsBionic();
         }
 
         [PLibMethod(RunAt.AfterLayerableLoad)]
@@ -1320,7 +1364,9 @@ namespace ArtifactsPlus
             PrintAllAttributesAction = new PActionManager().CreateAction(
                 "ArtifactsPlus.PrintAllAttributesAction", "Print All Attributes", new PKeyBinding(KKeyCode.F10, Modifier.Ctrl));
             PrintAllKeepsakesAction = new PActionManager().CreateAction(
-                "ArtifactsPlus.PrintAllKeepsakesAction", "Print All Keepsakes", new PKeyBinding(KKeyCode.F11, Modifier.Ctrl)); // NEW
+                "ArtifactsPlus.PrintAllKeepsakesAction", "Print All Keepsakes", new PKeyBinding(KKeyCode.F3, Modifier.Ctrl)); // NEW
+            PrintAllMinionsBionicAction = new PActionManager().CreateAction(
+                "ArtifactsPlus.PrintAllMinionsBionicAction", "Print All Minions (Bionic)", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl));
         }
     }
 }
