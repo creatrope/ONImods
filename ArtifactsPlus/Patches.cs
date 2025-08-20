@@ -566,9 +566,17 @@ namespace ArtifactsPlus
                 if (overwriteGlobals)
                 {
                     if (configJson["Neighbors"] != null)
+                    {
                         globalNeighbors = (int)configJson["Neighbors"];
+
+                        // After loading both embedded and user configs, set all artifact Neighbors to globalNeighbors
+                        if (artifactConfigMap != null)
+                            foreach (var config in artifactConfigMap.Values)
+                                config.Neighbors = globalNeighbors;
+                    }
                     if (configJson["Scope"] != null)
                         globalScope = (string)configJson["Scope"];
+
                 }
 
                 if (configJson["Artifacts"] is JArray arr)
@@ -580,8 +588,8 @@ namespace ArtifactsPlus
 
                         var artifactConfig = new ArtifactConfig(globalScope, globalNeighbors);
 
-                        if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
-                        if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
+                        //if (obj["Neighbors"] != null) artifactConfig.Neighbors = (int)obj["Neighbors"];
+                        //if (obj["Scope"] != null) artifactConfig.Scope = (string)obj["Scope"];
 
                         if (obj["Attributes"] is JObject attributes)
                         {
