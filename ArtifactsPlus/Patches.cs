@@ -1,24 +1,18 @@
-﻿using ArtifactsPlus; // Add this import for ArtifactEffectTracker
-using HarmonyLib;
-using HLib;
+﻿using HarmonyLib;
 using Klei.AI;
 using KMod;
-using KSerialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using PeterHan.PLib.Actions;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
-using PeterHan.PLib.UI;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using static ArtifactsPlus.ArtifactStateTracker;
 
 namespace ArtifactsPlus
@@ -32,30 +26,6 @@ namespace ArtifactsPlus
 
         public static void OnLoad()
         {
-        }
-
-        public static void PrintActiveArtifactsWithWorlds()
-        {
-            var activeArtifacts = ArtifactStateTracker.ArtifactsOnPedestals
-                .Where(artifact => artifact != null && ArtifactStateTracker.ArtifactStates.TryGetValue(artifact.GetInstanceID(), out var state) && state.IsActive);
-
-            if (!activeArtifacts.Any())
-            {
-                logger.LogDebug("[ArtifactsPlus] No active artifacts found.");
-                return;
-            }
-
-            logger.LogDebug("[ArtifactsPlus] Active Artifacts and their Worlds:");
-            foreach (var artifact in activeArtifacts)
-            {
-                int cell = Grid.PosToCell(artifact.transform.position);
-                int worldId = Grid.WorldIdx[cell];
-                var world = ClusterManager.Instance.GetWorld(worldId);
-                string worldName = world != null ? world.GetProperName() : $"World_{worldId}";
-                string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-
-                logger.LogDebug($"- {artifactName} in {worldName}");
-            }
         }
 
         public static void LogArtifactShortCircuitIssue(GameObject artifact, ArtifactStateTracker.ArtifactCriteriaResult criteria)
@@ -79,6 +49,20 @@ namespace ArtifactsPlus
                 {
                     var poller = Game.Instance.gameObject.AddComponent<ArtifactStatePoller>();
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(Game), "OnSpawn")]
+        public static class Game_OnSpawn_Patch
+        {
+            public static void Postfix(Game __instance)
+            {
+                // This is the best place to do your "game is ready" logic
+                //ArtifactStateTracker.BuildGlobalAllArtifacts();
+                //ArtifactStateTracker.InitializeAllMinions();
+                // Optionally, force a poll/update here
+                // ArtifactStatePoller.ForcePollNow(); // if you have such a method
+                Patches.logger.LogDebug("[ArtifactsPlus] Game is fully loaded and ready.");
             }
         }
 
@@ -124,21 +108,7 @@ namespace ArtifactsPlus
         {
             public static void Postfix(GameObject go)
             {
-                if (go == null)
-                    return;
-
-                // Recalculate the allMinions list
-                ArtifactStateTracker.InitializeAllMinions();
-
-                string minionName = go.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
-                logger.LogDebug($"[BionicMinionConfig] BionicMinion '{minionName}' spawned.");
-
-                var prefabId = go.GetComponent<KPrefabID>();
-                if (prefabId)
-                {
-                    prefabId.AddTag("worldChanged"); // Add the "worldChanged" tag to indicate the minion was freshly spawned
-                }
-
+                HandleMinionSpawn(go, "BionicMinionConfig");
             }
         }
 
@@ -147,129 +117,43 @@ namespace ArtifactsPlus
         {
             public static void Postfix(GameObject go)
             {
-                if (go == null)
-                    return;
-
-                // Recalculate the allMinions list
-                ArtifactStateTracker.InitializeAllMinions();
-
-                string minionName = go.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
-                logger.LogDebug($"[MinionConfig] Minion '{minionName}' spawned.");
-
-                var prefabId = go.GetComponent<KPrefabID>();
-                if (prefabId)
-                {
-                    prefabId.AddTag("worldChanged"); // Add the "worldChanged" tag to indicate the minion was freshly spawned
-                }
-
+                HandleMinionSpawn(go, "MinionConfig");
             }
         }
 
-        public static void PrintAllArtifacts(bool? isActive = null)
+        private static void HandleMinionSpawn(GameObject go, string configType)
         {
-            var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
-            if (allArtifacts == null || allArtifacts.Length == 0)
-            {
-                logger.LogDebug("[ArtifactsPlus] No artifacts found in the game.");
+            if (go == null)
                 return;
-            }
 
-            string header;
-            if (isActive == null)
-                header = "[ArtifactsPlus] All Artifacts:";
-            else if (isActive.Value)
-                header = "[ArtifactsPlus] Active Artifacts:";
-            else
-                header = "[ArtifactsPlus] Inactive Artifacts:";
+            ArtifactStateTracker.InitializeAllMinions();
 
-            logger.LogDebug(header);
+            string minionName = go.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
+            Patches.logger.LogDebug($"[{configType}] Minion '{minionName}' spawned.");
 
-            foreach (var artifact in allArtifacts)
+            var prefabId = go.GetComponent<KPrefabID>();
+            if (prefabId != null)
             {
-                if (artifact == null)
-                    continue;
-
-                int id = artifact.GetInstanceID();
-                string artifactName = artifact.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Artifact";
-
-                if (isActive != null)
-                {
-                    if (!ArtifactStateTracker.ArtifactStates.TryGetValue(id, out var state) || state.IsActive != isActive.Value)
-                        continue;
-                }
-
-                logger.LogDebug($"- {artifactName}");
+                prefabId.AddTag("worldChanged"); // Add the "worldChanged" tag to indicate the minion was freshly spawned
             }
         }
 
-        public static void PrintAllMinionAttributesInGame()
+        [HarmonyPatch(typeof(SpaceArtifact), "OnSpawn")]
+        public static class SpaceArtifact_OnSpawn_Patch
         {
-            logger.LogDebug("[ArtifactsPlus] Minion Attributes in the game:");
-            var dbAttributes = Db.Get()?.Attributes;
-            if (dbAttributes == null)
+            public static void Postfix(SpaceArtifact __instance)
             {
-                logger.LogDebug("[ArtifactsPlus] Could not find Db.Get().Attributes.");
-                return;
-            }
+                GameObject artifact = __instance.gameObject;
+                var type = __instance.artifactType;
+                int instanceId = artifact.GetInstanceID();
 
-            var attributeFields = typeof(Database.Attributes).GetFields(BindingFlags.Public | BindingFlags.Instance);
-            var minionAttributes = attributeFields
-                .Select(f => f.GetValue(dbAttributes) as Klei.AI.Attribute)
-                .Where(a => a != null)
-                .OrderBy(a => a.Id, StringComparer.OrdinalIgnoreCase);
-
-            foreach (var attr in minionAttributes)
-            {
-                if (attr.Description != null && attr.Description.Contains("MISSING"))
-                    logger.LogDebug($"- {attr.Id}: {attr.Name}");
+                if (type == ArtifactType.Terrestrial)
+                    Patches.logger.LogDebug($"[ArtifactsPlus] Terrestrial artifact spawned: {artifact.name} (instance id: {instanceId})");
+                else if (type == ArtifactType.Space)
+                    Patches.logger.LogDebug($"[ArtifactsPlus] Space artifact spawned: {artifact.name} (instance id: {instanceId})");
                 else
-                    logger.LogDebug($"- {attr.Id}: {attr.Name} ({attr.Description})");
-            }
-            logger.LogDebug($"[ArtifactsPlus] Total minion attributes found: {minionAttributes.Count()}");
-        }
-
-        public static void PrintAllKeepsakes()
-        {
-            // Find all GameObjects with the "Keepsake" tag and print their names
-            var keepsakes = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && kp.HasTag(GameTags.Keepsake))
-                .Select(kp => kp.gameObject)
-                .ToArray();
-
-            if (keepsakes.Length == 0)
-            {
-                logger.LogDebug("[ArtifactsPlus] No keepsakes found in the game.");
-                return;
-            }
-
-            logger.LogDebug("[ArtifactsPlus] All Keepsakes:");
-            foreach (var keepsake in keepsakes)
-            {
-                string keepsakeName = keepsake.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Keepsake";
-                logger.LogDebug($"- {keepsakeName}");
-            }
-        }
-
-        public static void PrintAllMinionsBionic()
-        {
-            var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
-                .Where(kp => kp != null && (kp.HasTag("Minion")) || kp.HasTag("BionicMinion"))
-                .Select(kp => kp.gameObject)
-                .ToArray();
-
-            if (allMinions.Length == 0)
-            {
-                logger.LogDebug("[ArtifactsPlus] No minions found in the game.");
-                return;
-            }
-
-            logger.LogDebug("[ArtifactsPlus] All Minions (Bionic status):");
-            foreach (var minion in allMinions)
-            {
-                string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
-                var prefabId = minion.GetComponent<KPrefabID>();
-                bool isBionic = prefabId != null && prefabId.HasTag("Bionic");
-                logger.LogDebug($"- {minionName} (Bionic: {(isBionic ? "Yes" : "No")})");
+                    Patches.logger.LogDebug($"[ArtifactsPlus] Artifact (type: {type}) spawned: {artifact.name} (instance id: {instanceId})");
+                BuildGlobalAllArtifacts();
             }
         }
     }
@@ -726,7 +610,7 @@ namespace ArtifactsPlus
             return count;
         }
 
-        public static void InitializeAllArtifacts()
+        public static void BuildGlobalAllArtifacts()
         {
             GlobalAllArtifacts = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag("Artifact") && kp.gameObject != null)
@@ -739,9 +623,7 @@ namespace ArtifactsPlus
         public static GameObject[] GetAllArtifacts()
         {
             if (GlobalAllArtifacts == null)
-            {
-                InitializeAllArtifacts();
-            }
+                BuildGlobalAllArtifacts();
             return GlobalAllArtifacts;
         }
 
@@ -1199,7 +1081,7 @@ namespace ArtifactsPlus
 
             ArtifactStateTracker.LoadArtifactConfig(); // fallback to default
 
-            ArtifactsPlusKeybindHandler.Register(new PPatchManager(harmony));
+            KeybindsHandler.Register(new PPatchManager(harmony));
         }
 
         public override void OnAllModsLoaded(Harmony harmony, IReadOnlyList<KMod.Mod> mods)
@@ -1218,13 +1100,6 @@ namespace ArtifactsPlus
                         Patches.logger.LogDebug("[ArtifactsPlus] Detected pether-pg.RoomsExpanded mod. Setting IsRoomsExpandedPresent = true.");
                     }
                 }
-            }
-
-            // Print the list of active mods
-            Patches.logger.LogDebug("[ArtifactsPlus] Active mods:");
-            foreach (var modId in activeMods)
-            {
-                Patches.logger.LogDebug($"- {modId}");
             }
 
             //CrossModManager.Initalize(activeMods);
@@ -1314,67 +1189,6 @@ namespace ArtifactsPlus
         {
         }
     }
-
-    internal sealed class ArtifactsPlusKeybindHandler : IInputHandler
-    {
-        private static PAction PrintActiveArtifactsAction;
-        private static PAction PrintAllArtifactsAction;
-        private static PAction PrintAllAttributesAction;
-        private static PAction PrintAllKeepsakesAction; // NEW
-        private static PAction PrintAllMinionsBionicAction;
-
-        private readonly Action printActiveArtifactsSnapshot;
-        private readonly Action printAllArtifactsSnapshot;
-        private readonly Action printAllAttributesSnapshot;
-        private readonly Action printAllKeepsakesSnapshot; // NEW
-        private readonly Action printAllMinionsBionicSnapshot;
-
-        public string handlerName => "ArtifactsPlusKeybindHandler";
-        public KInputHandler inputHandler { get; set; }
-
-        internal ArtifactsPlusKeybindHandler()
-        {
-            printActiveArtifactsSnapshot = PrintActiveArtifactsAction != null ? PrintActiveArtifactsAction.GetKAction() : PAction.MaxAction;
-            printAllArtifactsSnapshot = PrintAllArtifactsAction != null ? PrintAllArtifactsAction.GetKAction() : PAction.MaxAction;
-            printAllAttributesSnapshot = PrintAllAttributesAction != null ? PrintAllAttributesAction.GetKAction() : PAction.MaxAction;
-            printAllKeepsakesSnapshot = PrintAllKeepsakesAction != null ? PrintAllKeepsakesAction.GetKAction() : PAction.MaxAction;
-            printAllMinionsBionicSnapshot = PrintAllMinionsBionicAction != null ? PrintAllMinionsBionicAction.GetKAction() : PAction.MaxAction;
-        }
-
-        public void OnKeyDown(KButtonEvent e)
-        {
-            if (e.TryConsume(printActiveArtifactsSnapshot))
-                ArtifactsPlus.Patches.PrintAllArtifacts(true);
-            if (e.TryConsume(printAllArtifactsSnapshot))
-                ArtifactsPlus.Patches.PrintAllArtifacts(null);
-            if (e.TryConsume(printAllAttributesSnapshot))
-                ArtifactsPlus.Patches.PrintAllMinionAttributesInGame();
-            if (e.TryConsume(printAllKeepsakesSnapshot))
-                ArtifactsPlus.Patches.PrintAllKeepsakes();
-            if (e.TryConsume(printAllMinionsBionicSnapshot))
-                ArtifactsPlus.Patches.PrintAllMinionsBionic();
-        }
-
-        [PLibMethod(RunAt.AfterLayerableLoad)]
-        internal static void AddKeycodeHandler()
-        {
-            KInputHandler.Add(Global.GetInputManager().GetDefaultController(),
-                new ArtifactsPlusKeybindHandler(), 512);
-        }
-
-        internal static void Register(PPatchManager manager)
-        {
-            manager.RegisterPatchClass(typeof(ArtifactsPlusKeybindHandler));
-            PrintActiveArtifactsAction = new PActionManager().CreateAction(
-                "ArtifactsPlus.PrintActiveArtifactsAction", "Print Active Artifacts", new PKeyBinding(KKeyCode.F8, Modifier.Ctrl));
-            PrintAllArtifactsAction = new PActionManager().CreateAction(
-                "ArtifactsPlus.PrintAllArtifactsAction", "Print All Artifacts", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl));
-            PrintAllAttributesAction = new PActionManager().CreateAction(
-                "ArtifactsPlus.PrintAllAttributesAction", "Print All Attributes", new PKeyBinding(KKeyCode.F10, Modifier.Ctrl));
-            PrintAllKeepsakesAction = new PActionManager().CreateAction(
-                "ArtifactsPlus.PrintAllKeepsakesAction", "Print All Keepsakes", new PKeyBinding(KKeyCode.F3, Modifier.Ctrl)); // NEW
-            PrintAllMinionsBionicAction = new PActionManager().CreateAction(
-                "ArtifactsPlus.PrintAllMinionsBionicAction", "Print All Minions (Bionic)", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl));
-        }
-    }
 }
+
+

@@ -12,6 +12,12 @@ using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.PatchManager;
 using PeterHan.PLib.UI;
+using PeterHan.PLib.Actions;
+using PeterHan.PLib.PatchManager;
+using UnityEngine;
+using System.Linq;
+using System;
+using System.Collections.Generic;
 
 namespace ArtifactsPlus
 {
