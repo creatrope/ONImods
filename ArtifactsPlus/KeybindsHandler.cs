@@ -163,7 +163,7 @@ namespace ArtifactsPlus
 
                 foreach (var info in artifactsInWorld)
                 {
-                    Patches.logger.LogDebug($"- {info.ArtifactName}, {(info.IsActive ? "Active" : "")}");
+                    Patches.logger.LogDebug($"- {info.ArtifactName}{(info.IsActive ? ", Active" : "")}");
                 }
             }
         }

@@ -1059,7 +1059,6 @@ namespace ArtifactsPlus
             if (options != null)
             {
                 string optionsJson = JsonConvert.SerializeObject(options, Formatting.Indented);
-                Debug.Log($"[ArtifactsPlus] Options:\n{optionsJson}");
             }
             else
             {

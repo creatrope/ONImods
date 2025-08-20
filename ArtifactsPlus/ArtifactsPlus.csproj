@@ -32,7 +32,14 @@
     <EmbeddedResource Include="ArtifactsConfig.json" />
     <None Include="mod.yaml" />
     <None Include="mod_info.yaml" />
-    <None Include="Sample.ArtifactsConfig.json" />
+    <None Include="Sample.ArtifactsConfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
+  <Target Name="CopySampleArtifactsConfig" AfterTargets="Build">
+    <Copy SourceFiles="Sample.ArtifactsConfig.json"
+          DestinationFolder="$(DeploymentBasePath)$(ProjectName)" 
+          SkipUnchangedFiles="true" />
+  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -16,33 +16,28 @@ namespace ArtifactsPlus
         {
             // Use the configured minimum decor value
             int decorMin = ArtifactsPlus.ArtifactsPlusOptions.Instance.DecorMinimum;
-            // Debug print for decorMin
-            Debug.Log($"[ArtifactsPlus] DecorRoom decorMin value: {decorMin}");
-
-            Debug.Log($"[ArtifactsPlus] CustomConstraints.ItemPedestalTag: {CustomConstraints.ItemPedestalTag}");
-
             var decorRoomType = new RoomType(
-                id: "DecorRoom",
-                name: "Decor Room",
-                description: "A room focused on decor. Passes all constraints.",
-                tooltip: "A decor room type.",
-                effect: null,
-                category: Db.Get().RoomTypeCategories.Park,
-                primary_constraint: CustomConstraints.PEDESTAL,
-                additional_constraints: new RoomConstraints.Constraint[] {
+    id: "DecorRoom",
+    name: "Decor Room",
+    description: "A room focused on decor. Passes all constraints.",
+    tooltip: "A decor room type.",
+    effect: null,
+    category: Db.Get().RoomTypeCategories.Park,
+    primary_constraint: CustomConstraints.PEDESTAL,
+    additional_constraints: new RoomConstraints.Constraint[] {
                     RoomConstraints.MINIMUM_SIZE_12,
                     RoomConstraints.MAXIMUM_SIZE_96,
                     RoomConstraints.NO_INDUSTRIAL_MACHINERY,
                     CustomConstraints.DECORATIVE_ITEM_SCORE
-                },
-                display_details: new RoomDetails.Detail[] { RoomDetails.SIZE, RoomDetails.BUILDING_COUNT },
-                priority: 0,
-                upgrade_paths: null,
-                single_assignee: false,
-                priority_building_use: false,
-                effects: new string[] { },
-                sortKey: 100
-            );
+    },
+    display_details: new RoomDetails.Detail[] { RoomDetails.SIZE, RoomDetails.BUILDING_COUNT },
+    priority: 0,
+    upgrade_paths: null,
+    single_assignee: false,
+    priority_building_use: false,
+    effects: new string[] { },
+    sortKey: 100
+);
             Debug.Log($"[ArtifactsPlus] ItemPedestalTag: {ItemPedestalTag}");
 
             if (!Patches.IsRoomsExpandedPresent)
