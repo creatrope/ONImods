@@ -36,7 +36,7 @@ namespace RocketSpeed
         {
             if (e.TryConsume(snapshotAction))
             {
-                Debug.Log("[MinimalKeybindHandler] Hotkey 1 pressed!");
+                Debug.Log("[RocketSpeed] Hotkey 1 pressed!");
                 InstantTravelAllClusterTravelers(); // <-- This calls it directly on Ctrl+F11
             }
         }
