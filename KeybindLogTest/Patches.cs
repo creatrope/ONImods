@@ -2,15 +2,15 @@ using HarmonyLib;
 using PeterHan.PLib.Actions;
 using PeterHan.PLib.PatchManager;
 using UnityEngine;
-using PeterHan.PLib.Core; // Add this using directive
+using PeterHan.PLib.Core;
 
 namespace KeybindLogTest
 {
     internal static class KeybindActions
     {
-        public static void OnF10() => Debug.Log("[KeybindLogTestX] CTRL+F10 pressed");
-        public static void OnF11() => Debug.Log("[KeybindLogTestX] CTRL+F11 pressed");
-        public static void OnF12() => Debug.Log("[KeybindLogTestX] CTRL+F12 pressed");
+        public static void OnF10() => Debug.Log("[Keybind] CTRL+F10 pressed");
+        public static void OnF11() => Debug.Log("[Keybind] CTRL+F11 pressed");
+        public static void OnF12() => Debug.Log("[Keybind] CTRL+F12 pressed");
     }
 
     internal sealed class KeybindHandler : IInputHandler
