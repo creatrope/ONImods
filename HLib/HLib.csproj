@@ -6,12 +6,13 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{F446A1C4-7859-4B1A-A508-32997511C3BF}</ProjectGuid>
-	  <RootNamespace>$(ProjectName)</RootNamespace>
-	  <AssemblyName>$(ProjectName)</AssemblyName>
+    <RootNamespace>$(ProjectName)</RootNamespace>
+    <AssemblyName>$(ProjectName)</AssemblyName>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Keybinder.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -20,6 +21,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="PLib">
+      <HintPath>..\packages\PLib.4.17.1\lib\net471\PLib.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
