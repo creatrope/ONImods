@@ -23,13 +23,4 @@ namespace KeyBindLogTest
         };
     }
 
-    public class Mod : KMod.UserMod2
-    {
-        public override void OnLoad(Harmony harmony)
-        {
-            base.OnLoad(harmony);
-            PUtil.InitLibrary();
-            Keybinder.KeyInputHandler.Register(new PPatchManager(harmony), HotKeys.All);
-        }
-    }
 }
