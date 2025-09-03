@@ -1,23 +1,17 @@
-using Database;
-using HarmonyLib;
-using HLib;
-using Klei;
-using Klei.AI;
-using KMod;
-using KSerialization;
-using Newtonsoft.Json;
-using PeterHan.PLib.Actions;
-using PeterHan.PLib.Core;
-using PeterHan.PLib.Options;
-using PeterHan.PLib.PatchManager;
-using PeterHan.PLib.UI;
-using STRINGS;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using TUNING;
+using Database;
+using HarmonyLib;
+using Klei;
+using Klei.AI;
+using KSerialization;
+using Newtonsoft.Json;
+using PeterHan.PLib.Core;
+using PeterHan.PLib.PatchManager;
+using STRINGS;
 using UnityEngine;
 
 namespace CafePlus
@@ -230,7 +224,7 @@ namespace CafePlus
             }
         }
 
-        protected override void OnSpawn()
+        public override void OnSpawn()
         {
             base.OnSpawn();
             var recipeComponent = GetComponent<RecipeComponent>();
@@ -311,11 +305,24 @@ namespace CafePlus
             );
             descs.Add(descriptor);
 
-            Effect.AddModifierDescriptions(__instance.gameObject, descs, "Espresso", true);
+            // Get the selected recipe's effect name
+            var recipeComponent = __instance.GetComponent<RecipeComponent>();
+            string effectName = null;
+            if (recipeComponent != null && recipeComponent.SelectedRecipe != null)
+            {
+                effectName = recipeComponent.SelectedRecipe.EffectName;
+            }
+            else
+            {
+                Debug.Log("[CafePlus][DEBUG] No selected recipe found.");
+            }
+
+            // Only add effect modifiers if an effect is selected
+            if (!string.IsNullOrEmpty(effectName))
+                Effect.AddModifierDescriptions(__instance.gameObject, descs, effectName, true);
 
             // Use the selected recipe's solid ingredient
-            var recipeComponent = __instance.GetComponent<RecipeComponent>();
-            Tag solidTag = EspressoMachine.INGREDIENT_TAG;
+            var solidTag = EspressoMachine.INGREDIENT_TAG;
             if (recipeComponent != null && recipeComponent.SelectedRecipe != null && recipeComponent.SelectedRecipe.SolidIngredient.IsValid)
                 solidTag = recipeComponent.SelectedRecipe.SolidIngredient;
 
@@ -374,7 +381,7 @@ namespace CafePlus
 
         public CafePlusRecipe SelectedRecipe = null;
 
-        protected override void OnSpawn()
+        public override void OnSpawn()
         {
             base.OnSpawn();
             if (!string.IsNullOrEmpty(SelectedRecipeName))

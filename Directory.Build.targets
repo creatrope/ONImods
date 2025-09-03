@@ -27,8 +27,7 @@
 		<Reference Include="Assembly-CSharp-firstpass" HintPath="$(PublicizedPath)\Assembly-CSharp-firstpass.dll" />
 		<Reference Include="Newtonsoft.Json" HintPath="$(ONIManaged)\Newtonsoft.Json.dll" />
 		<Reference Include="PLib" HintPath="..\packages\PLib.4.17.1\lib\net471\PLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
-		<Reference Include="HLib" HintPath="..\HLib\bin\Release\HLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />
-		<Reference Include="System" />
+		<Reference Include="HLib" HintPath="..\HLib\bin\Release\HLib.dll" Condition=" '$(MSBuildProjectName)' != 'HLib' " />		<Reference Include="System" />
 		<Reference Include="System.Core" />
 		<Reference Include="System.Xml.Linq" />
 		<Reference Include="System.Data.DataSetExtensions" />
@@ -81,4 +80,8 @@
 	<ItemGroup>
 		<AnimFiles Include="anim\**\*" />
 	</ItemGroup>
+
+	<Target Name="EchoDeploymentBasePath" AfterTargets="Build">
+	  <Message Text="DeploymentBasePath: $(DeploymentBasePath)" Importance="high" />
+	</Target>
 </Project>

@@ -27,7 +27,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <ILRepackExe>$(SolutionDir)packages\ILRepack.2.0.18\tools\ILRepack.exe</ILRepackExe>
-    <DeploymentBasePath>C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Local\</DeploymentBasePath>
+    <DeploymentBasePath>C:\Users\sendh\Documents\Klei\OxygenNotIncluded\mods\Dev\</DeploymentBasePath>
     <!-- other shared properties -->
   </PropertyGroup>
 

@@ -84,6 +84,21 @@
       "LiquidIngredient": "CrudeOil",
       "SolidIngredients": [ "SpiceNut" ],
       "AllowedUsers": "Bionic"
+    },
+    {
+      "Recipe": "Isobrew",
+      "Effect": {
+        "Name": "Glowin' All Day",
+        "Duration": 180.0,
+        "Modifiers": {
+          "RadiationResistance": 1.0,
+          "Luminescence": 500.0
+        }
+      },
+      "LiquidIngredient": "NuclearWaste",
+      "SolidIngredients": [ "Ice" ],
+      "AllowedUsers": "All"
     }
+
   ]
 }

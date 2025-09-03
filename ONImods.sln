@@ -86,6 +86,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mementos", "Mementos\Mement
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RocketSpeed", "RocketSpeed\RocketSpeed.csproj", "{997A9F53-DB87-401B-993D-98C4E4B126F4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F446A1C4-7859-4B1A-A508-32997511C3BF} = {F446A1C4-7859-4B1A-A508-32997511C3BF}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResearchAllHexes", "ResearchAllHexes\ResearchAllHexes.csproj", "{EECC5FA3-6830-42A5-BEFA-B557CDA96C43}"
 EndProject
