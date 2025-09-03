@@ -1,22 +1,13 @@
-using Database;
-using Epic.OnlineServices.Platform;
 using HarmonyLib;
 using HLib;
 using KMod;
-using KSerialization;
-using Newtonsoft.Json; // Ensure this using directive is present
-
+using Newtonsoft.Json;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.Options;
 using PeterHan.PLib.UI;
 using System;
-using System.Collections.Generic; // For List<> and Dictionary<>
-using System.Runtime.CompilerServices; // For ConditionalWeakTable
-using TUNING;
+using System.Collections.Generic;
 using UnityEngine;
-using static Rendering.BlockTileRenderer;
-using static STRINGS.BUILDINGS.PREFABS;
-using static STRINGS.ELEMENTS;
 
 namespace RailSensor
 {
