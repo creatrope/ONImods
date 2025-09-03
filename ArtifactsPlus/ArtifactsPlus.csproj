@@ -13,7 +13,7 @@
     <Compile Include="ArtifactPedestalPanelPatch.cs" />
     <Compile Include="ArtifactRoomPatch.cs" />
     <Compile Include="ArtifactsPlusOptions.cs" />
-    <Compile Include="KeybindsHandler.cs" />
+    <Compile Include="HotKeys.cs" />
     <Compile Include="MinionPersonalityPanelPatch.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -37,9 +37,7 @@
     </None>
   </ItemGroup>
   <Target Name="CopySampleArtifactsConfig" AfterTargets="Build">
-    <Copy SourceFiles="Sample.ArtifactsConfig.json"
-          DestinationFolder="$(DeploymentBasePath)$(ProjectName)" 
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="Sample.ArtifactsConfig.json" DestinationFolder="$(DeploymentBasePath)$(ProjectName)" SkipUnchangedFiles="true" />
   </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

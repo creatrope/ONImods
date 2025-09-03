@@ -5,115 +5,28 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using HLib;
 
 namespace ArtifactsPlus
 {
-    internal sealed class KeybindsHandler : IInputHandler
+    internal static class HotKeys
     {
-        private class Keybind
-        {
-            public string Id;
-            public string DisplayName;
-            public PKeyBinding Binding;
-            public System.Action Handler;
-            public PAction Action;
-            public Action Snapshot;
-            public bool LocalOnly;
+        public static MinionIdentity SelectedMinion { get; set; }
 
-            public Keybind(string id, string displayName, PKeyBinding binding, System.Action handler, bool localOnly = false)
-            {
-                Id = id;
-                DisplayName = displayName;
-                Binding = binding;
-                Handler = handler;
-                LocalOnly = localOnly;
-            }
-        }
-
-        // Keybinds at the top
-        private static readonly List<Keybind> keybinds = new List<Keybind>
+        // Upgrade KeybindDef to the 5-parameter format: (string id, string displayName, KKeyCode key, Modifier modifiers, Action handler)
+        internal static readonly List<Keybinder.KeybindDef> All = new List<Keybinder.KeybindDef>
         {
-            new Keybind("ArtifactsPlus.PrintAllArtifactsAction", "Print All Artifacts", new PKeyBinding(KKeyCode.F9, Modifier.Ctrl), PrintAllArtifacts, false),
-            new Keybind("ArtifactsPlus.PrintAllKeepsakesAction", "Print All Keepsakes", new PKeyBinding(KKeyCode.F3, Modifier.Ctrl), PrintAllKeepsakes, false),
-            new Keybind("ArtifactsPlus.PrintAllMinionsBionicAction", "Print All Minions (Bionic)", new PKeyBinding(KKeyCode.F4, Modifier.Ctrl), PrintAllMinionsBionic, false),
+            new Keybinder.KeybindDef { Id = "ArtifactsPlus.PrintAllArtifactsAction", DisplayName = "Print All Artifacts", Key = KKeyCode.F3, Modifiers = Modifier.Ctrl | Modifier.Shift, Handler = PrintAllArtifacts },
+            new Keybinder.KeybindDef { Id = "ArtifactsPlus.PrintAllKeepsakesAction", DisplayName = "Print All Keepsakes", Key = KKeyCode.F5, Modifiers = Modifier.Ctrl | Modifier.Shift, Handler = PrintAllKeepsakes },
+            new Keybinder.KeybindDef { Id = "ArtifactsPlus.PrintAllMinionsBionicAction", DisplayName = "Print All Minions (Bionic)", Key = KKeyCode.F4, Modifiers = Modifier.Ctrl | Modifier.Shift, Handler = PrintAllMinionsBionic }
         };
-
-        private float lastSnapshotTime = 0f;
-        private readonly float debounceInterval = 1.0f; // seconds
-
-        public string handlerName => "KeybindsHandler";
-        public KInputHandler inputHandler { get; set; }
-
-        private bool keyIsDown = false;
-
-        public KeybindsHandler()
-        {
-            foreach (var kb in keybinds)
-            {
-                kb.Snapshot = (kb.Action != null) ? kb.Action.GetKAction() : Action.Invalid;
-            }
-        }
-
-        public void OnKeyDown(KButtonEvent e)
-        {
-            if (keyIsDown)
-                return;
-
-            keyIsDown = true;
-
-            float now = Time.time;
-            foreach (var kb in keybinds)
-            {
-                if (kb.Snapshot == null && kb.Action != null)
-                    kb.Snapshot = kb.Action.GetKAction();
-
-                if (e.TryConsume(kb.Snapshot))
-                {
-                    if (now - lastSnapshotTime >= debounceInterval)
-                    {
-                        lastSnapshotTime = now;
-                        kb.Handler?.Invoke();
-                    }
-                    break;
-                }
-            }
-        }
-
-        public void OnKeyUp(KButtonEvent e)
-        {
-            keyIsDown = false;
-        }
-
-        private static bool handlerRegistered = false;
-
-        [PLibMethod(RunAt.AfterLayerableLoad)]
-        public static void AddKeycodeHandler()
-        {
-            if (!handlerRegistered)
-            {
-                KInputHandler.Add(Global.GetInputManager().GetDefaultController(),
-                    new KeybindsHandler(), 512);
-                handlerRegistered = true;
-            }
-        }
-
-        public static void Register(PPatchManager manager)
-        {
-            manager.RegisterPatchClass(typeof(KeybindsHandler));
-            foreach (var kb in keybinds)
-            {
-                kb.Action = new PActionManager().CreateAction(kb.Id, kb.DisplayName, kb.Binding);
-                kb.Snapshot = kb.Action.GetKAction();
-            }
-        }
-
-        // --- SUPPORT FUNCTIONS BELOW ---
 
         private static void PrintAllArtifacts()
         {
+            Debug.Log("[ArtifactsPlus] PrintAllArtifacts hotkey triggered");
             ArtifactStateTracker.BuildGlobalAllArtifacts(); // Ensure up-to-date list
             var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
-            if (allArtifacts == null || allArtifacts.Length == 0)
+            if (allArtifacts == null || allArtifacts.Length == 0)  
             {
                 Patches.logger.LogDebug("[ArtifactsPlus] No artifacts found in the game.");
                 return;
@@ -168,8 +81,9 @@ namespace ArtifactsPlus
             }
         }
 
-             private static void PrintAllKeepsakes()
+        private static void PrintAllKeepsakes()
         {
+            Debug.Log("[ArtifactsPlus] PrintAllKeepsakes hotkey triggered");
             var keepsakes = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag(GameTags.Keepsake))
                 .Select(kp => kp.gameObject)
@@ -191,6 +105,7 @@ namespace ArtifactsPlus
 
         private static void PrintAllMinionsBionic()
         {
+            Debug.Log("[ArtifactsPlus] PrintAllMinionsBionic hotkey triggered");
             var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && (kp.HasTag("Minion") || kp.HasTag("BionicMinion")))
                 .Select(kp => kp.gameObject)

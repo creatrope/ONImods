@@ -1,23 +1,17 @@
+using ArtifactsPlus;
 using Klei.AI;
 using Newtonsoft.Json;
+using PeterHan.PLib.Actions;
+using PeterHan.PLib.Core;
+using PeterHan.PLib.Options;
+using PeterHan.PLib.PatchManager;
+using PeterHan.PLib.UI;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
-using ArtifactsPlus; // Add this namespace to access ArtifactStateTracker
-using PeterHan.PLib.Actions;
-using PeterHan.PLib.Core;
-using PeterHan.PLib.Options;
-using PeterHan.PLib.PatchManager;
-using PeterHan.PLib.UI;
-using PeterHan.PLib.Actions;
-using PeterHan.PLib.PatchManager;
-using UnityEngine;
-using System.Linq;
-using System;
-using System.Collections.Generic;
 
 namespace ArtifactsPlus
 {

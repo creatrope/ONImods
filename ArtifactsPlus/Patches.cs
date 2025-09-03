@@ -1080,7 +1080,7 @@ namespace ArtifactsPlus
 
             ArtifactStateTracker.LoadArtifactConfig(); // fallback to default
 
-            KeybindsHandler.Register(new PPatchManager(harmony));
+            Keybinder.KeyInputHandler.Register(new PPatchManager(harmony), HotKeys.All);
         }
 
         public override void OnAllModsLoaded(Harmony harmony, IReadOnlyList<KMod.Mod> mods)
