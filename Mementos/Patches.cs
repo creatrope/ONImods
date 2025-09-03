@@ -1,8 +1,12 @@
 using HarmonyLib;
+using PeterHan.PLib.Actions;
 using PeterHan.PLib.Core;
 using PeterHan.PLib.PatchManager;
 using System.Linq;
 using UnityEngine;
+using System;
+using System.Collections.Generic;
+using Keybinds;
 
 namespace Mementos
 {
