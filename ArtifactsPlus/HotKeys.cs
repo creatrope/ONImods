@@ -23,14 +23,19 @@ namespace ArtifactsPlus
 
         private static void PrintAllArtifacts()
         {
-            Debug.Log("[ArtifactsPlus] PrintAllArtifacts hotkey triggered");
+            Debug.Log("[ArtifactsPlus] PrintAllArtifacts called");
             ArtifactStateTracker.BuildGlobalAllArtifacts(); // Ensure up-to-date list
             var allArtifacts = ArtifactStateTracker.GetAllArtifacts();
+            Debug.Log($"[ArtifactsPlus] ArtifactStateTracker.GetAllArtifacts() returned {(allArtifacts == null ? "null" : allArtifacts.Length.ToString())} artifacts");
+
             if (allArtifacts == null || allArtifacts.Length == 0)  
             {
-                Patches.logger.LogDebug("[ArtifactsPlus] No artifacts found in the game.");
+                Debug.Log("[ArtifactsPlus] No artifacts found in the game.");
                 return;
             }
+
+            int nullCount = allArtifacts.Count(a => a == null);
+            Debug.Log($"[ArtifactsPlus] Null artifact count: {nullCount}");
 
             // Build a list of artifact info grouped by world
             var artifactInfos = allArtifacts
@@ -47,12 +52,15 @@ namespace ArtifactsPlus
                     var world = ClusterManager.Instance.GetWorld(worldId);
                     string worldName = world != null ? world.GetProperName() : $"World_{worldId}";
 
+                    Debug.Log($"[ArtifactsPlus] Artifact: {artifactName}, Active: {isActive}, World: {worldName}, InstanceID: {artifact.GetInstanceID()}");
+
                     return new
                     {
                         Artifact = artifact,
                         ArtifactName = artifactName,
                         IsActive = isActive,
-                        WorldName = worldName
+                        WorldName = worldName,
+                        InstanceId = artifact.GetInstanceID()
                     };
                 })
                 .GroupBy(info => info.WorldName)
@@ -71,60 +79,69 @@ namespace ArtifactsPlus
                 // Print world header with underline
                 string header = worldGroup.Key;
                 string underline = new string('-', header.Length);
-                Patches.logger.LogDebug(header);
-                Patches.logger.LogDebug(underline);
+                Debug.Log(header);
+                Debug.Log(underline);
 
                 foreach (var info in artifactsInWorld)
                 {
-                    Patches.logger.LogDebug($"- {info.ArtifactName}{(info.IsActive ? ", Active" : "")}");
+                    Debug.Log($"- {info.ArtifactName}{(info.IsActive ? ", Active" : "")} (InstanceID: {info.InstanceId})");
                 }
             }
+            Debug.Log("[ArtifactsPlus] PrintAllArtifacts() completed");
         }
 
         private static void PrintAllKeepsakes()
         {
-            Debug.Log("[ArtifactsPlus] PrintAllKeepsakes hotkey triggered");
+            Debug.Log("[ArtifactsPlus] PrintAllKeepsakes() called");
             var keepsakes = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && kp.HasTag(GameTags.Keepsake))
                 .Select(kp => kp.gameObject)
                 .ToArray();
 
+            Debug.Log($"[ArtifactsPlus] Found {keepsakes.Length} keepsakes");
+
             if (keepsakes.Length == 0)
             {
-                Patches.logger.LogDebug("[ArtifactsPlus] No keepsakes found in the game.");
+                Debug.Log("[ArtifactsPlus] No keepsakes found in the game.");
                 return;
             }
 
-            Patches.logger.LogDebug("[ArtifactsPlus] All Keepsakes:");
+            Debug.Log("[ArtifactsPlus] All Keepsakes:");
             foreach (var keepsake in keepsakes)
             {
                 string keepsakeName = keepsake.GetComponent<KPrefabID>()?.PrefabTag.Name ?? "Unknown Keepsake";
-                Patches.logger.LogDebug($"- {keepsakeName}");
+                int instanceId = keepsake.GetInstanceID();
+                Debug.Log($"- {keepsakeName} (InstanceID: {instanceId})");
             }
+            Debug.Log("[ArtifactsPlus] PrintAllKeepsakes() completed");
         }
 
         private static void PrintAllMinionsBionic()
         {
-            Debug.Log("[ArtifactsPlus] PrintAllMinionsBionic hotkey triggered");
+            Debug.Log("[ArtifactsPlus] PrintAllMinionsBionic() called");
             var allMinions = UnityEngine.Object.FindObjectsOfType<KPrefabID>()
                 .Where(kp => kp != null && (kp.HasTag("Minion") || kp.HasTag("BionicMinion")))
                 .Select(kp => kp.gameObject)
                 .ToArray();
 
+            Debug.Log($"[ArtifactsPlus] Found {allMinions.Length} minions (Minion or BionicMinion)");
+
             if (allMinions.Length == 0)
             {
-                Patches.logger.LogDebug("[ArtifactsPlus] No minions found in the game.");
+                Debug.Log("[ArtifactsPlus] No minions found in the game.");
                 return;
             }
 
-            Patches.logger.LogDebug("[ArtifactsPlus] All Minions (Bionic status):");
+            Debug.Log("[ArtifactsPlus] All Minions (Bionic status):");
             foreach (var minion in allMinions)
             {
                 string minionName = minion.GetComponent<KSelectable>()?.GetProperName() ?? "Unknown Minion";
                 var prefabId = minion.GetComponent<KPrefabID>();
                 bool isBionic = prefabId != null && prefabId.HasTag("BionicMinion");
-                Patches.logger.LogDebug($"- {minionName} (Bionic: {(isBionic ? "Yes" : "No")})");
+                int instanceId = minion.GetInstanceID();
+                Debug.Log($"- {minionName} (Bionic: {(isBionic ? "Yes" : "No")}, InstanceID: {instanceId})");
             }
+            Debug.Log("[ArtifactsPlus] PrintAllMinionsBionic() completed");
         }
     }
 }
