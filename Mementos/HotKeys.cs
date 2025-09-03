@@ -1,34 +1,49 @@
-﻿using System;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using HarmonyLib;
 using PeterHan.PLib.Actions;
 using PeterHan.PLib.PatchManager;
+using UnityEngine;
+using PeterHan.PLib.Core;
+using System.Collections.Generic;
+using HLib;
 
 namespace Mementos
 {
-    public static class KeybindHandler
+    internal static class HotKeys
     {
-        public static MinionIdentity SelectedMinion { get; set; }
+        public static void OnIncapacitate() => HandleIncapacitateHotkey();
+        public static void OnDamage() => HandleDamageHotkey();
+        public static void OnEraseAll() => HandleEraseAllHotkey();
+        public static void OnPrintAllMementos() => HandlePrintAllMementosHotkey();
+        public static void OnPrintDetailsScreens() => HandlePrintDetailsScreensHotkey();
+        public static void OnCreateMemento() => HandleCreateMementoHotkey();
+        public static void OnPrintIssuedMementos() => HandlePrintIssuedMementosHotkey();
 
-        public static void Register(PPatchManager patchManager)
+        public static readonly List<Keybinder.KeybindDef> All = new List<Keybinder.KeybindDef>
         {
-            // Register keybinds here, implementation depends on your mod's needs.
-        }
+            new Keybinder.KeybindDef { Id = "Mementos.Incapacitate", DisplayName = "Incapacitate Minion", Key = KKeyCode.F7, Modifiers = Modifier.Shift | Modifier.Ctrl, Handler = OnIncapacitate },
+            new Keybinder.KeybindDef { Id = "Mementos.Damage", DisplayName = "Damage Minion", Key = KKeyCode.F8, Modifiers = Modifier.Shift | Modifier.Ctrl, Handler = OnDamage },
+            new Keybinder.KeybindDef { Id = "Mementos.EraseAll", DisplayName = "Erase All Mementos", Key = KKeyCode.F9, Modifiers = Modifier.Shift | Modifier.Ctrl, Handler = OnEraseAll },
+            new Keybinder.KeybindDef { Id = "Mementos.PrintAllMementos", DisplayName = "Print All Mementos", Key = KKeyCode.F10, Modifiers = Modifier.Shift | Modifier.Ctrl, Handler = OnPrintAllMementos },
+            new Keybinder.KeybindDef { Id = "Mementos.PrintDetailsScreens", DisplayName = "Print Details Screens", Key = KKeyCode.F11, Modifiers = Modifier.Shift | Modifier.Ctrl, Handler = OnPrintDetailsScreens },
+            new Keybinder.KeybindDef { Id = "Mementos.CreateMemento", DisplayName = "Create Memento", Key = KKeyCode.F12, Modifiers = Modifier.Shift | Modifier.Ctrl, Handler = OnCreateMemento },
+            new Keybinder.KeybindDef { Id = "Mementos.PrintIssuedMementos", DisplayName = "Print Issued Mementos", Key = KKeyCode.F6, Modifiers = Modifier.Shift | Modifier.Ctrl, Handler = OnPrintIssuedMementos }
+        };
 
         public static void HandleIncapacitateHotkey()
         {
+            var selectedMinion = MinionSelectionManager.SelectedMinion;
             Debug.Log("[OnKeyDown] Incapacitate hotkey detected.");
-            if (SelectedMinion != null)
+            if (selectedMinion != null)
             {
-                var health = SelectedMinion.GetComponent<Health>();
+                var health = selectedMinion.GetComponent<Health>();
                 if (health != null)
                 {
                     Debug.Log($"[OnKeyDown] Health component found. Can be incapacitated: {health.canBeIncapacitated}, IsIncapacitated: {health.IsIncapacitated()}");
                     if (health.canBeIncapacitated && !health.IsIncapacitated())
                     {
                         health.Incapacitate(new Tag("ManualIncapacitate"));
-                        Debug.Log($"[OnKeyDown] Incapacitated '{SelectedMinion.GetProperName()}' via hotkey.");
-                        SelectedMinion = null;
+                        Debug.Log($"[OnKeyDown] Incapacitated '{selectedMinion.GetProperName()}' via hotkey.");
+                        // No need to clear selection here unless desired
                     }
                     else
                     {
@@ -48,14 +63,15 @@ namespace Mementos
 
         public static void HandleDamageHotkey()
         {
+            var selectedMinion = MinionSelectionManager.SelectedMinion;
             Debug.Log("[OnKeyDown] Damage hotkey detected.");
-            if (SelectedMinion != null)
+            if (selectedMinion != null)
             {
-                var health = SelectedMinion.GetComponent<Health>();
+                var health = selectedMinion.GetComponent<Health>();
                 if (health != null)
                 {
                     float damageAmount = 10f;
-                    Debug.Log($"[OnKeyDown] (before health.Damage) Damaged '{SelectedMinion.GetProperName()}' for {damageAmount} HP via hotkey.");
+                    Debug.Log($"[OnKeyDown] (before health.Damage) Damaged '{selectedMinion.GetProperName()}' for {damageAmount} HP via hotkey.");
                     health.Damage(damageAmount);
                     Debug.Log($"[OnKeyDown] (after health.Damage).");
                 }
@@ -85,14 +101,6 @@ namespace Mementos
 
             foreach (var medalInfo in medalInfos)
                 medalInfo.Medals.Clear();
-
-            // 3. Delete all minions (MinionIdentity components)
-            //var minions = UnityEngine.Object.FindObjectsOfType<MinionIdentity>();
-            //foreach (var minion in minions)
-            //{
-            //    Debug.Log($"[EraseMedals] Destroying minion: {minion.GetProperName()}");
-            //    UnityEngine.Object.Destroy(minion.gameObject);
-            //}
 
             var globalData = Mementos.MementosGlobalData.Instance;
 
@@ -132,15 +140,16 @@ namespace Mementos
 
         public static void HandleCreateMementoHotkey()
         {
+            var selectedMinion = MinionSelectionManager.SelectedMinion;
             Debug.Log("[OnKeyDown] Create Memento hotkey detected.");
-            if (SelectedMinion != null)
+            if (selectedMinion != null)
             {
                 foreach (var kvp in MementoPrototypes.Mementos)
                 {
                     var mementoData = kvp.Value;
-                    MementoUtils.CreateMemento(mementoData, SelectedMinion, "");
+                    MementoUtils.CreateMemento(mementoData, selectedMinion, "");
                 }
-                Debug.Log($"[OnKeyDown] Created mementos for '{SelectedMinion.GetProperName()}' via hotkey.");
+                Debug.Log($"[OnKeyDown] Created mementos for '{selectedMinion.GetProperName()}' via hotkey.");
             }
             else
             {

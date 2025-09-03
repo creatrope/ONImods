@@ -6,13 +6,17 @@ using System.Linq;
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using Keybinds;
 
 namespace Mementos
 {
     public static class MementosGlobals
     {
         public static bool KeybindsEnabled = true;
+    }
+
+    public static class MinionSelectionManager // Renamed from KeybindHandler
+    {
+        public static MinionIdentity SelectedMinion { get; set; }
     }
 
     public class Mod : KMod.UserMod2
@@ -23,10 +27,9 @@ namespace Mementos
             base.OnLoad(harmony);
             if (MementosGlobals.KeybindsEnabled)
             {
-                Mementos.KeybindHandler.Register(new PPatchManager(harmony));
+                Keybinder.KeyInputHandler.Register(new PPatchManager(harmony), HotKeys.All);
             }
         }
-
 
         [HarmonyPatch(typeof(MinionPersonalityPanel), "OnPrefabInit")]
         public static class MinionPersonalityPanel_AddMedalsPanelPatch
@@ -53,7 +56,7 @@ namespace Mementos
                 if (target == null)
                     return;
 
-                Mementos.KeybindHandler.SelectedMinion = target.GetComponent<MinionIdentity>();
+                Mementos.MinionSelectionManager.SelectedMinion = target.GetComponent<MinionIdentity>();
 
                 var minion = target.GetComponent<MinionIdentity>();
                 if (minion != null && MinionPersonalityPanel_AddMedalsPanelPatch.medalsPanel != null)
@@ -102,6 +105,5 @@ namespace Mementos
                 }
             }
         }
-
     }
 }
