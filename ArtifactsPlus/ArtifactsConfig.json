@@ -12,7 +12,7 @@
     { "ArtifactId": "artifact_hatchfossil", "Attributes": { "Ranching": 1 } },
     { "ArtifactId": "artifact_honeyjar", "Attributes": { "Immunity": 2, "Botanist": 1 } },
     { "ArtifactId": "artifact_magmalamp", "Attributes": { "Decor": 4 } },
-    { "ArtifactId": "artifact_moldavite", "Attributes": { "RadiationRecovery": 2, "GermResistance": 2 } },
+    { "ArtifactId": "artifact_moldavite", "Attributes": { "RadiationRecovery": -.25, "GermResistance": 2 } },
     { "ArtifactId": "artifact_modernart", "Attributes": { "Art": 2 } },
     { "ArtifactId": "artifact_moodring", "Attributes": { "Art": 3 } },
     { "ArtifactId": "artifact_moonmoonmoon", "Attributes": { "SpaceNavigation": 2 } },
