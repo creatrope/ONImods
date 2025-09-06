@@ -67,7 +67,7 @@ namespace OverheatControl
 
         public override int GetSideScreenSortOrder() => -100;
 
-        protected override void OnPrefabInit()
+        public override void OnPrefabInit()
         {
             Patches.logger.LogDebug("SimpleSideScreen OnPrefabInit called.");
             base.OnPrefabInit();
@@ -79,7 +79,7 @@ namespace OverheatControl
             };
         }
 
-        protected override void OnSpawn()
+        public override void OnSpawn()
         {
             base.OnSpawn();
 

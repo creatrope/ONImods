@@ -25,7 +25,7 @@ namespace ConveyorLoaderPatch
         private Storage storage;
         private float originalCapacity = -1f;
 
-        protected override void OnSpawn()
+        public override void OnSpawn()
         {
             base.OnSpawn();
 

@@ -23,13 +23,13 @@ namespace Heinermann.CritterRename
         private static readonly EventSystem.IntraObjectHandler<CritterName> OnLayEggDelegate =
             new EventSystem.IntraObjectHandler<CritterName>(OnLayEgg);
 
-        protected override void OnPrefabInit()
+        public override void OnPrefabInit()
         {
             Subscribe((int)GameHashes.SpawnedFrom, OnSpawnedFromDelegate);
             Subscribe((int)GameHashes.LayEgg, OnLayEggDelegate);
         }
 
-        protected override void OnSpawn()
+        public override void OnSpawn()
         {
             if (!string.IsNullOrWhiteSpace(critterName))
             {

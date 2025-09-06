@@ -43,7 +43,7 @@ namespace AutoSweeperTempFilter
         [Serialize]
         public float maxTempK = 1000f;
 
-        protected override void OnSpawn()
+        public override void OnSpawn()
         {
             base.OnSpawn();
             Logger.Log($"Spawned {gameObject?.name} (ID={gameObject?.GetInstanceID()}) with min={minTempK}, max={maxTempK}");
@@ -84,7 +84,7 @@ namespace AutoSweeperTempFilter
             if (maxInput != null) maxInput.text = ConvertToPreferredUnit(this.target.maxTempK).ToString("F1");
         }
 
-        protected override void OnPrefabInit()
+        public override void OnPrefabInit()
         {
             Logger.Log("Building UI manually");
 
